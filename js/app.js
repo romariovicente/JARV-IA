@@ -1,3 +1,13 @@
+// ===== DEBUG: Verifica se o script carregou =====
+alert("DEBUG: app.js carregou!");
+
+// ===== DEBUG: Verifica se Firebase está disponível =====
+if (typeof firebase === 'undefined') {
+  alert("ERRO: Firebase não carregou! Verifique a conexão.");
+} else {
+  alert("DEBUG: Firebase disponível!");
+}
+
 // Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RF6xS890o",
@@ -9,7 +19,13 @@ const firebaseConfig = {
 };
 
 // Inicializa Firebase
-firebase.initializeApp(firebaseConfig);
+try {
+  firebase.initializeApp(firebaseConfig);
+  alert("DEBUG: Firebase inicializado!");
+} catch (e) {
+  alert("ERRO ao inicializar Firebase: " + e.message);
+}
+
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -28,6 +44,7 @@ auth.onAuthStateChanged((user) => {
     userName.textContent = user.displayName || user.email;
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
+    alert("DEBUG: Usuário logado: " + (user.displayName || user.email));
   } else {
     userName.textContent = '';
     loginBtn.style.display = 'inline-block';
@@ -35,17 +52,24 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Login com Google — funciona em computador E mobile
+// Login com Google
 function signInWithGoogle() {
-  auth.signInWithRedirect(provider);
+  alert("DEBUG: Botão de login clicado!");
+  try {
+    alert("DEBUG: Tentando redirecionar para Google...");
+    auth.signInWithRedirect(provider);
+    alert("DEBUG: Redirecionamento iniciado!");
+  } catch (e) {
+    alert("ERRO no login: " + e.message);
+  }
 }
 
 // Logout
 function signOutUser() {
   auth.signOut().then(() => {
-    console.log("Logout OK");
+    alert("DEBUG: Logout OK");
   }).catch((error) => {
-    console.error("Erro no logout:", error);
+    alert("ERRO no logout: " + error.message);
   });
 }
 
