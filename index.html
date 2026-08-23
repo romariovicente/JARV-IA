@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARV I.A.</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="jarv-root" id="jarvApp">
+    <div class="jarv-topbar">
+      <div class="jarv-topbar-left">
+        <div class="jarv-dot"></div>
+        <span class="jarv-title">JARV I.A.</span>
+      </div>
+      <span class="jarv-status" id="jarvStatus">SYSTEM STANDBY</span>
+    </div>
+
+    <div class="jarv-main">
+      <div class="jarv-sidebar">
+        <div class="jarv-nav-item active" data-view="chat" onclick="switchView('chat')">
+          <span class="jarv-nav-icon">&#9000;</span> Terminal / Chat
+        </div>
+        <div class="jarv-nav-item" data-view="dashboard" onclick="switchView('dashboard')">
+          <span class="jarv-nav-icon">&#9638;</span> Dashboard
+        </div>
+        <div class="jarv-nav-item" data-view="agents" onclick="switchView('agents')">
+          <span class="jarv-nav-icon">&#9733;</span> Agentes
+        </div>
+        <div class="jarv-nav-item" data-view="memory" onclick="switchView('memory')">
+          <span class="jarv-nav-icon">&#9733;</span> Memória
+        </div>
+        <div class="jarv-nav-item" data-view="pcg" onclick="switchView('pcg')">
+          <span class="jarv-nav-icon">&#9733;</span> PCG
+        </div>
+        <div style="flex:1"></div>
+        <div class="jarv-nav-item" onclick="resetSystem()">
+          <span class="jarv-nav-icon">&#8634;</span> Reiniciar
+        </div>
+      </div>
+
+      <div class="jarv-content">
+        <div class="jarv-hero" id="heroView">
+          <h1>JARV I.A.</h1>
+          <p>JUST A RATHER VERY INTELLIGENT SYSTEM</p>
+          <button class="jarv-btn" id="initBtn" onclick="initializeJARV()">INITIALIZE JARV</button>
+        </div>
+
+        <div class="jarv-chat" id="chatView">
+          <div class="jarv-messages" id="msgArea">
+            <div class="jarv-msg jarv-msg-bot">
+              <span class="jarv-code">[JARV]</span> Sistema inicializado. Arquitetura: Frontend → Backend → Model Router. Aguardando comandos.
+            </div>
+          </div>
+          <div class="jarv-typing" id="typingIndicator">
+            <span class="jarv-code">[JARV]</span> processando<span class="jarv-cursor"></span>
+          </div>
+          <div class="jarv-input-area">
+            <input class="jarv-input" id="chatInput" placeholder="Digite um comando..." onkeydown="if(event.key==='Enter')sendMsg()">
+            <button class="jarv-send" onclick="sendMsg()">ENVIAR</button>
+          </div>
+        </div>
+
+        <div class="jarv-panel-info" id="dashboardView">
+          <h2>Dashboard do Sistema</h2>
+          <p><strong>Status:</strong> <span style="color:#b7ffb7">Operacional</span></p>
+          <p><strong>Frontend:</strong> GitHub Pages (HTML/CSS/JS)</p>
+          <p><strong>Backend:</strong> API segura (fora do frontend)</p>
+          <p><strong>Auth:</strong> Firebase Authentication + Google</p>
+          <p><strong>Model Router:</strong> Multimodelo (OpenAI / Claude / DeepSeek / Kimi)</p>
+          <p><strong>PCG:</strong> Provedor de Conhecimento Global ativo</p>
+          <p><strong>Memória:</strong> Persistência de preferências e histórico</p>
+          <br>
+          <span class="jarv-tag">HTML5</span>
+          <span class="jarv-tag">CSS3</span>
+          <span class="jarv-tag">JavaScript</span>
+          <span class="jarv-tag red">Git</span>
+          <span class="jarv-tag red">GitHub Pages</span>
+          <span class="jarv-tag">Firebase Auth</span>
+          <span class="jarv-tag">Node.js</span>
+        </div>
+
+        <div class="jarv-panel-info" id="agentsView">
+          <h2>Agentes Especializados</h2>
+          <p><span class="jarv-code">[GENERAL]</span> Assistência geral e orquestração</p>
+          <p><span class="jarv-code">[CODE]</span> Programação, revisão e debugging</p>
+          <p><span class="jarv-code">[CYBER]</span> Segurança defensiva e hardening</p>
+          <p><span class="jarv-code">[NETWORK]</span> Redes, servidores e infraestrutura</p>
+          <p><span class="jarv-code">[RESEARCH]</span> Pesquisa comparativa e investigação</p>
+          <p><span class="jarv-code">[STUDY]</span> Ensino, exercícios e explicações</p>
+          <p><span class="jarv-code">[DATA]</span> Análise e transformação de dados</p>
+          <p><span class="jarv-code">[WRITER]</span> Criação e edição de conteúdo</p>
+          <p><span class="jarv-code">[LANGUAGE]</span> Tradução e idiomas</p>
+          <p><span class="jarv-code">[SYSTEM]</span> Arquitetura do próprio JARV</p>
+        </div>
+
+        <div class="jarv-panel-info" id="memoryView">
+          <h2>Módulo de Memória</h2>
+          <p>Memória opt-in e configurável pelo usuário.</p>
+          <p><strong>Preferências armazenadas:</strong></p>
+          <p><span class="jarv-code">preferred_language:</span> pt-BR</p>
+          <p><span class="jarv-code">favorite_mode:</span> cyber</p>
+          <p><span class="jarv-code">theme:</span> terminal-dark</p>
+          <br>
+          <p>O usuário pode visualizar, editar e apagar memórias a qualquer momento.</p>
+        </div>
+
+        <div class="jarv-panel-info" id="pcgView">
+          <h2>Provedor de Conhecimento Global</h2>
+          <p>O PCG é a camada documental e de síntese do JARV.</p>
+          <p><strong>Fluxo:</strong> Documentos → Extração → Chunking → Metadados → Indexação → Busca → Contexto → Resposta com Fonte</p>
+          <br>
+          <p><strong>Fontes ativas:</strong></p>
+          <p><span class="jarv-code">1.</span> J.A.R.V.I.S. System Directives v3.0</p>
+          <p><span class="jarv-code">2.</span> Provedor de Conhecimento Global (PCG) v1.0</p>
+          <p><span class="jarv-code">3.</span> JARV I.A. Fonte Universal v1.0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
