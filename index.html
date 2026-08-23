@@ -13,7 +13,11 @@
         <div class="jarv-dot"></div>
         <span class="jarv-title">JARV I.A.</span>
       </div>
-      <span class="jarv-status" id="jarvStatus">SYSTEM STANDBY</span>
+      <div class="jarv-topbar-right">
+        <span class="jarv-user" id="userName"></span>
+        <button class="jarv-btn-login" id="loginBtn" onclick="signInWithGoogle()">Login com Google</button>
+        <button class="jarv-btn-logout" id="logoutBtn" onclick="signOutUser()" style="display:none;">Sair</button>
+      </div>
     </div>
 
     <div class="jarv-main">
@@ -119,6 +123,6 @@
     </div>
   </div>
 
-  <script src="js/app.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
