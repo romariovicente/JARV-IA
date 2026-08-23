@@ -1,19 +1,69 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RF6xS890o",
+  authDomain: "jarv-ia.firebaseapp.com",
+  projectId: "jarv-ia",
+  storageBucket: "jarv-ia.firebasestorage.app",
+  messagingSenderId: "275886641350",
+  appId: "1:275886641350:web:69bd0e534fb71a3a1e47c7"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
 let initialized = false;
 const msgArea = document.getElementById('msgArea');
 const chatInput = document.getElementById('chatInput');
 const typingIndicator = document.getElementById('typingIndicator');
 const statusEl = document.getElementById('jarvStatus');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const userName = document.getElementById('userName');
 
-function initializeJARV() {
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    userName.textContent = user.displayName || user.email;
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
+  } else {
+    userName.textContent = '';
+    loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+  }
+});
+
+window.signInWithGoogle = function() {
+  signInWithPopup(auth, provider)
+    .then((result) => {
+      console.log("Login OK:", result.user.displayName);
+    })
+    .catch((error) => {
+      console.error("Erro login:", error);
+      alert("Erro no login: " + error.message);
+    });
+};
+
+window.signOutUser = function() {
+  signOut(auth).then(() => {
+    console.log("Logout OK");
+  }).catch((error) => {
+    console.error("Erro logout:", error);
+  });
+};
+
+window.initializeJARV = function() {
   initialized = true;
   document.getElementById('heroView').style.display = 'none';
   document.getElementById('chatView').classList.add('active');
   statusEl.textContent = 'SYSTEM ONLINE';
   statusEl.style.color = '#b7ffb7';
   addBotMsg('[JARV] Sistema inicializado com sucesso. Arquitetura ativa: Frontend → Backend → Model Router. Digite um comando ou selecione uma aba no menu lateral.');
-}
+};
 
-function resetSystem() {
+window.resetSystem = function() {
   initialized = false;
   document.getElementById('heroView').style.display = 'flex';
   document.getElementById('chatView').classList.remove('active');
@@ -23,9 +73,9 @@ function resetSystem() {
   msgArea.innerHTML = '';
   chatInput.value = '';
   document.querySelectorAll('.jarv-nav-item').forEach(el => el.classList.remove('active'));
-}
+};
 
-function switchView(view) {
+window.switchView = function(view) {
   if (!initialized && view !== 'chat') {
     alert('Inicialize o JARV primeiro clicando em INITIALIZE JARV.');
     return;
@@ -44,7 +94,7 @@ function switchView(view) {
   } else {
     document.getElementById(view + 'View').classList.add('active');
   }
-}
+};
 
 function addBotMsg(text) {
   const div = document.createElement('div');
@@ -80,7 +130,7 @@ const responses = {
   'default': '[JARV] Comando recebido. Processando via JARV CORE → Model Router → Agente GENERAL. Resposta sintetizada. (Este é um demo do frontend; em produção, o backend processaria a requisição.)'
 };
 
-function sendMsg() {
+window.sendMsg = function() {
   const text = chatInput.value.trim();
   if (!text) return;
   addUserMsg(text);
@@ -93,4 +143,4 @@ function sendMsg() {
     const key = Object.keys(responses).find(k => text.toLowerCase().includes(k));
     addBotMsg(responses[key] || responses['default']);
   }, 800 + Math.random() * 600);
-}
+};
