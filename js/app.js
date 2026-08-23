@@ -1,6 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getAuth, signInWithRedirect, GoogleAuthProvider, signOut, onAuthStateChanged, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-
+// Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RF6xS890o",
   authDomain: "jarv-ia.firebaseapp.com",
@@ -10,9 +8,10 @@ const firebaseConfig = {
   appId: "1:275886641350:web:69bd0e534fb71a3a1e47c7"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+// Inicializa Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
 
 let initialized = false;
 const msgArea = document.getElementById('msgArea');
@@ -23,17 +22,8 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
 
-// Verifica se voltou de um login por redirecionamento
-getRedirectResult(auth).then((result) => {
-  if (result && result.user) {
-    console.log("Login OK:", result.user.displayName);
-  }
-}).catch((error) => {
-  console.error("Erro no login:", error);
-});
-
 // Observa estado de autenticação
-onAuthStateChanged(auth, (user) => {
+auth.onAuthStateChanged((user) => {
   if (user) {
     userName.textContent = user.displayName || user.email;
     loginBtn.style.display = 'none';
@@ -46,29 +36,29 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // Login com Google — funciona em computador E mobile
-window.signInWithGoogle = function() {
-  signInWithRedirect(auth, provider);
-};
+function signInWithGoogle() {
+  auth.signInWithRedirect(provider);
+}
 
 // Logout
-window.signOutUser = function() {
-  signOut(auth).then(() => {
+function signOutUser() {
+  auth.signOut().then(() => {
     console.log("Logout OK");
   }).catch((error) => {
     console.error("Erro no logout:", error);
   });
-};
+}
 
-window.initializeJARV = function() {
+function initializeJARV() {
   initialized = true;
   document.getElementById('heroView').style.display = 'none';
   document.getElementById('chatView').classList.add('active');
   statusEl.textContent = 'SYSTEM ONLINE';
   statusEl.style.color = '#b7ffb7';
   addBotMsg('[JARV] Sistema inicializado com sucesso. Arquitetura ativa: Frontend → Backend → Model Router. Digite um comando ou selecione uma aba no menu lateral.');
-};
+}
 
-window.resetSystem = function() {
+function resetSystem() {
   initialized = false;
   document.getElementById('heroView').style.display = 'flex';
   document.getElementById('chatView').classList.remove('active');
@@ -78,9 +68,9 @@ window.resetSystem = function() {
   msgArea.innerHTML = '';
   chatInput.value = '';
   document.querySelectorAll('.jarv-nav-item').forEach(el => el.classList.remove('active'));
-};
+}
 
-window.switchView = function(view) {
+function switchView(view) {
   if (!initialized && view !== 'chat') {
     alert('Inicialize o JARV primeiro clicando em INITIALIZE JARV.');
     return;
@@ -99,7 +89,7 @@ window.switchView = function(view) {
   } else {
     document.getElementById(view + 'View').classList.add('active');
   }
-};
+}
 
 function addBotMsg(text) {
   const div = document.createElement('div');
@@ -135,7 +125,7 @@ const responses = {
   'default': '[JARV] Comando recebido. Processando via JARV CORE → Model Router → Agente GENERAL. Resposta sintetizada. (Este é um demo do frontend; em produção, o backend processaria a requisição.)'
 };
 
-window.sendMsg = function() {
+function sendMsg() {
   const text = chatInput.value.trim();
   if (!text) return;
   addUserMsg(text);
@@ -148,4 +138,4 @@ window.sendMsg = function() {
     const key = Object.keys(responses).find(k => text.toLowerCase().includes(k));
     addBotMsg(responses[key] || responses['default']);
   }, 800 + Math.random() * 600);
-};
+}
