@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getAuth, signInWithRedirect, GoogleAuthProvider, signOut, onAuthStateChanged, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RF6xS890o",
@@ -23,6 +23,16 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
 
+// Verifica se voltou de um login por redirecionamento
+getRedirectResult(auth).then((result) => {
+  if (result && result.user) {
+    console.log("Login OK:", result.user.displayName);
+  }
+}).catch((error) => {
+  console.error("Erro no login:", error);
+});
+
+// Observa estado de autenticação
 onAuthStateChanged(auth, (user) => {
   if (user) {
     userName.textContent = user.displayName || user.email;
@@ -35,22 +45,17 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// Login com Google — funciona em computador E mobile
 window.signInWithGoogle = function() {
-  signInWithPopup(auth, provider)
-    .then((result) => {
-      console.log("Login OK:", result.user.displayName);
-    })
-    .catch((error) => {
-      console.error("Erro login:", error);
-      alert("Erro no login: " + error.message);
-    });
+  signInWithRedirect(auth, provider);
 };
 
+// Logout
 window.signOutUser = function() {
   signOut(auth).then(() => {
     console.log("Logout OK");
   }).catch((error) => {
-    console.error("Erro logout:", error);
+    console.error("Erro no logout:", error);
   });
 };
 
