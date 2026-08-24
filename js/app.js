@@ -122,7 +122,7 @@ function resetSystem() {
 }
 
 // ==========================================
-// MODEL ROUTER MULTIMODELO (GEMINI, OPENAI, CLAUDE, DEEPSEEK)
+// MODEL ROUTER MULTIMODELO (GEMINI ATIVO)
 // ==========================================
 
 async function sendMsg() {
@@ -157,40 +157,26 @@ async function sendMsg() {
 // Função central de roteamento entre os diferentes provedores de IA
 async function consultarModelRouter(promptUsuario) {
   // CONFIGURAÇÃO DAS CHAVES DAS INTELIGÊNCIAS DO PROJETO
-  // Substitua as strings abaixo pelas suas respectivas chaves de API quando quiser ativá-las:
   const chavesAPI = {
-    gemini: "SUA_API_KEY_GEMINI",     // Ex: "AIzaSy..."
-    openai: "SUA_API_KEY_OPENAI",     // Ex: "sk-..."
-    claude: "SUA_API_KEY_CLAUDE",     // Ex: "sk-ant-..."
-    deepseek: "SUA_API_KEY_DEEPSEEK"  // Ex: "sk-..."
+    gemini: "AQ.Ab8RN6IBsSFwgrpJVpzZ-qL8117wPHQxsN67rHq77-IA-kr-JA", // Chave padrão limpa configurada!
+    openai: "SUA_API_KEY_OPENAI",     
+    claude: "SUA_API_KEY_CLAUDE",     
+    deepseek: "SUA_API_KEY_DEEPSEEK"  
   };
 
-  // Aqui definimos qual modelo principal processará a requisição (padrão: Gemini)
-  // Você pode alternar o provedor ativo alterando esta variável:
+  // Provedor ativo definido como Gemini
   const provedorAtivo = "gemini"; 
 
   if (provedorAtivo === "gemini") {
-    if (chavesAPI.gemini === "SUA_API_KEY_GEMINI" || !chavesAPI.gemini) {
-      return `[Model Router - Gemini Ativo]: Comando recebido: "${promptUsuario}". Para ativar respostas em tempo real via Gemini, insira sua chave na variável 'gemini' do Model Router.`;
-    }
     return await chamarGemini(promptUsuario, chavesAPI.gemini);
   } 
   else if (provedorAtivo === "openai") {
-    if (chavesAPI.openai === "SUA_API_KEY_OPENAI" || !chavesAPI.openai) {
-      return `[Model Router - OpenAI Ativo]: Chave da OpenAI não configurada para o comando: "${promptUsuario}".`;
-    }
     return await chamarOpenAI(promptUsuario, chavesAPI.openai);
   }
   else if (provedorAtivo === "claude") {
-    if (chavesAPI.claude === "SUA_API_KEY_CLAUDE" || !chavesAPI.claude) {
-      return `[Model Router - Claude Ativo]: Chave do Claude não configurada para o comando: "${promptUsuario}".`;
-    }
     return await chamarClaude(promptUsuario, chavesAPI.claude);
   }
   else if (provedorAtivo === "deepseek") {
-    if (chavesAPI.deepseek === "SUA_API_KEY_DEEPSEEK" || !chavesAPI.deepseek) {
-      return `[Model Router - DeepSeek Ativo]: Chave do DeepSeek não configurada para o comando: "${promptUsuario}".`;
-    }
     return await chamarDeepSeek(promptUsuario, chavesAPI.deepseek);
   }
 
