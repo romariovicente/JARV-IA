@@ -30,16 +30,16 @@ const userName = document.getElementById('userName');
 auth.onAuthStateChanged((user) => {
   if (user) {
     userName.textContent = user.displayName || user.email;
-    loginBtn.style.display = 'none';
-    logoutBtn.style.display = 'inline-block';
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
     
     // Carrega o histórico de mensagens do usuário logado
     loadUserMessages(user.uid);
   } else {
     userName.textContent = '';
-    loginBtn.style.display = 'inline-block';
-    logoutBtn.style.display = 'none';
-    msgArea.innerHTML = ''; // Limpa o chat ao deslogar
+    if (loginBtn) loginBtn.style.display = 'inline-block';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (msgArea) msgArea.innerHTML = ''; // Limpa o chat ao deslogar
   }
 });
 
@@ -188,10 +188,8 @@ async function consultarModelRouter(promptUsuario) {
 
 // Conexão com o Google Gemini usando o SDK Oficial (@google/genai)
 async function chamarGemini(prompt, apiKey) {
-  // Inicializa o cliente do SDK oficial do Gemini
   const ai = new GoogleGenAI({ apiKey: apiKey });
 
-  // Utiliza o modelo gemini-1.5-flash recomendável para chat rápido
   const response = await ai.models.generateContent({
     model: 'gemini-1.5-flash',
     contents: prompt,
@@ -308,3 +306,13 @@ function appendMessageToUI(sender, text) {
   msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 }
+
+// ==========================================
+// EXPORTAÇÃO GLOBAL PARA OS EVENTOS ONCLICK DO HTML
+// ==========================================
+window.signInWithGoogle = signInWithGoogle;
+window.signOutUser = signOutUser;
+window.initializeJARV = initializeJARV;
+window.switchView = switchView;
+window.resetSystem = resetSystem;
+window.sendMsg = sendMsg;
