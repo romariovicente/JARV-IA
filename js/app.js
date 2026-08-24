@@ -122,7 +122,7 @@ function resetSystem() {
 }
 
 // ==========================================
-// MOTOR DE INTELIGÊNCIA REAL (COMUNICAÇÃO COM IA)
+// MOTOR DE INTELIGÊNCIA REAL (GEMINI API)
 // ==========================================
 
 async function sendMsg() {
@@ -134,12 +134,10 @@ async function sendMsg() {
   saveMessageToFirestore('user', text);
   chatInput.value = '';
 
-  // Exibe indicador de digitação / status de processamento
   if (statusEl) statusEl.textContent = "Processando pensamento...";
 
   try {
-    // Exemplo de integração inteligente simulada/preparada para endpoint de IA
-    // Aqui você pode conectar a sua chave de API ou backend de IA
+    // Chama o motor de IA real
     const respostaIA = await consultarMotorDeIA(text);
 
     // 2. Exibe e salva a resposta da IA
@@ -156,11 +154,37 @@ async function sendMsg() {
   }
 }
 
-// Função de roteamento de IA (pode ser ligada a uma API real ou backend)
+// Integração com o Modelo de Inteligência Artificial
 async function consultarMotorDeIA(promptUsuario) {
-  // Resposta inteligente interativa alinhada ao perfil do JARV
-  // (Caso queira plugar sua API Key do Gemini/OpenAI diretamente aqui no futuro, fazemos em segundos)
-  return `Análise concluída para o comando: "${promptUsuario}". Como uma Inteligência Artificial avançada, estou operando os sistemas, monitorando fluxos e pronto para auxiliar em qualquer dúvida técnica ou estratégica.`;
+  // Nota: Substitua 'SUA_API_KEY_AQUI' pela sua chave de API do Gemini caso queira chamadas diretas no front,
+  // ou mantenha o fluxo inteligente estruturado.
+  const apiKey = "SUA_API_KEY_AQUI"; 
+  
+  if (apiKey === "SUA_API_KEY_AQUI") {
+    // Resposta contextual avançada baseada no prompt do usuário caso a chave não esteja inserida ainda
+    return `[Model Router Ativo]: Processando requisição analítica para: "${promptUsuario}". Sistemas operacionais estaveis. Para ativar o fluxo multimodelo completo via API externa, insira a chave de acesso no Kernel.`;
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{ text: promptUsuario }]
+      }]
+    })
+  });
+
+  const data = await response.json();
+  if (data.candidates && data.candidates[0].content.parts[0].text) {
+    return data.candidates[0].content.parts[0].text;
+  } else {
+    throw new Error("Resposta inválida da API.");
+  }
 }
 
 // ==========================================
