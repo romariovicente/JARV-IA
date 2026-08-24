@@ -147,7 +147,8 @@ async function sendMsg() {
     if (statusEl) statusEl.textContent = "Online / Pronto";
   } catch (error) {
     console.error("Erro no Model Router:", error);
-    const erroMsg = "Erro crítico ao processar o comando com o Model Router multimodelo.";
+    // MOSTRA O ERRO EXATO NA TELA DO CHAT
+    const erroMsg = "Erro técnico: " + error.message;
     appendMessageToUI('jarv', erroMsg);
     saveMessageToFirestore('jarv', erroMsg);
     if (statusEl) statusEl.textContent = "Erro de conexão";
@@ -158,7 +159,7 @@ async function sendMsg() {
 async function consultarModelRouter(promptUsuario) {
   // CONFIGURAÇÃO DAS CHAVES DAS INTELIGÊNCIAS DO PROJETO
   const chavesAPI = {
-    gemini: "AQ.Ab8RN6KELCr_dZGiLAfDvwxHxEvr9T50nyrDSjhwzIHMdDja1g", // Chave nova integrada!
+    gemini: "AQ.Ab8RN6KELCr_dZGiLAfDvwxHxEvr9T50nyrDSjhwzIHMdDja1g", 
     openai: "SUA_API_KEY_OPENAI",     
     claude: "SUA_API_KEY_CLAUDE",     
     deepseek: "SUA_API_KEY_DEEPSEEK"  
