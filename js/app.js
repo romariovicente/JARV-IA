@@ -25,6 +25,14 @@ const statusEl = document.getElementById('jarvStatus');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
+const initBtn = document.getElementById('initBtn');
+
+// Configuração segura de eventos via DOM (Evita problemas de escopo de módulo)
+document.addEventListener("DOMContentLoaded", () => {
+  if (loginBtn) loginBtn.addEventListener("click", signInWithGoogle);
+  if (logoutBtn) logoutBtn.addEventListener("click", signOutUser);
+  if (initBtn) initBtn.addEventListener("click", initializeJARV);
+});
 
 // Observa estado de autenticação (atualiza a interface automaticamente)
 auth.onAuthStateChanged((user) => {
@@ -50,7 +58,6 @@ function signInWithGoogle() {
       const user = result.user;
       console.log("Login realizado com sucesso:", user.email);
 
-      // Salvar perfil do usuário no Firestore
       db.collection("users").doc(user.uid).set({
         nome: user.displayName,
         email: user.email,
@@ -59,7 +66,6 @@ function signInWithGoogle() {
       .catch((error) => {
         console.error("Erro ao salvar no Firestore:", error);
       });
-
     })
     .catch((error) => {
       console.error("Erro no login com Google:", error.code, error.message);
@@ -87,7 +93,7 @@ function initializeJARV() {
   if (chatView) chatView.style.display = 'flex';
 }
 
-function switchView(viewName) {
+window.switchView = function(viewName) {
   const views = ['heroView', 'chatView', 'dashboardView', 'agentsView', 'memoryView', 'pcgView'];
   views.forEach(id => {
     const el = document.getElementById(id);
@@ -112,7 +118,7 @@ function switchView(viewName) {
   }
 }
 
-function resetSystem() {
+window.resetSystem = function() {
   initialized = false;
   const heroView = document.getElementById('heroView');
   if (heroView) heroView.style.display = 'flex';
@@ -128,11 +134,10 @@ function resetSystem() {
 // MODEL ROUTER MULTIMODELO (GEMINI ATIVO)
 // ==========================================
 
-async function sendMsg() {
+window.sendMsg = async function() {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  // 1. Exibe e salva a mensagem do usuário
   appendMessageToUI('user', text);
   saveMessageToFirestore('user', text);
   chatInput.value = '';
@@ -140,10 +145,7 @@ async function sendMsg() {
   if (statusEl) statusEl.textContent = "Model Router roteando comando...";
 
   try {
-    // Consulta o Model Router com as inteligências integradas
     const respostaIA = await consultarModelRouter(text);
-
-    // 2. Exibe e salva a resposta da IA
     appendMessageToUI('jarv', respostaIA);
     saveMessageToFirestore('jarv', respostaIA);
 
@@ -157,36 +159,22 @@ async function sendMsg() {
   }
 }
 
-// Função central de roteamento entre os diferentes provedores de IA
 async function consultarModelRouter(promptUsuario) {
-  // CONFIGURAÇÃO DAS CHAVES DAS INTELIGÊNCIAS DO PROJETO
   const chavesAPI = {
-    gemini: "AQ.Ab8RN6K3e2-H2JxmKaPSAveB0GVrGNrU9uaHlkTqwRIzE6uyDg", // Sua chave atual
+    gemini: "AQ.Ab8RN6K3e2-H2JxmKaPSAveB0GVrGNrU9uaHlkTqwRIzE6uyDg", 
     openai: "SUA_API_KEY_OPENAI",     
     claude: "SUA_API_KEY_CLAUDE",     
     deepseek: "SUA_API_KEY_DEEPSEEK"  
   };
 
-  // Provedor ativo definido como Gemini
   const provedorAtivo = "gemini"; 
 
   if (provedorAtivo === "gemini") {
     return await chamarGemini(promptUsuario, chavesAPI.gemini);
   } 
-  else if (provedorAtivo === "openai") {
-    return await chamarOpenAI(promptUsuario, chavesAPI.openai);
-  }
-  else if (provedorAtivo === "claude") {
-    return await chamarClaude(promptUsuario, chavesAPI.claude);
-  }
-  else if (provedorAtivo === "deepseek") {
-    return await chamarDeepSeek(promptUsuario, chavesAPI.deepseek);
-  }
-
   return `[Model Router]: Nenhum provedor de IA válido selecionado.`;
 }
 
-// Conexão com o Google Gemini usando o SDK Oficial (@google/genai)
 async function chamarGemini(prompt, apiKey) {
   const ai = new GoogleGenAI({ apiKey: apiKey });
 
@@ -199,68 +187,6 @@ async function chamarGemini(prompt, apiKey) {
     return response.text;
   }
   throw new Error("Erro na resposta da API Gemini.");
-}
-
-// Conexão estruturada com OpenAI (ChatGPT)
-async function chamarOpenAI(prompt, apiKey) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-  const data = await response.json();
-  if (data.choices && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-  throw new Error("Erro na resposta da API OpenAI.");
-}
-
-// Conexão estruturada com Claude (Anthropic)
-async function chamarClaude(prompt, apiKey) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01"
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-  const data = await response.json();
-  if (data.content && data.content[0].text) {
-    return data.content[0].text;
-  }
-  throw new Error("Erro na resposta da API Claude.");
-}
-
-// Conexão estruturada com DeepSeek
-async function chamarDeepSeek(prompt, apiKey) {
-  const response = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-  const data = await response.json();
-  if (data.choices && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-  throw new Error("Erro na resposta da API DeepSeek.");
 }
 
 // ==========================================
@@ -306,13 +232,3 @@ function appendMessageToUI(sender, text) {
   msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 }
-
-// ==========================================
-// EXPORTAÇÃO GLOBAL PARA OS EVENTOS ONCLICK DO HTML
-// ==========================================
-window.signInWithGoogle = signInWithGoogle;
-window.signOutUser = signOutUser;
-window.initializeJARV = initializeJARV;
-window.switchView = switchView;
-window.resetSystem = resetSystem;
-window.sendMsg = sendMsg;
