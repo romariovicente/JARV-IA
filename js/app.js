@@ -54,24 +54,22 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Login com Google
+// Login com Google — CAPTURA ERRO
 function signInWithGoogle() {
-  alert("DEBUG: Botão de login clicado!");
-  try {
-    alert("DEBUG: Tentando redirecionar para Google...");
-    auth.signInWithRedirect(provider);
-    alert("DEBUG: Redirecionamento iniciado!");
-  } catch (e) {
-    alert("ERRO no login: " + e.message);
-  }
+  alert("DEBUG: Botão clicado");
+  auth.signInWithRedirect(provider).then(() => {
+    alert("DEBUG: Redirect iniciado com sucesso");
+  }).catch((error) => {
+    alert("ERRO no redirect: " + error.code + " - " + error.message);
+  });
 }
 
 // Logout
 function signOutUser() {
   auth.signOut().then(() => {
-    alert("DEBUG: Logout OK");
+    console.log("Logout OK");
   }).catch((error) => {
-    alert("ERRO no logout: " + error.message);
+    console.error("Erro no logout:", error);
   });
 }
 
