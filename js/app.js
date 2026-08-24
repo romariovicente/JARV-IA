@@ -77,16 +77,92 @@ function signOutUser() {
 }
 
 // ==========================================
+// CONTROLE DE TELA E NAVEGAÇÃO DO JARV
+// ==========================================
+
+// Inicializa o sistema ao clicar no botão da tela inicial
+function initializeJARV() {
+  initialized = true;
+  const heroView = document.getElementById('heroView');
+  const chatView = document.getElementById('chatView');
+  
+  if (heroView) heroView.style.display = 'none';
+  if (chatView) chatView.style.display = 'flex';
+  
+  console.log("JARV inicializado com sucesso.");
+}
+
+// Alterna entre as abas do menu lateral (Chat, Dashboard, Agentes, etc.)
+function switchView(viewName) {
+  // Esconde todas as abas de conteúdo
+  const views = ['heroView', 'chatView', 'dashboardView', 'agentsView', 'memoryView', 'pcgView'];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // Remove a classe 'active' de todos os itens do menu
+  document.querySelectorAll('.jarv-nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+
+  // Ativa a aba selecionada
+  if (viewName === 'chat') {
+    const chatView = document.getElementById('chatView');
+    if (chatView) chatView.style.display = 'flex';
+  } else {
+    const targetView = document.getElementById(viewName + 'View');
+    if (targetView) targetView.style.display = 'block';
+  }
+
+  // Marca o botão correspondente como ativo no menu
+  const activeNavItem = document.querySelector(`[data-view="${viewName}"]`);
+  if (activeNavItem) {
+    activeNavItem.classList.add('active');
+  }
+}
+
+// Reinicia o sistema voltando para a tela inicial
+function resetSystem() {
+  initialized = false;
+  const heroView = document.getElementById('heroView');
+  if (heroView) heroView.style.display = 'flex';
+  
+  const views = ['chatView', 'dashboardView', 'agentsView', 'memoryView', 'pcgView'];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+// Função simulada de envio de mensagem (você pode expandir depois)
+function sendMsg() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  // Exibe a mensagem do usuário na tela
+  appendMessageToUI('user', text);
+  saveMessageToFirestore('user', text);
+  chatInput.value = '';
+
+  // Simula resposta do JARV após 1 segundo
+  setTimeout(() => {
+    const botReply = "Comando recebido: " + text;
+    appendMessageToUI('jarv', botReply);
+    saveMessageToFirestore('jarv', botReply);
+  }, 1000);
+}
+
+// ==========================================
 // FASE 6: Funções de Histórico de Mensagens
 // ==========================================
 
-// Salva uma mensagem específica no Firestore dentro da subcoleção do usuário
 function saveMessageToFirestore(sender, text) {
   const user = auth.currentUser;
-  if (!user) return; // Se não estiver logado, não grava no banco
+  if (!user) return;
 
   db.collection("users").doc(user.uid).collection("messages").add({
-    sender: sender, // "user" ou "jarv"
+    sender: sender,
     text: text,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   })
@@ -95,14 +171,13 @@ function saveMessageToFirestore(sender, text) {
   });
 }
 
-// Busca e exibe as mensagens salvas anteriormente no banco
 function loadUserMessages(uid) {
   db.collection("users").doc(uid).collection("messages")
     .orderBy("timestamp", "asc")
     .get()
     .then((querySnapshot) => {
       if (!querySnapshot.empty) {
-        msgArea.innerHTML = ''; // Limpa a mensagem padrão se houver histórico salvo
+        msgArea.innerHTML = '';
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           appendMessageToUI(data.sender, data.text);
@@ -114,7 +189,6 @@ function loadUserMessages(uid) {
     });
 }
 
-// Desenha a mensagem na interface gráfica do chat
 function appendMessageToUI(sender, text) {
   const msgDiv = document.createElement('div');
   msgDiv.className = sender === 'user' ? 'jarv-msg jarv-msg-user' : 'jarv-msg jarv-msg-bot';
