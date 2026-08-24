@@ -188,118 +188,26 @@ async function chamarGemini(prompt, apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-  });
-  const data = await response.json();
-  if (data.candidates && data.candidates[0].content.parts[0].text) {
-    return data.candidates[0].content.parts[0].text;
-  }
-  throw new Error("Erro na resposta da API Gemini.");
-}
+    headers: { "Parece que você está construindo o **JARV**, uma interface de chat muito bacana com integração ao Firebase e um sistema de roteamento multimodelo para diferentes IAs (Gemini, OpenAI, Claude e DeepSeek). O fluxo de autenticação e a separação de responsabilidades (UI, banco de dados, roteamento) estão com uma lógica bem clara.
 
-// Conexão estruturada com OpenAI (ChatGPT)
-async function chamarOpenAI(prompt, apiKey) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-  const data = await response.json();
-  if (data.choices && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-  throw new Error("Erro na resposta da API OpenAI.");
-}
+No entanto, como você apenas compartilhou o código, fiz uma análise técnica e identifiquei um ponto de atenção urgente, além de algumas oportunidades de melhoria.
 
-// Conexão estruturada com Claude (Anthropic)
-async function chamarClaude(prompt, apiKey) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01"
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-  const data = await response.json();
-  if (data.content && data.content[0].text) {
-    return data.content[0].text;
-  }
-  throw new Error("Erro na resposta da API Claude.");
-}
+### 🚨 Alerta Crítico de Segurança: Exposição de API Keys
+O problema mais grave no código atual é que as **chaves de API das IAs estão expostas no frontend** (especificamente a chave do Gemini em `chavesAPI.gemini`). 
 
-// Conexão estruturada com DeepSeek
-async function chamarDeepSeek(prompt, apiKey) {
-  const response = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-  const data = await response.json();
-  if (data.choices && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-  throw new Error("Erro na resposta da API DeepSeek.");
-}
+Em aplicações web, qualquer código JavaScript executado no navegador pode ser lido pelos usuários. Isso significa que qualquer pessoa pode abrir as Ferramentas de Desenvolvedor (F12), inspecionar seu arquivo JS, copiar sua `apiKey` e utilizá-la em outros projetos. Isso pode resultar em esgotamento da sua cota de uso gratuita ou gerar cobranças altíssimas no seu cartão de crédito.
 
-// ==========================================
-// HISTÓRICO DE MENSAGENS (FIRESTORE)
-// ==========================================
+*   **A Solução:** Você **nunca** deve fazer requisições diretas para as APIs da OpenAI, Gemini, Claude ou DeepSeek a partir do frontend. O ideal é criar um intermediário seguro (um backend). Como você já está usando o Firebase, a solução mais nativa seria utilizar o **Firebase Cloud Functions**. Seu frontend envia a mensagem para a sua Cloud Function, e a Function (que guarda as chaves de forma segura e invisível para o usuário) faz a requisição para a IA e devolve a resposta.
 
-function saveMessageToFirestore(sender, text) {
-  const user = auth.currentUser;
-  if (!user) return;
+---
 
-  db.collection("users").doc(user.uid).collection("messages").add({
-    sender: sender,
-    text: text,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  })
-  .catch((error) => {
-    console.error("Erro ao salvar mensagem no histórico:", error);
-  });
-}
+### 💡 Recomendações de Melhoria Contínua
 
-function loadUserMessages(uid) {
-  db.collection("users").doc(uid).collection("messages")
-    .orderBy("timestamp", "asc")
-    .get()
-    .then((querySnapshot) => {
-      if (!querySnapshot.empty) {
-        msgArea.innerHTML = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          appendMessageToUI(data.sender, data.text);
-        });
-      }
-    })
-    .catch((error) => {
-      console.error("Erro ao carregar o histórico de mensagens:", error);
-    });
-}
+*   **Atualização do SDK do Firebase:**
+    O seu código utiliza a sintaxe de *namespacing* do Firebase (ex: `firebase.auth()`, `firebase.firestore()`), que pertence à versão 8 (ou ao modo de compatibilidade da v9+). O padrão atual (v9 e posteriores) utiliza uma abordagem modular (ex: `getAuth()`, `getFirestore()`), que permite o *tree-shaking*, deixando o carregamento do seu site consideravelmente mais rápido e leve.
+*   **Tratamento de Markdown na Interface:**
+    No método `appendMessageToUI`, você está inserindo o retorno da IA como texto simples (`innerHTML = ... ${text}`). Modelos como o Gemini e o GPT frequentemente retornam textos formatados em Markdown (com **negritos**, listas e blocos de código). Considere adicionar uma biblioteca como o `marked.js` para converter o retorno da IA em HTML renderizado de forma legível.
+*   **Tratamento de Exceções no Histórico:**
+    Na função `saveMessageToFirestore`, não há indicação visual para o usuário caso o salvamento falhe (por exemplo, se ele perder a conexão de rede logo após enviar). Adicionar um pequeno aviso de erro na UI seria uma boa prática de usabilidade.
 
-function appendMessageToUI(sender, text) {
-  const msgDiv = document.createElement('div');
-  msgDiv.className = sender === 'user' ? 'jarv-msg jarv-msg-user' : 'jarv-msg jarv-msg-bot';
-  msgDiv.innerHTML = `<span class="jarv-code">[${sender.toUpperCase()}]</span> ${text}`;
-  msgArea.appendChild(msgDiv);
-  msgArea.scrollTop = msgArea.scrollHeight;
-}
+Como posso te ajudar com esse projeto hoje? Você gostaria de ajuda para estruturar o Cloud Function de forma a esconder essa chave de API, ou está tentando resolver algum *bug* específico nessa integração multimodelo?
