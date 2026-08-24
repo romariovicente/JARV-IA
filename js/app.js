@@ -1,3 +1,5 @@
+alert("Firebase carregou? " + (typeof firebase !== 'undefined'));
+
 // ===== DEBUG: Verifica se o script carregou =====
 alert("DEBUG: app.js carregou!");
 
