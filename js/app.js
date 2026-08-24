@@ -11,7 +11,7 @@ const firebaseConfig = {
 // Inicializa Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore(); // Inicializa o banco de dados Firestore
+const db = firebase.firestore();
 const provider = new firebase.auth.GoogleAuthProvider();
 
 let initialized = false;
@@ -29,21 +29,25 @@ auth.onAuthStateChanged((user) => {
     userName.textContent = user.displayName || user.email;
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
+    
+    // FASE 6: Carrega o histórico de mensagens do usuário logado
+    loadUserMessages(user.uid);
   } else {
     userName.textContent = '';
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
+    msgArea.innerHTML = ''; // Limpa o chat ao deslogar
   }
 });
 
-// Login com Google via Popup (Perfeito para GitHub Pages, abre a mesma janela de escolha)
+// Login com Google via Popup
 function signInWithGoogle() {
   auth.signInWithPopup(provider)
     .then((result) => {
       const user = result.user;
       console.log("Login realizado com sucesso:", user.email);
 
-      // --- FASE 5: Salvar perfil do usuário no Firestore ---
+      // FASE 5: Salvar perfil do usuário no Firestore
       db.collection("users").doc(user.uid).set({
         nome: user.displayName,
         email: user.email,
@@ -70,4 +74,51 @@ function signOutUser() {
   }).catch((error) => {
     console.error("Erro no logout:", error);
   });
+}
+
+// ==========================================
+// FASE 6: Funções de Histórico de Mensagens
+// ==========================================
+
+// Salva uma mensagem específica no Firestore dentro da subcoleção do usuário
+function saveMessageToFirestore(sender, text) {
+  const user = auth.currentUser;
+  if (!user) return; // Se não estiver logado, não grava no banco
+
+  db.collection("users").doc(user.uid).collection("messages").add({
+    sender: sender, // "user" ou "jarv"
+    text: text,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  })
+  .catch((error) => {
+    console.error("Erro ao salvar mensagem no histórico:", error);
+  });
+}
+
+// Busca e exibe as mensagens salvas anteriormente no banco
+function loadUserMessages(uid) {
+  db.collection("users").doc(uid).collection("messages")
+    .orderBy("timestamp", "asc")
+    .get()
+    .then((querySnapshot) => {
+      if (!querySnapshot.empty) {
+        msgArea.innerHTML = ''; // Limpa a mensagem padrão se houver histórico salvo
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          appendMessageToUI(data.sender, data.text);
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Erro ao carregar o histórico de mensagens:", error);
+    });
+}
+
+// Desenha a mensagem na interface gráfica do chat
+function appendMessageToUI(sender, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = sender === 'user' ? 'jarv-msg jarv-msg-user' : 'jarv-msg jarv-msg-bot';
+  msgDiv.innerHTML = `<span class="jarv-code">[${sender.toUpperCase()}]</span> ${text}`;
+  msgArea.appendChild(msgDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
 }
