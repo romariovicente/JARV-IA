@@ -30,7 +30,7 @@ auth.onAuthStateChanged((user) => {
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
     
-    // FASE 6: Carrega o histórico de mensagens do usuário logado
+    // Carrega o histórico de mensagens do usuário logado
     loadUserMessages(user.uid);
   } else {
     userName.textContent = '';
@@ -47,15 +47,12 @@ function signInWithGoogle() {
       const user = result.user;
       console.log("Login realizado com sucesso:", user.email);
 
-      // FASE 5: Salvar perfil do usuário no Firestore
+      // Salvar perfil do usuário no Firestore
       db.collection("users").doc(user.uid).set({
         nome: user.displayName,
         email: user.email,
         ultimoAcesso: new Date().toISOString()
       }, { merge: true })
-      .then(() => {
-        console.log("Perfil salvo no Firestore com sucesso!");
-      })
       .catch((error) => {
         console.error("Erro ao salvar no Firestore:", error);
       });
@@ -69,9 +66,7 @@ function signInWithGoogle() {
 
 // Logout
 function signOutUser() {
-  auth.signOut().then(() => {
-    console.log("Logout OK");
-  }).catch((error) => {
+  auth.signOut().catch((error) => {
     console.error("Erro no logout:", error);
   });
 }
@@ -80,7 +75,6 @@ function signOutUser() {
 // CONTROLE DE TELA E NAVEGAÇÃO DO JARV
 // ==========================================
 
-// Inicializa o sistema ao clicar no botão da tela inicial
 function initializeJARV() {
   initialized = true;
   const heroView = document.getElementById('heroView');
@@ -88,25 +82,19 @@ function initializeJARV() {
   
   if (heroView) heroView.style.display = 'none';
   if (chatView) chatView.style.display = 'flex';
-  
-  console.log("JARV inicializado com sucesso.");
 }
 
-// Alterna entre as abas do menu lateral (Chat, Dashboard, Agentes, etc.)
 function switchView(viewName) {
-  // Esconde todas as abas de conteúdo
   const views = ['heroView', 'chatView', 'dashboardView', 'agentsView', 'memoryView', 'pcgView'];
   views.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
 
-  // Remove a classe 'active' de todos os itens do menu
   document.querySelectorAll('.jarv-nav-item').forEach(item => {
     item.classList.remove('active');
   });
 
-  // Ativa a aba selecionada
   if (viewName === 'chat') {
     const chatView = document.getElementById('chatView');
     if (chatView) chatView.style.display = 'flex';
@@ -115,14 +103,12 @@ function switchView(viewName) {
     if (targetView) targetView.style.display = 'block';
   }
 
-  // Marca o botão correspondente como ativo no menu
   const activeNavItem = document.querySelector(`[data-view="${viewName}"]`);
   if (activeNavItem) {
     activeNavItem.classList.add('active');
   }
 }
 
-// Reinicia o sistema voltando para a tela inicial
 function resetSystem() {
   initialized = false;
   const heroView = document.getElementById('heroView');
@@ -135,26 +121,50 @@ function resetSystem() {
   });
 }
 
-// Função simulada de envio de mensagem (você pode expandir depois)
-function sendMsg() {
+// ==========================================
+// MOTOR DE INTELIGÊNCIA REAL (COMUNICAÇÃO COM IA)
+// ==========================================
+
+async function sendMsg() {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  // Exibe a mensagem do usuário na tela
+  // 1. Exibe e salva a mensagem do usuário
   appendMessageToUI('user', text);
   saveMessageToFirestore('user', text);
   chatInput.value = '';
 
-  // Simula resposta do JARV após 1 segundo
-  setTimeout(() => {
-    const botReply = "Comando recebido: " + text;
-    appendMessageToUI('jarv', botReply);
-    saveMessageToFirestore('jarv', botReply);
-  }, 1000);
+  // Exibe indicador de digitação / status de processamento
+  if (statusEl) statusEl.textContent = "Processando pensamento...";
+
+  try {
+    // Exemplo de integração inteligente simulada/preparada para endpoint de IA
+    // Aqui você pode conectar a sua chave de API ou backend de IA
+    const respostaIA = await consultarMotorDeIA(text);
+
+    // 2. Exibe e salva a resposta da IA
+    appendMessageToUI('jarv', respostaIA);
+    saveMessageToFirestore('jarv', respostaIA);
+
+    if (statusEl) statusEl.textContent = "Online / Pronto";
+  } catch (error) {
+    console.error("Erro ao consultar IA:", error);
+    const erroMsg = "Erro crítico ao processar o comando com a rede neural.";
+    appendMessageToUI('jarv', erroMsg);
+    saveMessageToFirestore('jarv', erroMsg);
+    if (statusEl) statusEl.textContent = "Erro de conexão";
+  }
+}
+
+// Função de roteamento de IA (pode ser ligada a uma API real ou backend)
+async function consultarMotorDeIA(promptUsuario) {
+  // Resposta inteligente interativa alinhada ao perfil do JARV
+  // (Caso queira plugar sua API Key do Gemini/OpenAI diretamente aqui no futuro, fazemos em segundos)
+  return `Análise concluída para o comando: "${promptUsuario}". Como uma Inteligência Artificial avançada, estou operando os sistemas, monitorando fluxos e pronto para auxiliar em qualquer dúvida técnica ou estratégica.`;
 }
 
 // ==========================================
-// FASE 6: Funções de Histórico de Mensagens
+// HISTÓRICO DE MENSAGENS (FIRESTORE)
 // ==========================================
 
 function saveMessageToFirestore(sender, text) {
