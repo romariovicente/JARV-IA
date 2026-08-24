@@ -1,18 +1,6 @@
-alert("Firebase carregou? " + (typeof firebase !== 'undefined'));
-
-// ===== DEBUG: Verifica se o script carregou =====
-alert("DEBUG: app.js carregou!");
-
-// ===== DEBUG: Verifica se Firebase está disponível =====
-if (typeof firebase === 'undefined') {
-  alert("ERRO: Firebase não carregou! Verifique a conexão.");
-} else {
-  alert("DEBUG: Firebase disponível!");
-}
-
 // Configuração Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RF6xS890o",
+  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
   authDomain: "jarv-ia.firebaseapp.com",
   projectId: "jarv-ia",
   storageBucket: "jarv-ia.firebasestorage.app",
@@ -21,13 +9,7 @@ const firebaseConfig = {
 };
 
 // Inicializa Firebase
-try {
-  firebase.initializeApp(firebaseConfig);
-  alert("DEBUG: Firebase inicializado!");
-} catch (e) {
-  alert("ERRO ao inicializar Firebase: " + e.message);
-}
-
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -46,7 +28,6 @@ auth.onAuthStateChanged((user) => {
     userName.textContent = user.displayName || user.email;
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
-    alert("DEBUG: Usuário logado: " + (user.displayName || user.email));
   } else {
     userName.textContent = '';
     loginBtn.style.display = 'inline-block';
@@ -54,14 +35,9 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Login com Google — CAPTURA ERRO
+// Login com Google
 function signInWithGoogle() {
-  alert("DEBUG: Botão clicado");
-  auth.signInWithRedirect(provider).then(() => {
-    alert("DEBUG: Redirect iniciado com sucesso");
-  }).catch((error) => {
-    alert("ERRO no redirect: " + error.code + " - " + error.message);
-  });
+  auth.signInWithRedirect(provider);
 }
 
 // Logout
