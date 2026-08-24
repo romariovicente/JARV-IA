@@ -122,7 +122,7 @@ function resetSystem() {
 }
 
 // ==========================================
-// MOTOR DE INTELIGÊNCIA REAL (GEMINI API)
+// MODEL ROUTER MULTIMODELO (GEMINI, OPENAI, CLAUDE, DEEPSEEK)
 // ==========================================
 
 async function sendMsg() {
@@ -134,11 +134,11 @@ async function sendMsg() {
   saveMessageToFirestore('user', text);
   chatInput.value = '';
 
-  if (statusEl) statusEl.textContent = "Processando pensamento...";
+  if (statusEl) statusEl.textContent = "Model Router roteando comando...";
 
   try {
-    // Chama o motor de IA real
-    const respostaIA = await consultarMotorDeIA(text);
+    // Consulta o Model Router com as inteligências integradas
+    const respostaIA = await consultarModelRouter(text);
 
     // 2. Exibe e salva a resposta da IA
     appendMessageToUI('jarv', respostaIA);
@@ -146,45 +146,132 @@ async function sendMsg() {
 
     if (statusEl) statusEl.textContent = "Online / Pronto";
   } catch (error) {
-    console.error("Erro ao consultar IA:", error);
-    const erroMsg = "Erro crítico ao processar o comando com a rede neural.";
+    console.error("Erro no Model Router:", error);
+    const erroMsg = "Erro crítico ao processar o comando com o Model Router multimodelo.";
     appendMessageToUI('jarv', erroMsg);
     saveMessageToFirestore('jarv', erroMsg);
     if (statusEl) statusEl.textContent = "Erro de conexão";
   }
 }
 
-// Integração com o Modelo de Inteligência Artificial
-async function consultarMotorDeIA(promptUsuario) {
-  // Nota: Substitua 'SUA_API_KEY_AQUI' pela sua chave de API do Gemini caso queira chamadas diretas no front,
-  // ou mantenha o fluxo inteligente estruturado.
-  const apiKey = "SUA_API_KEY_AQUI"; 
-  
-  if (apiKey === "SUA_API_KEY_AQUI") {
-    // Resposta contextual avançada baseada no prompt do usuário caso a chave não esteja inserida ainda
-    return `[Model Router Ativo]: Processando requisição analítica para: "${promptUsuario}". Sistemas operacionais estaveis. Para ativar o fluxo multimodelo completo via API externa, insira a chave de acesso no Kernel.`;
+// Função central de roteamento entre os diferentes provedores de IA
+async function consultarModelRouter(promptUsuario) {
+  // CONFIGURAÇÃO DAS CHAVES DAS INTELIGÊNCIAS DO PROJETO
+  // Substitua as strings abaixo pelas suas respectivas chaves de API quando quiser ativá-las:
+  const chavesAPI = {
+    gemini: "SUA_API_KEY_GEMINI",     // Ex: "AIzaSy..."
+    openai: "SUA_API_KEY_OPENAI",     // Ex: "sk-..."
+    claude: "SUA_API_KEY_CLAUDE",     // Ex: "sk-ant-..."
+    deepseek: "SUA_API_KEY_DEEPSEEK"  // Ex: "sk-..."
+  };
+
+  // Aqui definimos qual modelo principal processará a requisição (padrão: Gemini)
+  // Você pode alternar o provedor ativo alterando esta variável:
+  const provedorAtivo = "gemini"; 
+
+  if (provedorAtivo === "gemini") {
+    if (chavesAPI.gemini === "SUA_API_KEY_GEMINI" || !chavesAPI.gemini) {
+      return `[Model Router - Gemini Ativo]: Comando recebido: "${promptUsuario}". Para ativar respostas em tempo real via Gemini, insira sua chave na variável 'gemini' do Model Router.`;
+    }
+    return await chamarGemini(promptUsuario, chavesAPI.gemini);
+  } 
+  else if (provedorAtivo === "openai") {
+    if (chavesAPI.openai === "SUA_API_KEY_OPENAI" || !chavesAPI.openai) {
+      return `[Model Router - OpenAI Ativo]: Chave da OpenAI não configurada para o comando: "${promptUsuario}".`;
+    }
+    return await chamarOpenAI(promptUsuario, chavesAPI.openai);
+  }
+  else if (provedorAtivo === "claude") {
+    if (chavesAPI.claude === "SUA_API_KEY_CLAUDE" || !chavesAPI.claude) {
+      return `[Model Router - Claude Ativo]: Chave do Claude não configurada para o comando: "${promptUsuario}".`;
+    }
+    return await chamarClaude(promptUsuario, chavesAPI.claude);
+  }
+  else if (provedorAtivo === "deepseek") {
+    if (chavesAPI.deepseek === "SUA_API_KEY_DEEPSEEK" || !chavesAPI.deepseek) {
+      return `[Model Router - DeepSeek Ativo]: Chave do DeepSeek não configurada para o comando: "${promptUsuario}".`;
+    }
+    return await chamarDeepSeek(promptUsuario, chavesAPI.deepseek);
   }
 
+  return `[Model Router]: Nenhum provedor de IA válido selecionado.`;
+}
+
+// Conexão com o Google Gemini
+async function chamarGemini(prompt, apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: promptUsuario }]
-      }]
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
   });
-
   const data = await response.json();
   if (data.candidates && data.candidates[0].content.parts[0].text) {
     return data.candidates[0].content.parts[0].text;
-  } else {
-    throw new Error("Resposta inválida da API.");
   }
+  throw new Error("Erro na resposta da API Gemini.");
+}
+
+// Conexão estruturada com OpenAI (ChatGPT)
+async function chamarOpenAI(prompt, apiKey) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  const data = await response.json();
+  if (data.choices && data.choices[0].message.content) {
+    return data.choices[0].message.content;
+  }
+  throw new Error("Erro na resposta da API OpenAI.");
+}
+
+// Conexão estruturada com Claude (Anthropic)
+async function chamarClaude(prompt, apiKey) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  const data = await response.json();
+  if (data.content && data.content[0].text) {
+    return data.content[0].text;
+  }
+  throw new Error("Erro na resposta da API Claude.");
+}
+
+// Conexão estruturada com DeepSeek
+async function chamarDeepSeek(prompt, apiKey) {
+  const response = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "deepseek-chat",
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  const data = await response.json();
+  if (data.choices && data.choices[0].message.content) {
+    return data.choices[0].message.content;
+  }
+  throw new Error("Erro na resposta da API DeepSeek.");
 }
 
 // ==========================================
