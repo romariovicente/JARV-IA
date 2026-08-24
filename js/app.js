@@ -13,13 +13,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
 
-// === ADICIONE APENAS ESTAS LINHAS ABAIXO ===
-// Isso captura o usuário quando ele volta da tela de login do Google
-auth.getRedirectResult().catch((error) => {
-  console.error("Erro no redirecionamento:", error);
-});
-// ===========================================
-
 let initialized = false;
 const msgArea = document.getElementById('msgArea');
 const chatInput = document.getElementById('chatInput');
@@ -29,7 +22,7 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
 
-// Observa estado de autenticação
+// Observa estado de autenticação (atualiza a interface automaticamente)
 auth.onAuthStateChanged((user) => {
   if (user) {
     userName.textContent = user.displayName || user.email;
@@ -42,9 +35,16 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Login com Google (Continua abrindo a escolha de conta perfeitamente)
+// Login com Google via Popup (Perfeito para GitHub Pages, abre a mesma janela de escolha)
 function signInWithGoogle() {
-  auth.signInWithRedirect(provider);
+  auth.signInWithPopup(provider)
+    .then((result) => {
+      console.log("Login realizado com sucesso:", result.user.email);
+    })
+    .catch((error) => {
+      console.error("Erro no login com Google:", error.code, error.message);
+      alert("Erro ao entrar: " + error.message);
+    });
 }
 
 // Logout
@@ -55,5 +55,3 @@ function signOutUser() {
     console.error("Erro no logout:", error);
   });
 }
-
-// (O restante das suas funções continua exatamente igual...)
