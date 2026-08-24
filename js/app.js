@@ -1,6 +1,3 @@
-// Importa o SDK oficial do Gemini diretamente via CDN (ESM)
-import { GoogleGenAI } from "https://esm.run/@google/genai";
-
 // Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
@@ -27,27 +24,25 @@ const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
 const initBtn = document.getElementById('initBtn');
 
-// Configuração segura de eventos via DOM (Evita problemas de escopo de módulo)
+// Configuração de eventos via DOM
 document.addEventListener("DOMContentLoaded", () => {
   if (loginBtn) loginBtn.addEventListener("click", signInWithGoogle);
   if (logoutBtn) logoutBtn.addEventListener("click", signOutUser);
   if (initBtn) initBtn.addEventListener("click", initializeJARV);
 });
 
-// Observa estado de autenticação (atualiza a interface automaticamente)
+// Observa estado de autenticação
 auth.onAuthStateChanged((user) => {
   if (user) {
     userName.textContent = user.displayName || user.email;
     if (loginBtn) loginBtn.style.display = 'none';
     if (logoutBtn) logoutBtn.style.display = 'inline-block';
-    
-    // Carrega o histórico de mensagens do usuário logado
     loadUserMessages(user.uid);
   } else {
     userName.textContent = '';
     if (loginBtn) loginBtn.style.display = 'inline-block';
     if (logoutBtn) logoutBtn.style.display = 'none';
-    if (msgArea) msgArea.innerHTML = ''; // Limpa o chat ao deslogar
+    if (msgArea) msgArea.innerHTML = '';
   }
 });
 
@@ -56,8 +51,6 @@ function signInWithGoogle() {
   auth.signInWithPopup(provider)
     .then((result) => {
       const user = result.user;
-      console.log("Login realizado com sucesso:", user.email);
-
       db.collection("users").doc(user.uid).set({
         nome: user.displayName,
         email: user.email,
@@ -131,7 +124,7 @@ window.resetSystem = function() {
 }
 
 // ==========================================
-// MODEL ROUTER MULTIMODELO (GEMINI ATIVO)
+// MODEL ROUTER MULTIMODELO (GEMINI VIA FETCH BEARER)
 // ==========================================
 
 window.sendMsg = async function() {
@@ -160,33 +153,31 @@ window.sendMsg = async function() {
 }
 
 async function consultarModelRouter(promptUsuario) {
-  const chavesAPI = {
-    gemini: "AQ.Ab8RN6K3e2-H2JxmKaPSAveB0GVrGNrU9uaHlkTqwRIzE6uyDg", 
-    openai: "SUA_API_KEY_OPENAI",     
-    claude: "SUA_API_KEY_CLAUDE",     
-    deepseek: "SUA_API_KEY_DEEPSEEK"  
-  };
-
-  const provedorAtivo = "gemini"; 
-
-  if (provedorAtivo === "gemini") {
-    return await chamarGemini(promptUsuario, chavesAPI.gemini);
-  } 
-  return `[Model Router]: Nenhum provedor de IA válido selecionado.`;
+  // Token AQ. configurado com Bearer Auth
+  const tokenAQ = "AQ.Ab8RN6KDJ9rlg54i5vmT0pAvOCzp6ulv8drpZLS2EU5f-TdiHQ";
+  return await chamarGeminiComTokenAQ(promptUsuario, tokenAQ);
 }
 
-async function chamarGemini(prompt, apiKey) {
-  const ai = new GoogleGenAI({ apiKey: apiKey });
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-1.5-flash',
-    contents: prompt,
+// Conexão via Fetch utilizando o token AQ no cabeçalho Authorization
+async function chamarGeminiComTokenAQ(prompt, token) {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
   });
-
-  if (response && response.text) {
-    return response.text;
+  
+  const data = await response.json();
+  
+  if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+    return data.candidates[0].content.parts[0].text;
   }
-  throw new Error("Erro na resposta da API Gemini.");
+  
+  throw new Error(data.error ? data.error.message : JSON.stringify(data));
 }
 
 // ==========================================
