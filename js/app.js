@@ -13,19 +13,47 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
 
-// ---> ADICIONE ESTE BLOCO AQUI PARA CAPTURAR O RETORNO DO GOOGLE <---
-auth.getRedirectResult()
-  .then((result) => {
-    if (result.user) {
-      console.log("Usuário autenticado com sucesso via Redirect:", result.user.email);
-    }
-  })
-  .catch((error) => {
-    console.error("Erro no redirecionamento do auth:", error.code, error.message);
-    alert("Erro ao entrar: " + error.message);
-  });
-// -----------------------------------------------------------------------
+// === ADICIONE APENAS ESTAS LINHAS ABAIXO ===
+// Isso captura o usuário quando ele volta da tela de login do Google
+auth.getRedirectResult().catch((error) => {
+  console.error("Erro no redirecionamento:", error);
+});
+// ===========================================
 
 let initialized = false;
 const msgArea = document.getElementById('msgArea');
-// ... (o restante do seu código continua igualzinho daqui para baixo)
+const chatInput = document.getElementById('chatInput');
+const typingIndicator = document.getElementById('typingIndicator');
+const statusEl = document.getElementById('jarvStatus');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const userName = document.getElementById('userName');
+
+// Observa estado de autenticação
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    userName.textContent = user.displayName || user.email;
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
+  } else {
+    userName.textContent = '';
+    loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+  }
+});
+
+// Login com Google (Continua abrindo a escolha de conta perfeitamente)
+function signInWithGoogle() {
+  auth.signInWithRedirect(provider);
+}
+
+// Logout
+function signOutUser() {
+  auth.signOut().then(() => {
+    console.log("Logout OK");
+  }).catch((error) => {
+    console.error("Erro no logout:", error);
+  });
+}
+
+// (O restante das suas funções continua exatamente igual...)
