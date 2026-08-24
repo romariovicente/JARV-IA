@@ -19,8 +19,8 @@
       </div>
       <div class="jarv-topbar-right">
         <span class="jarv-user" id="userName"></span>
-        <button class="jarv-btn-login" id="loginBtn" onclick="signInWithGoogle()">Login com Google</button>
-        <button class="jarv-btn-logout" id="logoutBtn" onclick="signOutUser()" style="display:none;">Sair</button>
+        <button class="jarv-btn-login" id="loginBtn">Login com Google</button>
+        <button class="jarv-btn-logout" id="logoutBtn" style="display:none;">Sair</button>
       </div>
     </div>
 
@@ -51,16 +51,16 @@
         <div class="jarv-hero" id="heroView">
           <h1>JARV I.A.</h1>
           <p>JUST A RATHER VERY INTELLIGENT SYSTEM</p>
-          <button class="jarv-btn" id="initBtn" onclick="initializeJARV()">INITIALIZE JARV</button>
+          <button class="jarv-btn" id="initBtn">INITIALIZE JARV</button>
         </div>
 
-        <div class="jarv-chat" id="chatView">
+        <div class="jarv-chat" id="chatView" style="display:none;">
           <div class="jarv-messages" id="msgArea">
             <div class="jarv-msg jarv-msg-bot">
               <span class="jarv-code">[JARV]</span> Sistema inicializado. Arquitetura: Frontend → Backend → Model Router. Aguardando comandos.
             </div>
           </div>
-          <div class="jarv-typing" id="typingIndicator">
+          <div class="jarv-typing" id="typingIndicator" style="display:none;">
             <span class="jarv-code">[JARV]</span> processando<span class="jarv-cursor"></span>
           </div>
           <div class="jarv-input-area">
@@ -69,7 +69,7 @@
           </div>
         </div>
 
-        <div class="jarv-panel-info" id="dashboardView">
+        <div class="jarv-panel-info" id="dashboardView" style="display:none;">
           <h2>Dashboard do Sistema</h2>
           <p><strong>Status:</strong> <span style="color:#b7ffb7">Operacional</span></p>
           <p><strong>Frontend:</strong> GitHub Pages (HTML/CSS/JS)</p>
@@ -88,7 +88,7 @@
           <span class="jarv-tag">Node.js</span>
         </div>
 
-        <div class="jarv-panel-info" id="agentsView">
+        <div class="jarv-panel-info" id="agentsView" style="display:none;">
           <h2>Agentes Especializados</h2>
           <p><span class="jarv-code">[GENERAL]</span> Assistência geral e orquestração</p>
           <p><span class="jarv-code">[CODE]</span> Programação, revisão e debugging</p>
@@ -102,7 +102,7 @@
           <p><span class="jarv-code">[SYSTEM]</span> Arquitetura do próprio JARV</p>
         </div>
 
-        <div class="jarv-panel-info" id="memoryView">
+        <div class="jarv-panel-info" id="memoryView" style="display:none;">
           <h2>Módulo de Memória</h2>
           <p>Otimizado e configurável pelo usuário.</p>
           <p><strong>Preferências armazenadas:</strong></p>
@@ -113,7 +113,7 @@
           <p>O usuário pode visualizar, editar e apagar memórias a qualquer momento.</p>
         </div>
 
-        <div class="jarv-panel-info" id="pcgView">
+        <div class="jarv-panel-info" id="pcgView" style="display:none;">
           <h2>Provedor de Conhecimento Global</h2>
           <p>O PCG é a camada documental e de síntese do JARV.</p>
           <p><strong>Fluxo:</strong> Documentos → Extração → Chunking → Metadados → Indexação → Busca → Contexto → Resposta com Fonte</p>
@@ -127,7 +127,7 @@
     </div>
   </div>
 
-  <!-- ATUALIZADO COM type="module" PARA SUPORTAR O SDK DO GEMINI -->
+  <!-- Carrega o app como Módulo ES para suportar o SDK do Gemini -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
