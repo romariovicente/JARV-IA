@@ -1,3 +1,6 @@
+// Importa o SDK oficial do Gemini diretamente via CDN (ESM)
+import { GoogleGenAI } from "https://esm.run/@google/genai";
+
 // Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
@@ -147,7 +150,6 @@ async function sendMsg() {
     if (statusEl) statusEl.textContent = "Online / Pronto";
   } catch (error) {
     console.error("Erro no Model Router:", error);
-    // MOSTRA O ERRO EXATO NA TELA DO CHAT
     const erroMsg = "Erro técnico: " + error.message;
     appendMessageToUI('jarv', erroMsg);
     saveMessageToFirestore('jarv', erroMsg);
@@ -159,7 +161,7 @@ async function sendMsg() {
 async function consultarModelRouter(promptUsuario) {
   // CONFIGURAÇÃO DAS CHAVES DAS INTELIGÊNCIAS DO PROJETO
   const chavesAPI = {
-    gemini: "AQ.Ab8RN6KELCr_dZGiLAfDvwxHxEvr9T50nyrDSjhwzIHMdDja1g", 
+    gemini: "AQ.Ab8RN6K3e2-H2JxmKaPSAveB0GVrGNrU9uaHlkTqwRIzE6uyDg", // Sua chave atual
     openai: "SUA_API_KEY_OPENAI",     
     claude: "SUA_API_KEY_CLAUDE",     
     deepseek: "SUA_API_KEY_DEEPSEEK"  
@@ -184,17 +186,19 @@ async function consultarModelRouter(promptUsuario) {
   return `[Model Router]: Nenhum provedor de IA válido selecionado.`;
 }
 
-// Conexão com o Google Gemini
+// Conexão com o Google Gemini usando o SDK Oficial (@google/genai)
 async function chamarGemini(prompt, apiKey) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  // Inicializa o cliente do SDK oficial do Gemini
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+
+  // Utiliza o modelo gemini-1.5-flash recomendável para chat rápido
+  const response = await ai.models.generateContent({
+    model: 'gemini-1.5-flash',
+    contents: prompt,
   });
-  const data = await response.json();
-  if (data.candidates && data.candidates[0].content.parts[0].text) {
-    return data.candidates[0].content.parts[0].text;
+
+  if (response && response.text) {
+    return response.text;
   }
   throw new Error("Erro na resposta da API Gemini.");
 }
