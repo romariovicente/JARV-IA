@@ -158,7 +158,7 @@ async function sendMsg() {
 async function consultarModelRouter(promptUsuario) {
   // CONFIGURAÇÃO DAS CHAVES DAS INTELIGÊNCIAS DO PROJETO
   const chavesAPI = {
-    gemini: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo", // Usando chave padrão compatível com requisições web
+    gemini: "AQ.Ab8RN6KELCr_dZGiLAfDvwxHxEvr9T50nyrDSjhwzIHMdDja1g", // Chave nova integrada!
     openai: "SUA_API_KEY_OPENAI",     
     claude: "SUA_API_KEY_CLAUDE",     
     deepseek: "SUA_API_KEY_DEEPSEEK"  
