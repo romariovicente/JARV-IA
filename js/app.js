@@ -11,6 +11,7 @@ const firebaseConfig = {
 // Inicializa Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db = firebase.firestore(); // Inicializa o banco de dados Firestore
 const provider = new firebase.auth.GoogleAuthProvider();
 
 let initialized = false;
@@ -39,7 +40,22 @@ auth.onAuthStateChanged((user) => {
 function signInWithGoogle() {
   auth.signInWithPopup(provider)
     .then((result) => {
-      console.log("Login realizado com sucesso:", result.user.email);
+      const user = result.user;
+      console.log("Login realizado com sucesso:", user.email);
+
+      // --- FASE 5: Salvar perfil do usuário no Firestore ---
+      db.collection("users").doc(user.uid).set({
+        nome: user.displayName,
+        email: user.email,
+        ultimoAcesso: new Date().toISOString()
+      }, { merge: true })
+      .then(() => {
+        console.log("Perfil salvo no Firestore com sucesso!");
+      })
+      .catch((error) => {
+        console.error("Erro ao salvar no Firestore:", error);
+      });
+
     })
     .catch((error) => {
       console.error("Erro no login com Google:", error.code, error.message);
