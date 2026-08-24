@@ -1,6 +1,6 @@
 // Configuração Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RF6xS890o",
+  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
   authDomain: "jarv-ia.firebaseapp.com",
   projectId: "jarv-ia",
   storageBucket: "jarv-ia.firebasestorage.app",
