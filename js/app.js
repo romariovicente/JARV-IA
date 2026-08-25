@@ -1,6 +1,6 @@
 // Configuração Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
+  apiKey: "AIzaSyD-akFpRNaUcpioNZMp1IVF2RFGxSB9Oo",
   authDomain: "jarv-ia.firebaseapp.com",
   projectId: "jarv-ia",
   storageBucket: "jarv-ia.firebasestorage.app",
@@ -9,217 +9,181 @@ const firebaseConfig = {
 };
 
 // Inicializa Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 const db = firebase.firestore();
 const provider = new firebase.auth.GoogleAuthProvider();
 
-let initialized = false;
-const msgArea = document.getElementById('msgArea');
-const chatInput = document.getElementById('chatInput');
-const typingIndicator = document.getElementById('typingIndicator');
-const statusEl = document.getElementById('jarvStatus');
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userName = document.getElementById('userName');
-const initBtn = document.getElementById('initBtn');
+// Elementos Globais do DOM
+let msgArea;
+let chatInput;
+let statusEl;
+let loginModal;
+let userNameEl;
+let logoutBtn;
 
-// Configuração de eventos via DOM
 document.addEventListener("DOMContentLoaded", () => {
+  msgArea = document.getElementById('msgArea');
+  chatInput = document.getElementById('chatInput');
+  statusEl = document.getElementById('jarvStatus');
+  loginModal = document.getElementById('loginModal');
+  userNameEl = document.getElementById('userName');
+  logoutBtn = document.getElementById('logoutBtn');
+
+  const loginBtn = document.getElementById('loginBtn');
   if (loginBtn) loginBtn.addEventListener("click", signInWithGoogle);
   if (logoutBtn) logoutBtn.addEventListener("click", signOutUser);
-  if (initBtn) initBtn.addEventListener("click", initializeJARV);
+
+  // Monitora o estado de Autenticação do Firebase
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      const name = user.displayName || user.email;
+      if (userNameEl) userNameEl.textContent = name;
+      if (statusEl) statusEl.textContent = `Authenticated (${name})`;
+      if (loginModal) loginModal.style.display = "none";
+      if (logoutBtn) logoutBtn.style.display = "inline-block";
+    } else {
+      if (userNameEl) userNameEl.textContent = "Visitante";
+      if (statusEl) statusEl.textContent = "Awaiting Authentication";
+      if (loginModal) loginModal.style.display = "flex";
+      if (logoutBtn) logoutBtn.style.display = "none";
+    }
+  });
 });
 
-// Observa estado de autenticação
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    userName.textContent = user.displayName || user.email;
-    if (loginBtn) loginBtn.style.display = 'none';
-    if (logoutBtn) logoutBtn.style.display = 'inline-block';
-    loadUserMessages(user.uid);
-  } else {
-    userName.textContent = '';
-    if (loginBtn) loginBtn.style.display = 'inline-block';
-    if (logoutBtn) logoutBtn.style.display = 'none';
-    if (msgArea) msgArea.innerHTML = '';
-  }
-});
-
-// Login com Google via Popup
+// Login Google via Popup
 function signInWithGoogle() {
-  auth.signInWithPopup(provider)
-    .then((result) => {
-      const user = result.user;
-      db.collection("users").doc(user.uid).set({
-        nome: user.displayName,
-        email: user.email,
-        ultimoAcesso: new Date().toISOString()
-      }, { merge: true })
-      .catch((error) => {
-        console.error("Erro ao salvar no Firestore:", error);
-      });
-    })
-    .catch((error) => {
-      console.error("Erro no login com Google:", error.code, error.message);
-      alert("Erro ao entrar: " + error.message);
-    });
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error("Erro no login:", error);
+    alert("Erro ao realizar login: " + error.message);
+  });
 }
 
-// Logout
+// Logout do Usuário
 function signOutUser() {
-  auth.signOut().catch((error) => {
-    console.error("Erro no logout:", error);
+  auth.signOut().then(() => {
+    console.log("Sessão encerrada com sucesso.");
   });
 }
 
-// ==========================================
-// CONTROLE DE TELA E NAVEGAÇÃO DO JARV
-// ==========================================
+// Envio de Mensagem para a IA (Groq Router)
+async function sendMsg() {
+  if (!chatInput) chatInput = document.getElementById('chatInput');
+  if (!msgArea) msgArea = document.getElementById('msgArea');
 
-function initializeJARV() {
-  initialized = true;
-  const heroView = document.getElementById('heroView');
-  const chatView = document.getElementById('chatView');
-  
-  if (heroView) heroView.style.display = 'none';
-  if (chatView) chatView.style.display = 'flex';
-}
-
-window.switchView = function(viewName) {
-  const views = ['heroView', 'chatView', 'dashboardView', 'agentsView', 'memoryView', 'pcgView'];
-  views.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-
-  document.querySelectorAll('.jarv-nav-item').forEach(item => {
-    item.classList.remove('active');
-  });
-
-  if (viewName === 'chat') {
-    const chatView = document.getElementById('chatView');
-    if (chatView) chatView.style.display = 'flex';
-  } else {
-    const targetView = document.getElementById(viewName + 'View');
-    if (targetView) targetView.style.display = 'block';
-  }
-
-  const activeNavItem = document.querySelector(`[data-view="${viewName}"]`);
-  if (activeNavItem) {
-    activeNavItem.classList.add('active');
-  }
-}
-
-window.resetSystem = function() {
-  initialized = false;
-  const heroView = document.getElementById('heroView');
-  if (heroView) heroView.style.display = 'flex';
-  
-  const views = ['chatView', 'dashboardView', 'agentsView', 'memoryView', 'pcgView'];
-  views.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-
-// ==========================================
-// MODEL ROUTER MULTIMODELO (GROQ AI ENGINE)
-// ==========================================
-
-window.sendMsg = async function() {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  appendMessageToUI('user', text);
-  saveMessageToFirestore('user', text);
+  // Renderiza mensagem do usuário
+  appendMessage(text, 'user');
   chatInput.value = '';
 
-  if (statusEl) statusEl.textContent = "Model Router roteando comando...";
+  // Elemento visual de carregamento
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'jarv-msg jarv-msg-bot';
+  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando...`;
+  msgArea.appendChild(loadingDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
 
   try {
-    const respostaIA = await consultarModelRouter(text);
-    appendMessageToUI('jarv', respostaIA);
-    saveMessageToFirestore('jarv', respostaIA);
-
-    if (statusEl) statusEl.textContent = "Online / Pronto";
-  } catch (error) {
-    console.error("Erro no Model Router:", error);
-    const erroMsg = "Erro técnico: " + error.message;
-    appendMessageToUI('jarv', erroMsg);
-    saveMessageToFirestore('jarv', erroMsg);
-    if (statusEl) statusEl.textContent = "Erro de conexão";
-  }
-}
-
-async function consultarModelRouter(promptUsuario) {
-  const groqApiKey = "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";
-
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${groqApiKey}`
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-oss-20b",
-      messages: [
-        { role: "system", content: "Você é o JARV, um assistente de IA avançado, inteligente e prestativo." },
-        { role: "user", content: promptUsuario }
-      ],
-      temperature: 0.7
-    })
-  });
-
-  const data = await response.json();
-
-  if (data.choices && data.choices[0].message && data.choices[0].message.content) {
-    return data.choices[0].message.content;
-  }
-
-  throw new Error(data.error ? data.error.message : JSON.stringify(data));
-}
-
-// ==========================================
-// HISTÓRICO DE MENSAGENS (FIRESTORE)
-// ==========================================
-
-function saveMessageToFirestore(sender, text) {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  db.collection("users").doc(user.uid).collection("messages").add({
-    sender: sender,
-    text: text,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  })
-  .catch((error) => {
-    console.error("Erro ao salvar mensagem no histórico:", error);
-  });
-}
-
-function loadUserMessages(uid) {
-  db.collection("users").doc(uid).collection("messages")
-    .orderBy("timestamp", "asc")
-    .get()
-    .then((querySnapshot) => {
-      if (!querySnapshot.empty) {
-        msgArea.innerHTML = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          appendMessageToUI(data.sender, data.text);
-        });
-      }
-    })
-    .catch((error) => {
-      console.error("Erro ao carregar o histórico de mensagens:", error);
+    // Chamada à API Groq com a chave configurada
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer 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"
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-20b",
+        messages: [
+          {
+            role: "system",
+            content: "Você é o JARV, uma IA assistente integrada em um terminal Cyberpunk / Kali Linux. Seja preciso, direto e solícito."
+          },
+          {
+            role: "user",
+            content: text
+          }
+        ]
+      })
     });
+
+    const data = await response.json();
+    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
+
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      appendMessage(data.choices[0].message.content, 'bot');
+    } else if (data.error) {
+      appendMessage(`Erro técnico: ${data.error.message}`, 'system');
+    } else {
+      appendMessage("Erro: Resposta inesperada do servidor.", 'system');
+    }
+  } catch (err) {
+    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
+    appendMessage(`Erro de conexão: ${err.message}`, 'system');
+  }
 }
 
-function appendMessageToUI(sender, text) {
+// Renderiza mensagens na interface
+function appendMessage(text, type) {
+  if (!msgArea) msgArea = document.getElementById('msgArea');
   const msgDiv = document.createElement('div');
-  msgDiv.className = sender === 'user' ? 'jarv-msg jarv-msg-user' : 'jarv-msg jarv-msg-bot';
-  msgDiv.innerHTML = `<span class="jarv-code">[${sender.toUpperCase()}]</span> ${text}`;
+
+  if (type === 'user') {
+    msgDiv.className = 'jarv-msg jarv-msg-user';
+    msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;
+  } else if (type === 'bot') {
+    msgDiv.className = 'jarv-msg jarv-msg-bot';
+    msgDiv.innerHTML = `<span class="jarv-code">[JARV]</span> ${formatMarkdown(text)}`;
+  } else {
+    msgDiv.className = 'jarv-msg jarv-msg-system';
+    msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${escapeHTML(text)}`;
+  }
+
   msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
+}
+
+// Navegação do Menu Lateral
+function switchView(viewName) {
+  const items = document.querySelectorAll('.jarv-nav-item');
+  items.forEach(item => item.classList.remove('active'));
+
+  const activeBtn = document.querySelector(`.jarv-nav-item[data-view="${viewName}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  console.log(`Visão alterada para: ${viewName}`);
+}
+
+// Reiniciar Terminal
+function resetSystem() {
+  if (!msgArea) msgArea = document.getElementById('msgArea');
+  msgArea.innerHTML = `
+    <div class="jarv-msg jarv-msg-system">
+      <span class="jarv-code">[JARV]</span> Sistema inicializado. Arquitetura: Frontend → Backend → Model Router. Aguardando comandos.
+    </div>
+  `;
+}
+
+// Função de escape para evitar injeção de scripts (XSS)
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
+// Formatação básica de texto (Negrito e Quebras de linha)
+function formatMarkdown(text) {
+  let formatted = escapeHTML(text);
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\n/g, '<br>');
+  return formatted;
 }
