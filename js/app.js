@@ -23,6 +23,7 @@ let statusEl;
 let loginModal;
 let userNameEl;
 let logoutBtn;
+let hiddenFileInput;
 
 document.addEventListener("DOMContentLoaded", () => {
   msgArea = document.getElementById('msgArea');
@@ -57,9 +58,52 @@ document.addEventListener("DOMContentLoaded", () => {
       if (logoutBtn) logoutBtn.style.display = "none";
     }
   });
+
+  // Configura o input de arquivo oculto para anexos
+  setupFileUpload();
 });
 
-// Login Google via Redirecionamento (Evita bloqueio de pop-up)
+// Configura o botão de anexo para abrir o explorador de arquivos
+function setupFileUpload() {
+  hiddenFileInput = document.createElement('input');
+  hiddenFileInput.type = 'file';
+  hiddenFileInput.style.display = 'none';
+  document.body.appendChild(hiddenFileInput);
+
+  hiddenFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      appendMessage(`Arquivo carregado para o buffer: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'system');
+      chatInput.value = `[Arquivo Anexado: ${file.name}] `;
+      chatInput.focus();
+    }
+  });
+
+  // Seleciona o botão de anexo na barra inferior (segundo ícone - clipe)
+  const actionButtons = document.querySelectorAll('.jarv-footer-actions button, .jarv-input-actions button, .fa-paperclip, svg');
+  // Procura pelo botão que contém o ícone de anexo/papel de parede ou adiciona ao segundo botão da barra inferior
+  const toolbarButtons = document.querySelectorAll('.flex.items-center.gap-3 button, .flex button, footer button');
+  
+  // Forma segura: adiciona listener em todos os botões de ação da barra inferior que não sejam envio
+  const allButtons = document.querySelectorAll('button');
+  allButtons.forEach(btn => {
+    if (btn.querySelector('.fa-paperclip') || btn.innerHTML.includes('paperclip') || btn.title?.toLowerCase().includes('anexo') || btn.classList.contains('fa-paperclip')) {
+      btn.addEventListener('click', () => hiddenFileInput.click());
+    }
+  });
+
+  // Fallback direto pelo container de ícones se existirem na toolbar
+  const iconsBar = document.querySelector('.jarv-input-bar, .flex.gap-4, .flex.items-center.gap-4');
+  if (iconsBar) {
+    const clipBtn = iconsBar.querySelectorAll('button')[1] || iconsBar.querySelectorAll('i')[1];
+    if (clipBtn) {
+      const target = clipBtn.tagName === 'I' ? clipBtn.parentElement : clipBtn;
+      target.addEventListener('click', () => hiddenFileInput.click());
+    }
+  }
+}
+
+// Login Google via Redirecionamento
 function signInWithGoogle() {
   auth.signInWithRedirect(provider).catch((error) => {
     console.error("Erro no login:", error);
@@ -82,14 +126,12 @@ async function sendMsg() {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  // Renderiza mensagem do usuário
   appendMessage(text, 'user');
   chatInput.value = '';
 
-  // Elemento visual de carregamento
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'jarv-msg jarv-msg-bot';
-  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando...`;
+  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando e estruturando dados...`;
   msgArea.appendChild(loadingDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 
@@ -105,7 +147,7 @@ async function sendMsg() {
         messages: [
           {
             role: "system",
-            content: "Você é o JARV, uma IA assistente integrada em um terminal Cyberpunk / Kali Linux. Seja preciso, direto e solícito."
+            content: "Você é o JARV, uma IA assistente avançada integrada em um terminal Cyberpunk / Kali Linux. Quando o usuário pedir slides, estruture o conteúdo em tópicos limpos, slides organizados com títulos, resumo e pontos-chave claros (sem usar tabelas markdown brutas com barras verticais)."
           },
           {
             role: "user",
@@ -131,7 +173,7 @@ async function sendMsg() {
   }
 }
 
-// Renderiza mensagens na interface
+// Renderiza mensagens na interface com suporte a Slides Visuais
 function appendMessage(text, type) {
   if (!msgArea) msgArea = document.getElementById('msgArea');
   const msgDiv = document.createElement('div');
@@ -141,7 +183,12 @@ function appendMessage(text, type) {
     msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;
   } else if (type === 'bot') {
     msgDiv.className = 'jarv-msg jarv-msg-bot';
-    msgDiv.innerHTML = `<span class="jarv-code">[JARV]</span> ${formatMarkdown(text)}`;
+    // Verifica se a resposta contém estrutura de slides
+    if (text.includes('Slide') || text.includes('Tópico') || text.includes('Pontos-Chave')) {
+      msgDiv.innerHTML = `<span class="jarv-code">[JARV - SLIDE DECK]</span><div class="jarv-slide-card" style="background: rgba(0,20,40,0.8); border: 1px solid #00ffcc; padding: 15px; border-radius: 8px; margin-top: 10px;">${formatMarkdown(text)}</div>`;
+    } else {
+      msgDiv.innerHTML = `<span class="jarv-code">[JARV]</span> ${formatMarkdown(text)}`;
+    }
   } else {
     msgDiv.className = 'jarv-msg jarv-msg-system';
     msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${escapeHTML(text)}`;
@@ -185,10 +232,11 @@ function escapeHTML(str) {
   );
 }
 
-// Formatação básica de texto (Negrito e Quebras de linha)
+// Formatação limpa de texto
 function formatMarkdown(text) {
   let formatted = escapeHTML(text);
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #00ffcc;">$1</strong>');
+  formatted = formatted.replace(/\|/g, ' &bull; '); // Substitui as barras chatas por marcadores bonitos
   formatted = formatted.replace(/\n/g, '<br>');
   return formatted;
 }
