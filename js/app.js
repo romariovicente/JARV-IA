@@ -259,7 +259,7 @@ async function sendMsg() {
   msgArea.scrollTop = msgArea.scrollHeight;
 
   try {
-    let messageContent = text || "Analise esta imagem.";
+    let messageContent = text || "Olá!";
     if (attachedImageBase64) {
       messageContent = `[Imagem Anexada] ${text}`;
     }
@@ -268,7 +268,7 @@ async function sendMsg() {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },
       body: JSON.stringify({
-        model: "llama-3.1-70b-versatile", // <-- GARANTIDO E ATIVO NA GROQ
+        model: "llama-3.1-8b-instant", // <-- MODELO ESTÁVEL E 100% ATIVO NA GROQ
         messages: [
           { role: "system", content: "Você é o JARV, IA assistente em terminal Cyberpunk/Kali." },
           { role: "user", content: messageContent }
