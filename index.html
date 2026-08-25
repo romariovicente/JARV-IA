@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JARV.IA - Secure Access Portal</title>
-  <link rel="stylesheet" href="styles.css">
+  <!-- Link relativo apontando para a mesma pasta -->
+  <link rel="stylesheet" href="./styles.css">
   <!-- Ícones FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -68,7 +69,6 @@
 
       <!-- ÁREA DE MENSAGENS -->
       <div id="msgArea" class="msg-container">
-        <!-- Exemplo de log inicial -->
         <div class="jarv-msg jarv-msg-system">
           <span class="jarv-code">[JARV]</span> Sistema inicializado. Arquitetura: Frontend → Backend → Model Router. Aguardando comandos.
         </div>
@@ -100,7 +100,7 @@
     </main>
   </div>
 
-  <!-- MODAL DE LOGIN (Visível quando deslogado) -->
+  <!-- MODAL DE LOGIN (Exibido via script se deslogado) -->
   <div id="loginModal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <i class="fa-solid fa-dragon modal-logo"></i>
@@ -120,6 +120,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
