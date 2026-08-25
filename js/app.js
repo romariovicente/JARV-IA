@@ -36,6 +36,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginBtn) loginBtn.addEventListener("click", signInWithGoogle);
   if (logoutBtn) logoutBtn.addEventListener("click", signOutUser);
 
+  // Trata o retorno do login por redirecionamento
+  auth.getRedirectResult().catch((error) => {
+    console.error("Erro no redirecionamento de login:", error);
+    alert("Erro ao realizar login: " + error.message);
+  });
+
   // Monitora o estado de Autenticação do Firebase
   auth.onAuthStateChanged((user) => {
     if (user) {
@@ -53,9 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Login Google via Popup
+// Login Google via Redirecionamento (Evita bloqueio de pop-up)
 function signInWithGoogle() {
-  auth.signInWithPopup(provider).catch((error) => {
+  auth.signInWithRedirect(provider).catch((error) => {
     console.error("Erro no login:", error);
     alert("Erro ao realizar login: " + error.message);
   });
