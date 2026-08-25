@@ -124,7 +124,7 @@ window.resetSystem = function() {
 }
 
 // ==========================================
-// MODEL ROUTER MULTIMODELO (JARV ENGINE)
+// MODEL ROUTER MULTIMODELO (GROQ AI ENGINE)
 // ==========================================
 
 window.sendMsg = async function() {
@@ -135,10 +135,9 @@ window.sendMsg = async function() {
   saveMessageToFirestore('user', text);
   chatInput.value = '';
 
-  if (statusEl) statusEl.textContent = "Model Router processando comando...";
+  if (statusEl) statusEl.textContent = "Model Router roteando comando...";
 
   try {
-    // Simulação inteligente estruturada para processar as pesquisas instantaneamente
     const respostaIA = await consultarModelRouter(text);
     appendMessageToUI('jarv', respostaIA);
     saveMessageToFirestore('jarv', respostaIA);
@@ -154,23 +153,31 @@ window.sendMsg = async function() {
 }
 
 async function consultarModelRouter(promptUsuario) {
-  // Token AQ. guardado no escopo do sistema
-  const tokenAQ = "AQ.Ab8RN6JCvRnSlc5dlkpKVZbwcK7PuVDteyjH2LmJVviyC7INCw";
-  
-  // Pequeno atraso simulando processamento de IA avançada
-  await new Promise(resolve => setTimeout(resolve, 800));
+  const groqApiKey = "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";
 
-  const promptLower = promptUsuario.toLowerCase();
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${groqApiKey}`
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: "Você é o JARV, um assistente de IA avançado, inteligente e prestativo." },
+        { role: "user", content: promptUsuario }
+      ],
+      temperature: 0.7
+    })
+  });
 
-  if (promptLower.includes("biologia") || promptLower.includes("bioquímica")) {
-    return `[JARV - Módulo Research]: Análise concluída sobre "${promptUsuario}". A biologia molecular estuda a estrutura e a função de macromolecules essenciais como o DNA, RNA e proteínas, fundamentais para a manutenção dos processos metabólicos celulares.`;
-  } else if (promptLower.includes("matemática")) {
-    return `[JARV - Módulo Study]: Processamento matemático para "${promptUsuario}". Os cálculos analíticos demonstram relações proporcionais e modelhagem de funções lineares e exponenciais aplicadas.`;
-  } else if (promptLower.includes("português")) {
-    return `[JARV - Módulo Writer]: Análise linguística para "${promptUsuario}". O texto apresenta coesão, coerência estrutural e obedece às normas gramaticais padrão da língua portuguesa.`;
+  const data = await response.json();
+
+  if (data.choices && data.choices[0].message && data.choices[0].message.content) {
+    return data.choices[0].message.content;
   }
 
-  return `[JARV Model Router]: Comando recebido com sucesso ("${promptUsuario}"). Sistema operacional integrado e operando em modo de alta performance.`;
+  throw new Error(data.error ? data.error.message : JSON.stringify(data));
 }
 
 // ==========================================
