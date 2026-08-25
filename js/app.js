@@ -40,12 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginBtn) loginBtn.addEventListener("click", signInWithGoogle);
   if (logoutBtn) logoutBtn.addEventListener("click", signOutUser);
 
-  // Trata o retorno do login por redirecionamento
-  auth.getRedirectResult().catch((error) => {
-    console.error("Erro no redirecionamento de login:", error);
-    alert("Erro ao realizar login: " + error.message);
-  });
-
   // Monitora o estado de Autenticação do Firebase
   auth.onAuthStateChanged((user) => {
     if (user) {
@@ -174,12 +168,21 @@ function startVoiceRecognition() {
   recognition.start();
 }
 
-// Login Google via Redirecionamento
+// Login Google Robusto contra Bloqueio de Navegadores (Brave/Mobile)
 function signInWithGoogle() {
-  auth.signInWithRedirect(provider).catch((error) => {
-    console.error("Erro no login:", error);
-    alert("Erro ao realizar login: " + error.message);
-  });
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .then(() => {
+      return auth.signInWithPopup(provider);
+    })
+    .catch((error) => {
+      console.warn("Popup bloqueado ou falhou, tentando redirecionamento...", error);
+      // Fallback seguro caso o navegador bloqueie popups
+      return auth.signInWithRedirect(provider);
+    })
+    .catch((err) => {
+      console.error("Erro crítico no login:", err);
+      alert("Erro ao realizar login: " + err.message);
+    });
 }
 
 // Logout do Usuário
@@ -189,7 +192,7 @@ function signOutUser() {
   });
 }
 
-// Envio de Mensagem para a IA (Groq Router com modelo funcional)
+// Envio de Mensagem para a IA (Groq Router)
 async function sendMsg() {
   if (!chatInput) chatInput = document.getElementById('chatInput');
   if (!msgArea) msgArea = document.getElementById('msgArea');
@@ -202,11 +205,9 @@ async function sendMsg() {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`; 
   }
 
-  // Renderiza mensagem do usuário (com imagem se houver)
   appendCustomMessage(userDisplayHtml, 'user');
   chatInput.value = '';
 
-  // Elemento visual de carregamento
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'jarv-msg jarv-msg-bot';
   loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando...`;
@@ -226,7 +227,7 @@ async function sendMsg() {
         "Authorization": "Bearer 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"
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b", // Modelo testado e funcional na sua conta
+        model: "openai/gpt-oss-20b",
         messages: [
           {
             role: "system",
@@ -280,7 +281,7 @@ function appendMessage(text, type) {
   msgArea.scrollTop = msgArea.scrollHeight;
 }
 
-// Renderiza mensagens customizadas (com HTML, ex: visualização de imagem)
+// Renderiza mensagens customizadas
 function appendCustomMessage(htmlContent, type) {
   if (!msgArea) msgArea = document.getElementById('msgArea');
   const msgDiv = document.createElement('div');
@@ -311,7 +312,7 @@ function resetSystem() {
   `;
 }
 
-// Função de escape para evitar injeção de scripts (XSS)
+// Função de escape para evitar XSS
 function escapeHTML(str) {
   return str.replace(/[&<>'"]/g, 
     tag => ({
@@ -324,10 +325,11 @@ function escapeHTML(str) {
   );
 }
 
-// Formatação básica de texto (Negrito e Quebras de linha)
+// Formatação básica de texto
 function formatMarkdown(text) {
   let formatted = escapeHTML(text);
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   formatted = formatted.replace(/\n/g, '<br>');
   return formatted;
 }
+
