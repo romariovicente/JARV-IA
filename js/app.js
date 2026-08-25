@@ -1,6 +1,6 @@
 // Configuração Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyD-akFpRNaUcpioNZMp1IVF2RFGxSB9Oo",
+  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
   authDomain: "jarv-ia.firebaseapp.com",
   projectId: "jarv-ia",
   storageBucket: "jarv-ia.firebasestorage.app",
@@ -88,7 +88,6 @@ async function sendMsg() {
   msgArea.scrollTop = msgArea.scrollHeight;
 
   try {
-    // Chamada à API Groq com a chave configurada
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
