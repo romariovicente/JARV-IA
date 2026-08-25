@@ -27,7 +27,7 @@ body.kali-theme {
   overflow: hidden;
 }
 
-/* HEADER TOP BAR */
+/* BARRA SUPERIOR (HEADER) */
 .jarv-header {
   height: 45px;
   background-color: #05080e;
@@ -92,7 +92,7 @@ body.kali-theme {
   cursor: pointer;
 }
 
-/* CONTAINER PRINCIPAL */
+/* LAYOUT PRINCIPAL */
 .jarv-container {
   display: flex;
   flex: 1;
@@ -149,7 +149,7 @@ body.kali-theme {
   gap: 8px;
 }
 
-/* MAIN CHAT AREA */
+/* PAINEL CENTRAL DE CHAT */
 .jarv-main {
   flex: 1;
   position: relative;
@@ -236,7 +236,7 @@ body.kali-theme {
 
 @keyframes blink { 50% { opacity: 0; } }
 
-/* BARRA DE INPUT E ICONES */
+/* BARRA DE FERRAMENTAS E CAMPO DE TEXTO */
 .input-section {
   display: flex;
   flex-direction: column;
@@ -293,7 +293,7 @@ body.kali-theme {
   cursor: pointer;
 }
 
-/* MODAL LOGIN */
+/* MODAL DE LOGIN */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
