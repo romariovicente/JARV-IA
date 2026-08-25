@@ -259,17 +259,16 @@ async function sendMsg() {
   msgArea.scrollTop = msgArea.scrollHeight;
 
   try {
-    let messageContent = [];
-    if (attachedImageBase64) { 
-      messageContent.push({ type: "image_url", image_url: { url: attachedImageBase64 } }); 
+    let messageContent = text || "Analise esta imagem.";
+    if (attachedImageBase64) {
+      messageContent = `[Imagem Anexada] ${text}`;
     }
-    messageContent.push({ type: "text", text: text || "Analise esta imagem." });
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },
       body: JSON.stringify({
-        model: "llama-3.2-90b-vision-preview", // <-- MODELO ATUALIZADO AQUI
+        model: "llama-3.3-70b-versatile", // <-- MODELO ATIVO E ESTÁVEL
         messages: [
           { role: "system", content: "Você é o JARV, IA assistente em terminal Cyberpunk/Kali." },
           { role: "user", content: messageContent }
