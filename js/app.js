@@ -268,7 +268,7 @@ async function sendMsg() {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },
       body: JSON.stringify({
-        model: "llama-3.1-70b-versatile", // <-- MODELO COMPATÍVEL COM GROQ
+        model: "llama-3.1-70b-versatile", // <-- GARANTIDO E ATIVO NA GROQ
         messages: [
           { role: "system", content: "Você é o JARV, IA assistente em terminal Cyberpunk/Kali." },
           { role: "user", content: messageContent }
