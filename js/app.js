@@ -113,35 +113,25 @@ function setupFileUploads() {
   });
 }
 
-// 3. Botões da Barra Inferior
+// 3. Botões da Barra Inferior (Corrigido para .action-toolbar e títulos)
 function setupToolbarButtons() {
-  const actionButtons = document.querySelectorAll('.jarv-input-actions button, .jarv-footer-actions button');
-  actionButtons.forEach((btn, index) => {
-    const icon = btn.querySelector('i, svg'); 
-    const iconClass = icon ? icon.className : '';
-    if (iconClass.includes('image') || index === 0) { 
-      btn.title = "Enviar Imagem (Visão)"; 
-      btn.onclick = () => hiddenImageInput.click(); 
-    }
-    else if (iconClass.includes('paperclip') || index === 1) { 
-      btn.title = "Anexar Arquivo"; 
-      btn.onclick = () => hiddenFileInput.click(); 
-    }
-    else if (iconClass.includes('microphone') || index === 2) { 
-      btn.title = "Comando por Voz"; 
-      btn.onclick = () => startVoiceRecognition(); 
-    }
-    else if (iconClass.includes('search') || index === 3) { 
-      btn.title = "Pesquisa Web"; 
-      btn.onclick = () => { 
-        appendMessage("[SISTEMA] Pesquisa Web ativada.", 'system'); 
-        chatInput.value = "[Pesquisa Web] "; 
-        chatInput.focus(); 
-      }; 
-    }
-    else if (iconClass.includes('cog') || iconClass.includes('settings') || index === 4) { 
-      btn.title = "Configurações"; 
-      btn.onclick = () => alert("Painel de Configurações em desenvolvimento."); 
+  const actionButtons = document.querySelectorAll('.action-toolbar button, .tool-btn');
+  actionButtons.forEach((btn) => {
+    const title = btn.getAttribute('title') || '';
+    if (title.includes('Câmera') || title.includes('Imagem')) {
+      btn.onclick = () => hiddenImageInput.click();
+    } else if (title.includes('Anexo')) {
+      btn.onclick = () => hiddenFileInput.click();
+    } else if (title.includes('Voz')) {
+      btn.onclick = () => startVoiceRecognition();
+    } else if (title.includes('Buscar')) {
+      btn.onclick = () => {
+        appendMessage("[SISTEMA] Pesquisa Web ativada.", 'system');
+        chatInput.value = "[Pesquisa Web] ";
+        chatInput.focus();
+      };
+    } else if (title.includes('Configurações')) {
+      btn.onclick = () => alert("Painel de Configurações em desenvolvimento.");
     }
   });
 }
