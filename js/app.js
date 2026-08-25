@@ -162,7 +162,7 @@ async function consultarModelRouter(promptUsuario) {
       "Authorization": `Bearer ${groqApiKey}`
     },
     body: JSON.stringify({
-      model: "llama3-8b-8192",
+      model: "openai/gpt-oss-20b",
       messages: [
         { role: "system", content: "Você é o JARV, um assistente de IA avançado, inteligente e prestativo." },
         { role: "user", content: promptUsuario }
