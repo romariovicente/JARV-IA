@@ -269,7 +269,7 @@ async function sendMsg() {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },
       body: JSON.stringify({
-        model: "llama-3.2-11b-vision-preview",
+        model: "llama-3.2-90b-vision-preview", // <-- MODELO ATUALIZADO AQUI
         messages: [
           { role: "system", content: "Você é o JARV, IA assistente em terminal Cyberpunk/Kali." },
           { role: "user", content: messageContent }
