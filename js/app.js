@@ -289,7 +289,7 @@ function appendMessage(text, type) {
 }
 
 function appendCustomMessage(htmlContent, type) {
-  if (-!msgArea) msgArea = document.getElementById('msgArea'); 
+  if (!msgArea) msgArea = document.getElementById('msgArea'); 
   const msgDiv = document.createElement('div');
   msgDiv.className = 'jarv-msg jarv-msg-user'; 
   msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${htmlContent}`;
