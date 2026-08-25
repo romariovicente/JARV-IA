@@ -113,7 +113,7 @@ function setupFileUploads() {
   });
 }
 
-// 3. Botões da Barra Inferior (Corrigido para .action-toolbar e títulos)
+// 3. Botões da Barra Inferior
 function setupToolbarButtons() {
   const actionButtons = document.querySelectorAll('.action-toolbar button, .tool-btn');
   actionButtons.forEach((btn) => {
@@ -175,15 +175,53 @@ function switchView(viewName) {
   }
 }
 
-// Comandos por Voz
+// 5. Comandos por Voz Inteligentes (Aguarda término e envia automático)
 function startVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { alert("Seu navegador não suporta reconhecimento de voz."); return; }
+  if (!SpeechRecognition) { 
+    alert("Seu navegador não suporta reconhecimento de voz."); 
+    return; 
+  }
+
   const recognition = new SpeechRecognition();
   recognition.lang = 'pt-BR';
-  recognition.onstart = () => appendMessage("[MIC] Ouvindo...", 'system');
-  recognition.onresult = (event) => { chatInput.value = event.results[0][0].transcript; chatInput.focus(); };
-  recognition.onerror = (e) => appendMessage(`Erro: ${e.error}`, 'system');
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  let finalTranscript = '';
+
+  recognition.onstart = () => {
+    appendMessage("[MIC] Ouvindo... Pode falar sua pergunta com calma, estou aguardando você terminar.", 'system');
+  };
+
+  recognition.onresult = (event) => {
+    let interimTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interimTranscript += event.results[i][0].transcript;
+      }
+    }
+    chatInput.value = finalTranscript || interimTranscript;
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error !== 'no-speech') {
+      appendMessage(`[MIC] Erro de áudio: ${e.error}`, 'system');
+    }
+  };
+
+  recognition.onend = () => {
+    if (finalTranscript.trim() !== '') {
+      chatInput.value = finalTranscript;
+      appendMessage(`[MIC] Pergunta concluída. Enviando para o JARV...`, 'system');
+      sendMsg();
+    } else {
+      appendMessage(`[MIC] Nenhuma fala detectada. Clique no microfone novamente quando quiser falar.`, 'system');
+    }
+  };
+
   recognition.start();
 }
 
