@@ -162,7 +162,7 @@ async function consultarModelRouter(promptUsuario) {
       "Authorization": `Bearer ${groqApiKey}`
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: "Você é o JARV, um assistente de IA avançado, inteligente e prestativo." },
         { role: "user", content: promptUsuario }
