@@ -24,7 +24,9 @@ let loginModal;
 let userNameEl;
 let logoutBtn;
 let hiddenFileInput;
-let attachedImageBase64 = null; // Armazena a imagem em Base64 para envio multimodal
+let hiddenImageInput;
+let attachedImageBase64 = null;
+let currentView = 'terminal';
 
 document.addEventListener("DOMContentLoaded", () => {
   msgArea = document.getElementById('msgArea');
@@ -57,92 +59,227 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  setupFileUpload();
+  // Inicializa recursos interativos
+  initClock();
+  setupFileUploads();
+  setupToolbarButtons();
+  setupSidebarNavigation();
 });
 
-// Configura o seletor de arquivos para converter imagem em Base64 real
-function setupFileUpload() {
-  hiddenFileInput = document.createElement('input');
-  hiddenFileInput.type = 'file';
-  hiddenFileInput.accept = 'image/*';
-  hiddenFileInput.style.display = 'none';
-  document.body.appendChild(hiddenFileInput);
+// Relógio em tempo real sincronizado com o sistema
+function initClock() {
+  const updateClock = () => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+    // Procura por elementos que exibem hora na barra superior
+    const headerElements = document.querySelectorAll('header span, .flex.items-center span, header div');
+    headerElements.forEach(el => {
+      // Identifica se o elemento parece um relógio (contém formato de hora ou substitui o texto estático)
+      if (el.textContent.match(/\d{2}:\d{2}/) && !el.textContent.includes('Authenticated')) {
+        el.textContent = timeString;
+      }
+    });
+  };
+  setInterval(updateClock, 1000);
+  updateClock();
+}
 
-  hiddenFileInput.addEventListener('change', (e) => {
+// Configura inputs de arquivos (Imagem e Documento)
+function setupFileUploads() {
+  // Input para imagens visuais
+  hiddenImageInput = document.createElement('input');
+  hiddenImageInput.type = 'file';
+  hiddenImageInput.accept = 'image/*';
+  hiddenImageInput.style.display = 'none';
+  document.body.appendChild(hiddenImageInput);
+
+  hiddenImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = function(uploadEvent) {
-        attachedImageBase64 = uploadEvent.target.result; // Base64 da imagem
-        appendMessage(`Imagem carregada no buffer visual: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'system');
-        chatInput.placeholder = `Escreva um comando sobre a imagem anexada...`;
+        attachedImageBase64 = uploadEvent.target.result;
+        appendMessage(`[BUFFER VISUAL] Imagem carregada: ${file.name} (${(file.size / 1024).toFixed(1)} KB). Digite sua pergunta sobre ela.`, 'system');
+        chatInput.placeholder = `Escreva um comando sobre a imagem...`;
         chatInput.focus();
       };
       reader.readAsDataURL(file);
     }
   });
 
-  const allButtons = document.querySelectorAll('button');
-  allButtons.forEach(btn => {
-    if (btn.querySelector('.fa-paperclip') || btn.innerHTML.includes('paperclip') || btn.title?.toLowerCase().includes('anexo') || btn.classList.contains('fa-paperclip')) {
-      btn.addEventListener('click', () => hiddenFileInput.click());
+  // Input para arquivos gerais (Clipe)
+  hiddenFileInput = document.createElement('input');
+  hiddenFileInput.type = 'file';
+  hiddenFileInput.style.display = 'none';
+  document.body.appendChild(hiddenFileInput);
+
+  hiddenFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      appendMessage(`[BUFFER ARQUIVO] Anexo carregado: ${file.name} (${(file.size / 1024).toFixed(1)} KB).`, 'system');
+      chatInput.value = `[Arquivo: ${file.name}] `;
+      chatInput.focus();
     }
   });
+}
 
-  const iconsBar = document.querySelector('.jarv-input-bar, .flex.gap-4, .flex.items-center.gap-4');
-  if (iconsBar) {
-    const clipBtn = iconsBar.querySelectorAll('button')[1] || iconsBar.querySelectorAll('i')[1];
-    if (clipBtn) {
-      const target = clipBtn.tagName === 'I' ? clipBtn.parentElement : clipBtn;
-      target.addEventListener('click', () => hiddenFileInput.click());
+// Atribui ações funcionais para todos os botões da barra inferior
+function setupToolbarButtons() {
+  const buttons = document.querySelectorAll('.jarv-input-bar button, .flex.items-center.gap-4 button, footer button, .flex.gap-3 button');
+  
+  buttons.forEach((btn, index) => {
+    const icon = btn.querySelector('i, svg');
+    const iconClass = icon ? icon.className : btn.innerHTML;
+
+    // Identifica o tipo de botão pelo ícone ou posição
+    if (iconClass.includes('image') || index === 0) {
+      btn.title = "Enviar Imagem (Visão Computacional)";
+      btn.onclick = () => hiddenImageInput.click();
+    } 
+    else if (iconClass.includes('paperclip') || index === 1) {
+      btn.title = "Anexar Arquivo";
+      btn.onclick = () => hiddenFileInput.click();
+    } 
+    else if (iconClass.includes('microphone') || index === 2) {
+      btn.title = "Comando por Voz";
+      btn.onclick = () => startVoiceRecognition();
+    } 
+    else if (iconClass.includes('search') || index === 3) {
+      btn.title = "Pesquisa Web Avançada";
+      btn.onclick = () => {
+        appendMessage("[SISTEMA] Modo de Pesquisa Web ativado. O JARV cruzará dados em tempo real.", 'system');
+        chatInput.value = "[Pesquisa Web] ";
+        chatInput.focus();
+      };
+    } 
+    else if (iconClass.includes('cog') || iconClass.includes('settings') || index === 4) {
+      btn.title = "Configurações do Sistema";
+      btn.onclick = () => openSettingsModal();
     }
+  });
+}
+
+// Reconhecimento de Voz (Microfone)
+function startVoiceRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Seu navegador não suporta reconhecimento de voz.");
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'pt-BR';
+  recognition.onstart = () => appendMessage("[MIC] Ouvindo comando de voz...", 'system');
+  recognition.onresult = (event) => {
+    chatInput.value = event.results[0][0].transcript;
+    chatInput.focus();
+  };
+  recognition.onerror = (e) => appendMessage(`[MIC] Erro: ${e.error}`, 'system');
+  recognition.start();
+}
+
+// Modal de Configurações
+function openSettingsModal() {
+  let modal = document.getElementById('settingsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'settingsModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index:9999;';
+    modal.innerHTML = `
+      <div style="background:#0a192f; border:1px solid #00ffcc; padding:25px; border-radius:10px; width:400px; color:#fff; font-family:monospace;">
+        <h3 style="color:#00ffcc; margin-top:0;">[JARV - CONFIGURAÇÕES]</h3>
+        <p><strong>Modelo Ativo:</strong> llama-3.2-11b-vision-preview</p>
+        <p><strong>Banco de Dados:</strong> Firebase Firestore (Ativo)</p>
+        <p><strong>Autenticação:</strong> Google OAuth</p>
+        <div style="margin-top:20px; text-align:right;">
+          <button id="closeSettings" style="background:#00ffcc; color:#000; border:none; padding:8px 15px; font-weight:bold; cursor:pointer; border-radius:4px;">Fechar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('closeSettings').onclick = () => modal.style.display = 'none';
+  } else {
+    modal.style.display = 'flex';
   }
 }
 
-function signInWithGoogle() {
-  auth.signInWithRedirect(provider).catch((error) => console.error(error));
+// Navegação do Menu Lateral Funcional
+function setupSidebarNavigation() {
+  const navItems = document.querySelectorAll('.jarv-nav-item, aside nav div, aside ul li');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      navItems.forEach(ni => ni.classList.remove('active'));
+      item.classList.add('active');
+
+      const text = item.textContent.trim().toLowerCase();
+      if (text.includes('dashboard')) {
+        switchView('Dashboard', '<h2 style="color:#00ffcc;">[DASHBOARD]</h2><p>Métricas de sistema, consumo de API Groq, status do Firebase e requisições ativas.</p>');
+      } else if (text.includes('agentes')) {
+        switchView('Agentes', '<h2 style="color:#00ffcc;">[AGENTES NEURAIS]</h2><p>Agentes disponíveis: Model Router (Groq), Vision Analyzer, Slide Generator e Customer Support (Stone/TON).</p>');
+      } else if (text.includes('memória')) {
+        switchView('Memória', '<h2 style="color:#00ffcc;">[MEMÓRIA DE LONGO PRAZO]</h2><p>Histórico de conversas salvas no Firestore e buffers de arquivos temporários.</p>');
+      } else if (text.includes('pcg')) {
+        switchView('PCG', '<h2 style="color:#00ffcc;">[PCG - PROTOCOLO DE CONTROLE]</h2><p>Ferramentas de automação, scripts de suporte e logs de auditoria.</p>');
+      } else {
+        // Retorna ao chat padrão
+        const mainContainer = document.querySelector('.jarv-main-content, main');
+        if (mainContainer && document.getElementById('msgArea')) {
+          document.getElementById('msgArea').style.display = 'block';
+        }
+      }
+    });
+  });
 }
 
-function signOutUser() {
-  auth.signOut();
+function switchView(title, htmlContent) {
+  if (!msgArea) msgArea = document.getElementById('msgArea');
+  msgArea.style.display = 'none'; // Oculta o chat momentaneamente
+
+  let viewContainer = document.getElementById('dynamicViewContainer');
+  if (!viewContainer) {
+    viewContainer = document.createElement('div');
+    viewContainer.id = 'dynamicViewContainer';
+    viewContainer.style.cssText = 'padding: 25px; color: #fff; font-family: monospace;';
+    msgArea.parentNode.insertBefore(viewContainer, msgArea);
+  }
+  viewContainer.style.display = 'block';
+  viewContainer.innerHTML = htmlContent;
 }
 
-// Envio de Mensagem Multimodal para a IA (Groq Vision)
+// Função de envio de mensagem atualizada com suporte a visão e chat
 async function sendMsg() {
   if (!chatInput) chatInput = document.getElementById('chatInput');
   if (!msgArea) msgArea = document.getElementById('msgArea');
 
+  // Garante que se estiver em outra aba, volte para o chat
+  const viewContainer = document.getElementById('dynamicViewContainer');
+  if (viewContainer) viewContainer.style.display = 'none';
+  if (msgArea) msgArea.style.display = 'block';
+
   const text = chatInput.value.trim();
   if (!text && !attachedImageBase64) return;
 
-  // Exibe a mensagem do usuário junto com miniatura se houver imagem
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`;
   }
   appendCustomMessage(userDisplayHtml, 'user');
-
   chatInput.value = '';
 
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'jarv-msg jarv-msg-bot';
-  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Analisando dados visuais e processando redes neurais...`;
+  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando em redes neurais...`;
   msgArea.appendChild(loadingDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 
   try {
-    // Monta o payload da mensagem (suporte a texto + imagem se anexada)
     let messageContent = [];
-    
     if (attachedImageBase64) {
       messageContent.push({
         type: "image_url",
-        image_url: {
-          url: attachedImageBase64
-        }
+        image_url: { url: attachedImageBase64 }
       });
     }
-    
     messageContent.push({
       type: "text",
       text: text || "Analise esta imagem em detalhes."
@@ -155,11 +292,11 @@ async function sendMsg() {
         "Authorization": "Bearer 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"
       },
       body: JSON.stringify({
-        model: "llama-3.2-11b-vision-preview", // Modelo Groq com suporte a visão computacional
+        model: "llama-3.2-11b-vision-preview",
         messages: [
           {
             role: "system",
-            content: "Você é o JARV, uma IA assistente avançada integrada em um terminal Cyberpunk / Kali Linux. Analise imagens enviadas com precisão (como capas de livros, códigos, diagramas) e forneça resumos completos, autores, temas e curiosidades. Quando o usuário pedir slides, estruture em tópicos limpos."
+            content: "Você é o JARV, IA assistente avançada em terminal Cyberpunk / Kali Linux. Responda com precisão, analise imagens enviadas e estruture slides em cartões limpos quando solicitado."
           },
           {
             role: "user",
@@ -173,7 +310,6 @@ async function sendMsg() {
     const data = await response.json();
     if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
 
-    // Limpa o buffer da imagem após o envio bem-sucedido
     attachedImageBase64 = null;
     chatInput.placeholder = "Digite um comando...";
 
@@ -191,7 +327,6 @@ async function sendMsg() {
   }
 }
 
-// Renderiza mensagens normais
 function appendMessage(text, type) {
   if (!msgArea) msgArea = document.getElementById('msgArea');
   const msgDiv = document.createElement('div');
@@ -215,7 +350,6 @@ function appendMessage(text, type) {
   msgArea.scrollTop = msgArea.scrollHeight;
 }
 
-// Renderiza mensagens customizadas (com HTML embutido, ex: imagem no chat)
 function appendCustomMessage(htmlContent, type) {
   if (!msgArea) msgArea = document.getElementById('msgArea');
   const msgDiv = document.createElement('div');
@@ -225,18 +359,11 @@ function appendCustomMessage(htmlContent, type) {
   msgArea.scrollTop = msgArea.scrollHeight;
 }
 
-function switchView(viewName) {
-  const items = document.querySelectorAll('.jarv-nav-item');
-  items.forEach(item => item.classList.remove('active'));
-  const activeBtn = document.querySelector(`.jarv-nav-item[data-view="${viewName}"]`);
-  if (activeBtn) activeBtn.classList.add('active');
-}
-
 function resetSystem() {
   if (!msgArea) msgArea = document.getElementById('msgArea');
   msgArea.innerHTML = `
     <div class="jarv-msg jarv-msg-system">
-      <span class="jarv-code">[JARV]</span> Sistema inicializado. Arquitetura: Frontend → Backend → Model Router. Aguardando comandos.
+      <span class="jarv-code">[JARV]</span> Sistema reiniciado. Arquitetura: Frontend → Backend → Model Router. Aguardando comandos.
     </div>
   `;
 }
