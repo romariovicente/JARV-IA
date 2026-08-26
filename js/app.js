@@ -21,9 +21,9 @@ if (typeof firebase !== 'undefined') {
   console.error("[ERRO CRÍTICO] Firebase não foi carregado. Verifique o HTML.");
 }
 
-// Configurações de Estado da Aplicação
+// Configurações de Estado da Aplicação (Modelo padrão alterado para llama3-8b-8192)
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
-let selectedModel = localStorage.getItem('jarv_model') || 'llama-3.3-70b-versatile';
+let selectedModel = localStorage.getItem('jarv_model') || 'llama3-8b-8192';
 let ttsEnabled = localStorage.getItem('jarv_tts') !== 'false';
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v2')) || {};
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   userNameEl = document.getElementById('userName');
   logoutBtn = document.getElementById('logoutBtn');
 
-  // Inicializa Relógio do Sistema em Tempo Real
+  // Relógio do Sistema em Tempo Real
   startRealTimeClock();
 
   // Autenticação Firebase (se disponível)
@@ -117,7 +117,7 @@ function startRealTimeClock() {
   setInterval(update, 1000);
 }
 
-// 2. Gerenciamento de Histórico e Conversas (LocalStorage)
+// 2. Gerenciamento de Histórico e Conversas
 function initChatStore() {
   if (!activeChatId || !chatsStore[activeChatId]) {
     createNewChat(false);
@@ -264,20 +264,35 @@ function toggleTTS(state) {
   }
 }
 
-// 7. Envio de Mensagem para a Groq API
+// 7. Envio de Mensagem para a Groq API com Detecção de Pesquisa
 async function sendMsg() {
   const text = chatInput.value.trim();
   if (!text && !attachedImageBase64) return;
 
-  // Interceptador para a Wikipédia
-  if (text.startsWith('!wiki ')) {
-    const wikiQuery = text.replace('!wiki ', '').trim();
+  const lowerText = text.toLowerCase();
+  const isSearchQuery = text.startsWith('!wiki ') || 
+                        lowerText.startsWith('pesquise sobre') || 
+                        lowerText.startsWith('pesquise para mim sobre') ||
+                        lowerText.startsWith('pesquisa sobre') ||
+                        lowerText.startsWith('busque sobre');
+
+  // Processamento de Pesquisa Automática na Wikipédia
+  if (isSearchQuery) {
+    let wikiQuery = text
+      .replace(/^!wiki\s+/i, '')
+      .replace(/^pesquise\s+para\s+mim\s+sobre\s+/i, '')
+      .replace(/^pesquise\s+sobre\s+/i, '')
+      .replace(/^pesquisa\s+sobre\s+/i, '')
+      .replace(/^busque\s+sobre\s+/i, '')
+      .replace(/por\s+favor.*$/i, '')
+      .trim();
+
     chatInput.value = '';
     appendCustomMessage(escapeHTML(text), 'user', true);
     
     const loadingWiki = document.createElement('div');
     loadingWiki.className = 'jarv-msg jarv-msg-bot';
-    loadingWiki.innerHTML = `<span class="jarv-code">[WIKI]</span> Pesquisando na Wikipédia...`;
+    loadingWiki.innerHTML = `<span class="jarv-code">[WIKI]</span> Pesquisando na Wikipédia sobre "${escapeHTML(wikiQuery)}"...`;
     msgArea.appendChild(loadingWiki);
     msgArea.scrollTop = msgArea.scrollHeight;
 
@@ -312,7 +327,6 @@ async function sendMsg() {
     let messageContent = text || "Olá!";
     if (attachedImageBase64) messageContent = `[Imagem Anexada] ${text}`;
 
-    // Monta o histórico limpo para enviar à API da Groq
     const groqMessages = [
       {
         role: "system",
@@ -414,7 +428,7 @@ function appendCustomMessage(htmlContent, type, save = true) {
   }
 }
 
-// 8. Modais e Navegação Lateral
+// Modais e Navegação Lateral
 function openSettingsModal() {
   document.getElementById('settingsModal').style.display = 'flex';
 }
@@ -458,7 +472,7 @@ function switchView(viewName) {
   }
 }
 
-// 9. Uploads e Voz
+// Uploads e Voz
 function setupFileUploads() {
   hiddenImageInput = document.createElement('input');
   hiddenImageInput.type = 'file'; 
