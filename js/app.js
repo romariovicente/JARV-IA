@@ -19,8 +19,8 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-// FIXAÇÃO PERMANENTE DO MODELO RÁPIDO: LLaMA 3 8B
-const ULTRA_FAST_MODEL = 'llama3-8b-8192';
+// FIXAÇÃO PERMANENTE DO MODELO ATUALIZADO: LLaMA 3.1 8B Instant
+const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 let selectedModel = ULTRA_FAST_MODEL;
 
@@ -33,7 +33,7 @@ let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 const i18n = {
   'pt-BR': {
     placeholder: "Digite um comando (ex: pesquise sobre, crie slides, gere imagem, crie documento)...",
-    system_init: "J.A.R.V.I.S. Operacional em modo Ultra Rápido (LLaMA 3 8B). Recursos ativados: Voz, Pesquisa, Slides, Word, Imagens e Vídeos."
+    system_init: "J.A.R.V.I.S. Operacional em modo Ultra Rápido (LLaMA 3.1 8B). Recursos ativados: Voz, Pesquisa, Slides, Word, Imagens e Vídeos."
   }
 };
 
@@ -55,12 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user) {
         const name = user.displayName || user.email;
         if (userNameEl) userNameEl.textContent = name;
-        if (statusEl) statusEl.textContent = `Autenticado (${name}) - Mod: LLaMA 3 8B`;
+        if (statusEl) statusEl.textContent = `Autenticado (${name}) - Mod: LLaMA 3.1 8B`;
         if (loginModal) loginModal.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "inline-block";
       } else {
         if (userNameEl) userNameEl.textContent = "Operador";
-        if (statusEl) statusEl.textContent = "Modo Convidado - Mod: LLaMA 3 8B";
+        if (statusEl) statusEl.textContent = "Modo Convidado - Mod: LLaMA 3.1 8B";
         if (loginModal) loginModal.style.display = "flex";
         if (logoutBtn) logoutBtn.style.display = "none";
       }
@@ -186,7 +186,7 @@ function downloadAsWord(filename, textContent) {
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const cleanText = text.replace(/[*_#`\[\]]/g, '').substring(0, 300); // Fala o resumo inicial
+  const cleanText = text.replace(/[*_#`\[\]]/g, '').substring(0, 300);
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = 'pt-BR';
   utterance.rate = 1.05;
@@ -238,7 +238,7 @@ async function sendMsg() {
     return;
   }
 
-  // C. Envio Padrão para Groq AI em Modo Ultra Rápido (LLaMA 3 8B)
+  // C. Envio Padrão para Groq AI em Modo Ultra Rápido (LLaMA 3.1 8B Instant)
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`;
