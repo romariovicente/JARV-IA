@@ -16,8 +16,8 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-// MODELO CORRIGIDO PARA UM OFICIAL DA GROQ
-const ULTRA_FAST_MODEL = 'llama3-70b-8192';
+// MODELO ATUALIZADO (O anterior foi desligado pela Groq)
+const ULTRA_FAST_MODEL = 'llama-3.1-70b-versatile';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   startRealTimeClock();
   initAudioAnalyzer();
 
-  // Lógica de Autenticação Restaurada
+  // Lógica de Autenticação
   if (auth) {
     auth.onAuthStateChanged((user) => {
       if (user) {
@@ -55,16 +55,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userNameEl) userNameEl.textContent = name;
         if (statusEl) statusEl.textContent = `Autenticado (${name}) - J.A.R.V.I.S. Ativo`;
         if (loginModal) loginModal.style.display = "none";
-        if (logoutBtn) logoutBtn.style.display = "flex"; // Mostra botão de sair
+        if (logoutBtn) logoutBtn.style.display = "flex";
       } else {
         if (userNameEl) userNameEl.textContent = "Operador";
         if (statusEl) statusEl.textContent = "Modo Operacional - J.A.R.V.I.S. Ativo";
-        if (loginModal) loginModal.style.display = "flex"; // Força exibir o modal
-        if (logoutBtn) logoutBtn.style.display = "none"; // Oculta o botão de sair
+        if (loginModal) loginModal.style.display = "flex";
+        if (logoutBtn) logoutBtn.style.display = "none";
       }
     });
 
-    // Evento de Login (Busca o botão pelo ID ou classe)
     const btnLogin = document.getElementById('loginBtn') || document.querySelector('.login-btn');
     if (btnLogin) {
       btnLogin.addEventListener('click', () => {
@@ -72,12 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Evento de Logout
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
-        auth.signOut().then(() => {
-          window.location.reload(); // Recarrega a página ao sair
-        }).catch(err => console.error("Erro ao deslogar:", err));
+        auth.signOut().then(() => window.location.reload()).catch(err => console.error("Erro ao deslogar:", err));
       });
     }
   }
@@ -85,7 +81,45 @@ document.addEventListener("DOMContentLoaded", () => {
   initChatStore();
   setupFileUploads();
   setupToolbarButtons();
+
+  // FIX: Força os botões de "Nova Conversa" e "Lixeira" a executarem a limpeza
+  document.querySelectorAll('button, a, div').forEach(el => {
+    const txt = (el.textContent || '').toLowerCase();
+    const html = (el.innerHTML || '').toLowerCase();
+    
+    // Se o elemento for o botão de nova conversa ou o ícone de lixeira
+    if (txt.includes('nova conversa') || html.includes('fa-trash') || html.includes('lixeira') || html.includes('trash')) {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resetSystem();
+      });
+    }
+  });
+
+  // Garantia extra para ícones avulsos
+  document.querySelectorAll('.fa-trash, i[class*="trash"], svg').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetSystem();
+    });
+  });
 });
+
+function resetSystem() {
+  chatsStore = {}; // Zera as conversas
+  localStorage.removeItem('jarv_chats_v2'); // Remove do cache
+  localStorage.removeItem('jarv_active_chat'); // Remove ID atual
+  activeChatId = null;
+  
+  if (msgArea) msgArea.innerHTML = ''; // Limpa a tela
+  
+  const historyList = document.getElementById('chatHistoryList');
+  if (historyList) historyList.innerHTML = ''; // Limpa a barra lateral
+  
+  createNewChat(true); // Reinicia zerado
+}
 
 function injectJarvisOrbStyles() {
   if (document.getElementById('jarvisOrbStyle')) return;
@@ -457,12 +491,6 @@ function setupToolbarButtons() {
       if (!isContinuousActive) toggleContinuousListening();
     };
   });
-}
-
-function resetSystem() {
-  chatsStore = {};
-  localStorage.removeItem('jarv_chats_v2');
-  createNewChat(true);
 }
 
 function escapeHTML(str) {
