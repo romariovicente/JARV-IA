@@ -9,12 +9,16 @@ const firebaseConfig = {
 };
 
 // Inicializa Firebase
-if (!firebase.apps.length) {
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
-const auth = firebase.auth();
-const db = firebase.firestore();
-const provider = new firebase.auth.GoogleAuthProvider();
+
+const auth = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth() : null;
+const db = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore() : null;
+const provider = (typeof firebase !== 'undefined' && firebase.auth) ? new firebase.auth.GoogleAuthProvider() : null;
+
+// Armazenamento global de conteúdos baixáveis
+window.downloadCache = {};
 
 // Configurações de Estado da Aplicação
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
@@ -66,32 +70,30 @@ document.addEventListener("DOMContentLoaded", () => {
   userNameEl = document.getElementById('userName');
   logoutBtn = document.getElementById('logoutBtn');
 
-  // Inicializa Relógio do Sistema em Tempo Real
   startRealTimeClock();
 
-  // Autenticação Firebase
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      const name = user.displayName || user.email;
-      if (userNameEl) userNameEl.textContent = name;
-      if (statusEl) statusEl.textContent = `Authenticated (${name})`;
-      if (loginModal) loginModal.style.display = "none";
-      if (logoutBtn) logoutBtn.style.display = "inline-block";
-    } else {
-      if (userNameEl) userNameEl.textContent = "Visitante";
-      if (statusEl) statusEl.textContent = "Awaiting Authentication";
-      if (loginModal) loginModal.style.display = "flex";
-      if (logoutBtn) logoutBtn.style.display = "none";
-    }
-  });
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        const name = user.displayName || user.email;
+        if (userNameEl) userNameEl.textContent = name;
+        if (statusEl) statusEl.textContent = `Authenticated (${name})`;
+        if (loginModal) loginModal.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "inline-block";
+      } else {
+        if (userNameEl) userNameEl.textContent = "Visitante";
+        if (statusEl) statusEl.textContent = "Awaiting Authentication";
+        if (loginModal) loginModal.style.display = "flex";
+        if (logoutBtn) logoutBtn.style.display = "none";
+      }
+    });
+  }
 
-  // Configuração de sessões e histórico
   initChatStore();
   setupFileUploads();
   setupToolbarButtons();
   applyLanguage(currentLang);
   
-  // Atualiza controles do modal
   const langSelect = document.getElementById('langSelect');
   if (langSelect) langSelect.value = currentLang;
   const modelSelect = document.getElementById('modelSelect');
@@ -111,7 +113,7 @@ function startRealTimeClock() {
   setInterval(update, 1000);
 }
 
-// 2. Gerenciamento de Histórico e Conversas (LocalStorage)
+// 2. Gerenciamento de Histórico e Conversas
 function initChatStore() {
   if (!activeChatId || !chatsStore[activeChatId]) {
     createNewChat(false);
@@ -124,7 +126,55 @@ function initChatStore() {
 function createNewChat(shouldRender = true) {
   const id = 'chat_' + Date.now();
   chatsStore[id] = {
-    title: `Conversa ${Object.keys(chatsStore).length + 1}`,     timestamp: Date.now(),     messages: []   };   activeChatId = id;   saveStore();   if (shouldRender) {     renderHistoryList();     loadChatMessages(activeChatId);   } }  function loadChatMessages(id) {   activeChatId = id;   saveStore();   renderHistoryList();   msgArea.innerHTML = '';      const chat = chatsStore[id];   if (!chat \vert{}\vert{} chat.messages.length === 0) {     appendMessage(i18n[currentLang].system_init, 'system', false);     return;   }    chat.messages.forEach(msg => {     if (msg.type === 'user') {       appendCustomMessage(msg.content, 'user', false);     } else {       appendMessage(msg.content, msg.type, false);     }   }); }  function clearCurrentChat() {   if (activeChatId && chatsStore[activeChatId]) {     delete chatsStore[activeChatId];     createNewChat(true);   } }  function renderHistoryList() {   const listEl = document.getElementById('chatHistoryList');   if (!listEl) return;   listEl.innerHTML = '';    Object.keys(chatsStore).reverse().forEach(id => {     const chat = chatsStore[id];     const btn = document.createElement('button');     btn.className = `history-item ${id === activeChatId ? 'active' : ''}`;
+    title: `Conversa ${Object.keys(chatsStore).length + 1}`,
+    timestamp: Date.now(),
+    messages: []
+  };
+  activeChatId = id;
+  saveStore();
+  if (shouldRender) {
+    renderHistoryList();
+    loadChatMessages(activeChatId);
+  }
+}
+
+function loadChatMessages(id) {
+  activeChatId = id;
+  saveStore();
+  renderHistoryList();
+  if (msgArea) msgArea.innerHTML = '';
+  
+  const chat = chatsStore[id];
+  if (!chat || chat.messages.length === 0) {
+    appendMessage(i18n[currentLang].system_init, 'system', false);
+    return;
+  }
+
+  chat.messages.forEach(msg => {
+    if (msg.type === 'user') {
+      appendCustomMessage(msg.content, 'user', false);
+    } else {
+      appendMessage(msg.content, msg.type, false);
+    }
+  });
+}
+
+function clearCurrentChat() {
+  if (activeChatId && chatsStore[activeChatId]) {
+    delete chatsStore[activeChatId];
+    createNewChat(true);
+  }
+}
+
+function renderHistoryList() {
+  const listEl = document.getElementById('chatHistoryList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  Object.keys(chatsStore).reverse().forEach(id => {
+    const chat = chatsStore[id];
+    const btn = document.createElement('button');
+    btn.className = `history-item ${id === activeChatId ? 'active' : ''}`;
     btn.textContent = chat.title;
     btn.onclick = () => loadChatMessages(id);
     listEl.appendChild(btn);
@@ -136,8 +186,9 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// 3. Sistema de Download de Arquivos e Slides
-function downloadAsFile(filename, textContent) {
+// 3. Download de Arquivos
+function downloadAsFile(filename, cacheKey) {
+  const textContent = window.downloadCache[cacheKey] || "";
   const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -149,7 +200,7 @@ function downloadAsFile(filename, textContent) {
   URL.revokeObjectURL(url);
 }
 
-// 4. Voz do JARVIS (Text-to-Speech)
+// 4. Síntese de Voz (TTS)
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
@@ -176,8 +227,9 @@ function toggleTTS(state) {
   }
 }
 
-// 5. Envio de Mensagem para a IA
+// 5. Envio de Mensagem para IA
 async function sendMsg() {
+  if (!chatInput) return;
   const text = chatInput.value.trim();
   if (!text && !attachedImageBase64) return;
 
@@ -188,7 +240,6 @@ async function sendMsg() {
 
   appendCustomMessage(userDisplayHtml, 'user', true);
   
-  // Atualiza título do chat caso seja o primeiro envio
   if (chatsStore[activeChatId] && chatsStore[activeChatId].messages.length <= 1) {
     chatsStore[activeChatId].title = text.substring(0, 22) + '...';
     renderHistoryList();
@@ -246,6 +297,7 @@ async function sendMsg() {
 
 // Renderização de Mensagens
 function appendMessage(text, type, save = true) {
+  if (!msgArea) return;
   const msgDiv = document.createElement('div');
 
   if (type === 'user') {
@@ -255,13 +307,12 @@ function appendMessage(text, type, save = true) {
     msgDiv.className = 'jarv-msg jarv-msg-bot';
     let htmlContent = `<span class="jarv-code">[JARV]</span> ${formatMarkdown(text)}`;
     
-    // Se a mensagem contiver termos de Slide ou código, adiciona o Botão de Download
     if (text.toLowerCase().includes('slide') || text.includes('```')) {
-      const uniqueId = 'slide_' + Date.now();
-      window[uniqueId] = text;
+      const cacheKey = 'slide_' + Date.now();
+      window.downloadCache[cacheKey] = text;
       htmlContent += `
         <div class="msg-download-bar">
-          <button class="btn-download-file" onclick="downloadAsFile('slide_jarvis.md', window['${uniqueId}'])">
+          <button class="btn-download-file" onclick="downloadAsFile('slide_jarvis.md', '${cacheKey}')">
             <i class="fa-solid fa-download"></i> Baixar Slide (.md / .txt)
           </button>
         </div>
@@ -283,6 +334,7 @@ function appendMessage(text, type, save = true) {
 }
 
 function appendCustomMessage(htmlContent, type, save = true) {
+  if (!msgArea) return;
   const msgDiv = document.createElement('div');
   msgDiv.className = 'jarv-msg jarv-msg-user';
   msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${htmlContent}`;
@@ -295,16 +347,20 @@ function appendCustomMessage(htmlContent, type, save = true) {
   }
 }
 
-// 6. Modal de Configurações e Idiomas
+// Configurações e Idiomas
 function openSettingsModal() {
-  document.getElementById('settingsModal').style.display = 'flex';
+  const modal = document.getElementById('settingsModal');
+  if (modal) modal.style.display = 'flex';
 }
 
 function closeSettingsModal() {
-  const model = document.getElementById('modelSelect').value;
-  selectedModel = model;
-  localStorage.setItem('jarv_model', model);
-  document.getElementById('settingsModal').style.display = 'none';
+  const modelSelect = document.getElementById('modelSelect');
+  if (modelSelect) {
+    selectedModel = modelSelect.value;
+    localStorage.setItem('jarv_model', selectedModel);
+  }
+  const modal = document.getElementById('settingsModal');
+  if (modal) modal.style.display = 'none';
 }
 
 function changeLanguage(lang) {
@@ -322,7 +378,7 @@ function applyLanguage(lang) {
   if (chatInput) chatInput.placeholder = dict.placeholder;
 }
 
-// 7. Demais Utilidades (Uploads & Voz de Entrada)
+// Uploads e Voz
 function setupFileUploads() {
   hiddenImageInput = document.createElement('input');
   hiddenImageInput.type = 'file'; 
@@ -371,13 +427,11 @@ function startVoiceRecognition() {
   recognition.start();
 
   recognition.onresult = (e) => {
-    chatInput.value = e.results[0][0].transcript;
-    sendMsg();
+    if (chatInput) {
+      chatInput.value = e.results[0][0].transcript;
+      sendMsg();
+    }
   };
-}
-
-function signInWithGoogle() {
-  auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider));
 }
 
 function switchView(viewName) {
@@ -391,9 +445,17 @@ function resetSystem() {
 }
 
 function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, tag => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  }[tag] || tag));
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, (tag) => {
+    const chars = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#039;',
+      '"': '&quot;'
+    };
+    return chars[tag] || tag;
+  });
 }
 
 function formatMarkdown(text) {
@@ -402,3 +464,15 @@ function formatMarkdown(text) {
   }
   return escapeHTML(text).replace(/\n/g, '<br>');
 }
+
+// Exposição explícita das funções para o escopo global (window)
+window.sendMsg = sendMsg;
+window.createNewChat = createNewChat;
+window.clearCurrentChat = clearCurrentChat;
+window.downloadAsFile = downloadAsFile;
+window.toggleTTS = toggleTTS;
+window.openSettingsModal = openSettingsModal;
+window.closeSettingsModal = closeSettingsModal;
+window.changeLanguage = changeLanguage;
+window.switchView = switchView;
+window.resetSystem = resetSystem;
