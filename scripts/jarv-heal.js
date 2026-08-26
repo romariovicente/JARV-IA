@@ -3,14 +3,13 @@ const https = require('https');
 
 async function runAutoHeal() {
   console.log("[JARV-HEAL] Robô de auto-correção iniciado...");
-  
+
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.error("[ERRO] GROQ_API_KEY não encontrada nos secrets do repositório.");
     process.exit(1);
   }
 
-  // Exemplo de leitura do arquivo principal para verificação
   const targetFile = 'js/app.js';
   if (!fs.existsSync(targetFile)) {
     console.error(`[ERRO] Arquivo alvo ${targetFile} não encontrado.`);
