@@ -16,7 +16,7 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-const ULTRA_FAST_MODEL = 'llama3-70b-8192';
+const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
@@ -265,7 +265,6 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// Módulo de Consulta Profunda (Deep Web Indexada)
 async function fetchDeepWebKnowledge(query) {
   try {
     const searchUrl = `https://ahmia.fi/search/?q=${encodeURIComponent(query)}`;
@@ -297,7 +296,6 @@ async function fetchDeepWebKnowledge(query) {
   }
 }
 
-// Módulo de Consulta Wikipedia (Web Aberta)
 async function fetchWikipedia(query) {
   try {
     const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
@@ -402,14 +400,12 @@ async function sendMsg() {
     return;
   }
 
-  // Busca universal automática (Web Aberta + Redes Ocultas) ativada para qualquer pergunta analítica ou informativa
-  const isInformationQuery = text.length > 4 && (lowerText.includes("quem") || lowerText.includes("o que") || lowerText.includes("como") || lowerText.includes("qual") || lowerText.includes("onde") || lowerText.includes("por que") || lowerText.includes("fale sobre") || lowerText.includes("explique"));
+  const isInformationQuery = text.length > 4 && (lowerText.includes("quem") || lowerText.includes("o que") || lowerText.includes("como") || lowerText.includes("qual") || lowerText.includes("onde") || lowerText.includes("por que") || lowerText.includes("fale sobre") || lowerText.includes("explique") || lowerText.includes("preciso que você pesquise"));
   
   if (isInformationQuery) {
     appendCustomMessage(escapeHTML(text), 'user', true);
     setOrbState(true);
     
-    // Executa as varreduras de forma paralela e silenciosa nos bastidores
     const [deepRes, wikiRes] = await Promise.all([
       fetchDeepWebKnowledge(text),
       fetchWikipedia(text)
@@ -457,7 +453,6 @@ async function sendMsg() {
     return;
   }
 
-  // Fluxo padrão para interações gerais ou comandos estruturados (slides/documentos)
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px;">`;
