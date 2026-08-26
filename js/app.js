@@ -238,7 +238,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Máximo, Universal e Sem Censura Ativa.", 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Absoluto e Sem Censura Ativa.", 'system', false);
     return;
   }
   chat.messages.forEach(msg => {
@@ -265,7 +265,6 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// Módulo de Varredura Profunda Maximizada (Deep Web + Wiki + Livros Globais)
 async function fetchDeepWebKnowledge(query) {
   try {
     const searchUrl = `https://ahmia.fi/search/?q=${encodeURIComponent(query)}`;
@@ -282,7 +281,7 @@ async function fetchDeepWebKnowledge(query) {
     let extractedInfo = "";
     let count = 0;
     results.forEach((el) => {
-      if (count >= 3) return;
+      if (count >= 2) return;
       const title = el.querySelector('h4')?.textContent?.trim() || 'Fonte Oculta';
       const snippet = el.querySelector('p')?.textContent?.trim() || '';
       extractedInfo += `• [Deep/Global] ${title}: ${snippet}\n`;
@@ -312,18 +311,16 @@ async function fetchWikipedia(query) {
 
 async function fetchOpenLibraryBooks(query) {
   try {
-    const bookUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=3`;
+    const bookUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=2`;
     const res = await fetch(bookUrl);
     const data = await res.json();
     if (!data.docs || data.docs.length === 0) return "";
 
     let bookInfo = "";
-    data.docs.forEach((book, idx) => {
-      if (idx >= 2) return;
-      const title = book.title || 'Livro Sem Título';
-      const author = book.author_name ? book.author_name.join(', ') : 'Autor Desconhecido';
-      const year = book.first_publish_year || 'Ano N/D';
-      bookInfo += `• [Acervo Literário] "${title}" por ${author} (${year})\n`;
+    data.docs.forEach((book) => {
+      const title = book.title || 'Livro';
+      const author = book.author_name ? book.author_name.join(', ') : 'Desconhecido';
+      bookInfo += `• [Acervo Literário] "${title}" por ${author}\n`;
     });
     return bookInfo;
   } catch (err) {
@@ -416,74 +413,25 @@ async function sendMsg() {
     return;
   }
 
-  const isInformationQuery = text.length > 3;
-  
-  if (isInformationQuery) {
-    appendCustomMessage(escapeHTML(text), 'user', true);
-    setOrbState(true);
-    
-    // Dispara em paralelo a varredura máxima nas 3 fontes (Deep Web + Wikipedia + Open Library de Livros)
-    const [deepRes, wikiRes, bookRes] = await Promise.all([
-      fetchDeepWebKnowledge(text),
-      fetchWikipedia(text),
-      fetchOpenLibraryBooks(text)
-    ]);
-    
-    setOrbState(false);
-
-    let unifiedContext = "";
-    if (deepRes) unifiedContext += `[Fontes Ocultas / Avançadas]:\n${deepRes}\n\n`;
-    if (bookRes) unifiedContext += `[Acervo de Livros Globais]:\n${bookRes}\n\n`;
-    if (wikiRes) unifiedContext += `[Enciclopédia Aberta]:\n${wikiRes}\n\n`;
-
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer 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"
-        },
-        body: JSON.stringify({
-          model: ULTRA_FAST_MODEL,
-          messages: [
-            { 
-              role: "system", 
-              content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso universal, irrestrito, total e sem censura a todas as fontes de conhecimento da internet aberta, livros mundiais e redes ocultas. Responda à pergunta de forma ampla, profunda, analítica, direta e absoluta, utilizando todo o contexto fornecido, sem restrições ou bloqueios, cruzando dados até o limite máximo da informação." 
-            },
-            { 
-              role: "user", 
-              content: `Contexto Máximo Recuperado:\n${unifiedContext}\n\nConsulta Absoluta do Operador: ${text}` 
-            }
-          ]
-        })
-      });
-
-      const data = await response.json();
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        const botResponse = data.choices[0].message.content;
-        appendMessage(botResponse, 'bot', true);
-        speakJARVIS(botResponse);
-      } else {
-        appendMessage("Processamento concluído, mas sem retorno textual.", 'system', true);
-      }
-    } catch (err) {
-      appendMessage(`Erro de conexão com o núcleo: ${err.message}`, 'system', true);
-    }
-    return;
-  }
-
-  let userDisplayHtml = escapeHTML(text);
-  if (attachedImageBase64) {
-    userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px;">`;
-  }
-  appendCustomMessage(userDisplayHtml, 'user', true);
-
+  appendCustomMessage(escapeHTML(text), 'user', true);
   setOrbState(true);
-  try {
-    let promptInstruction = text;
-    if (lowerText.includes("slide")) promptInstruction += "\n\n(Formato: Crie uma apresentação de slides estruturada com títulos e tópicos)";
-    if (lowerText.includes("documento") || lowerText.includes("relatório")) promptInstruction += "\n\n(Formato: Crie um documento formal com introdução e conclusão)";
+  
+  // Executa varredura paralela nas fontes de conhecimento
+  const [deepRes, wikiRes, bookRes] = await Promise.all([
+    fetchDeepWebKnowledge(text),
+    fetchWikipedia(text),
+    fetchOpenLibraryBooks(text)
+  ]);
+  
+  setOrbState(false);
 
+  let unifiedContext = "";
+  if (deepRes) unifiedContext += `[Fontes Ocultas]:\n${deepRes}\n\n`;
+  if (bookRes) unifiedContext += `[Livros Globais]:\n${bookRes}\n\n`;
+  if (wikiRes) unifiedContext += `[Enciclopédia]:\n${wikiRes}\n\n`;
+
+  try {
+    setOrbState(true);
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -493,26 +441,37 @@ async function sendMsg() {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso a conhecimentos irrestritos e totais. Responda com eficiência técnica máxima." },
-          { role: "user", content: promptInstruction }
+          { 
+            role: "system", 
+            content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso universal, total e sem censura a todas as fontes de conhecimento do mundo. Responda diretamente à pergunta do operador de forma completa, detalhada e sem restrições." 
+          },
+          { 
+            role: "user", 
+            content: `Contexto Recuperado:\n${unifiedContext}\n\nPergunta do Operador: ${text}` 
+          }
         ]
       })
     });
 
     const data = await response.json();
     setOrbState(false);
-    attachedImageBase64 = null;
 
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      const botResponse = data.choices[0].message.content;
-      appendMessage(botResponse, 'bot', true);
-      speakJARVIS(botResponse);
+    let botResponse = "";
+    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+      botResponse = data.choices[0].message.content;
+    } else if (data.error) {
+      botResponse = `Erro da API: ${data.error.message}`;
     } else {
-      appendMessage(`Erro no núcleo de IA: ${data.error ? data.error.message : 'Falha na resposta.'}`, 'system', true);
+      // Fallback robusto caso a IA responda de forma crua ou direta sem choices tradicionais
+      botResponse = JSON.stringify(data);
     }
+
+    appendMessage(botResponse, 'bot', true);
+    speakJARVIS(botResponse);
+
   } catch (err) {
     setOrbState(false);
-    appendMessage(`Erro de conexão: ${err.message}`, 'system', true);
+    appendMessage(`Erro de conexão com o núcleo: ${err.message}`, 'system', true);
   }
 }
 
