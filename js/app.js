@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupToolbarButtons();
 });
 
-// 1. Criação Visual da Esfera Holográfica (Orb Matrix / Waveform Sphere)
+// Esfera Holográfica (Orb Matrix)
 function injectJarvisOrbStyles() {
   if (document.getElementById('jarvisOrbStyle')) return;
   const style = document.createElement('style');
@@ -92,7 +92,7 @@ function injectJarvisOrbStyles() {
     }
     .jarvis-orb.active-speaking {
       animation: orb-speaking 0.5s infinite alternate ease-in-out;
-      box-shadow: 0 0 35px #00ffcc, 0 f 0 15px rgba(0, 255, 204, 0.4);
+      box-shadow: 0 0 35px #00ffcc, 0 0 15px rgba(0, 255, 204, 0.4);
     }
     @keyframes orb-pulse {
       0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 15px #00ffff; }
@@ -147,7 +147,6 @@ function setOrbState(active) {
   }
 }
 
-// Relógio em Tempo Real
 function startRealTimeClock() {
   const clockEl = document.getElementById('clockDisplay');
   if (!clockEl) return;
@@ -156,7 +155,6 @@ function startRealTimeClock() {
   setInterval(update, 1000);
 }
 
-// Histórico
 function initChatStore() {
   if (!activeChatId || !chatsStore[activeChatId]) {
     createNewChat(false);
@@ -209,7 +207,6 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// Pesquisa Web na Wikipédia
 async function fetchWikipedia(query) {
   try {
     const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
@@ -226,7 +223,6 @@ async function fetchWikipedia(query) {
   }
 }
 
-// Arquivos
 function downloadAsFile(filename, textContent, mimeType = 'text/plain;charset=utf-8') {
   const blob = new Blob([textContent], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -252,7 +248,6 @@ function downloadAsWord(filename, textContent) {
   downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
-// Voz (TTS com ativação da Esfera Holográfica)
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
@@ -268,7 +263,6 @@ function speakJARVIS(text) {
   window.speechSynthesis.speak(utterance);
 }
 
-// Comando Principal
 async function sendMsg() {
   const text = chatInput.value.trim();
   if (!text && !attachedImageBase64) return;
@@ -276,7 +270,6 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();
   chatInput.value = '';
 
-  // Imagem
   if (lowerText.startsWith("gere uma imagem de") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem")) {
     const promptImg = text.replace(/^(gere|gerar|criar)\s+(uma\s+)?imagem\s+(de\s+)?/i, '').trim();
     appendCustomMessage(escapeHTML(text), 'user', true);
@@ -287,7 +280,6 @@ async function sendMsg() {
     return;
   }
 
-  // Pesquisa
   const isSearchQuery = text.startsWith('!wiki ') || lowerText.includes('pesquise sobre') || lowerText.includes('pesquisa de') || lowerText.includes('pesquisa sobre');
   if (isSearchQuery) {
     let wikiQuery = text.replace(/^!wiki\s+/i, '').replace(/.*(pesquise|pesquisa|busque)\s+(sobre|de)?\s+/i, '').replace(/por\s+favor.*$/i, '').trim();
@@ -302,7 +294,6 @@ async function sendMsg() {
     return;
   }
 
-  // IA Groq
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px;">`;
@@ -325,7 +316,6 @@ async function sendMsg() {
         model: ULTRA_FAST_MODEL,
         messages: [
           { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado. Responda de forma precisa e eficiente." },
-          { role: { role: "user", content: promptInstruction } },
           { role: "user", content: promptInstruction }
         ]
       })
