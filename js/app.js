@@ -26,7 +26,7 @@ let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput, jarvisOrb;
 let attachedImageBase64 = null;
-let audioCtx = null, analyser = null, dataArray = null, sourceNode = null, animFrameId = null;
+let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   msgArea = document.getElementById('msgArea');
@@ -172,9 +172,7 @@ function initAudioAnalyzer() {
       analyser.fftSize = 64;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
     }
-  } catch (e) {
-    console.log("AudioContext não suportado diretamente.");
-  }
+  } catch (e) {}
 }
 
 function setOrbState(active) {
@@ -313,35 +311,63 @@ function downloadAsWord(filename, textContent) {
   downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
-// Voz estilo J.A.R.V.I.S. (Metálica / Britânica calibrada) e Leitura Completa Integrada
+// Voz Masculina J.A.R.V.I.S. (Lenta, Cadenciada, Respeitando Vírgulas e Raciocínio Lógico)
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   
+  // Limpeza de marcações markdown mantendo a pontuação correta para pausas naturais
   const cleanText = text.replace(/[*_#`\[\]]/g, '');
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = 'pt-BR';
-  utterance.rate = 1.02; // Velocidade calibrada para clareza e precisão
-  utterance.pitch = 0.85; // Tom mais grave e sério, simulando voz de IA avançada
-
-  // Tentar encontrar uma voz masculina ou britânica em pt-BR / pt-PT se disponível
-  const voices = window.speechSynthesis.getVoices();
-  const selectedVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('microsoft'))) || voices.find(v => v.lang.includes('pt'));
-  if (selectedVoice) {
-    utterance.voice = selectedVoice;
-  }
-
-  try {
-    if (audioCtx && analyser && !sourceNode) {
-      sourceNode = audioCtx.createMediaStreamSource ? null : null; // Mantém fallback seguro para síntese nativa
-    }
-  } catch(e) {}
-
-  setOrbState(true);
-  utterance.onend = () => setOrbState(false);
-  utterance.onerror = () => setOrbState(false);
   
-  window.speechSynthesis.speak(utterance);
+  // Quebrar o texto em blocos menores baseados em pontuação para garantir respeito total a vírgulas e pontos
+  const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];
+  
+  let currentSegment = 0;
+  
+  const speakNextSegment = () => {
+    if (currentSegment >= segments.length) {
+      setOrbState(false);
+      return;
+    }
+    
+    const segmentText = segments[currentSegment].trim();
+    if (!segmentText) {
+      currentSegment++;
+      speakNextSegment();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(segmentText);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 0.82; // Velocidade bem compassada para acompanhar o raciocínio lógico
+    utterance.pitch = 0.70; // Tom de voz masculino grave, sério e metálico
+
+    const voices = window.speechSynthesis.getVoices();
+    // Priorizar vozes masculinas em português (como Daniel, Antonio, Google português masculino, etc.)
+    const maleVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('antonio') || v.name.toLowerCase().includes('manoel') || v.name.toLowerCase().includes('google português do brasil') || v.name.toLowerCase().includes('male'))) || voices.find(v => v.lang.includes('pt'));
+    
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    }
+
+    utterance.onstart = () => {
+      if (currentSegment === 0) setOrbState(true);
+    };
+
+    utterance.onend = () => {
+      currentSegment++;
+      // Pequena pausa calculada entre as frases para simular respiração e processamento lógico
+      setTimeout(speakNextSegment, 300);
+    };
+
+    utterance.onerror = () => {
+      setOrbState(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  speakNextSegment();
 }
 
 async function sendMsg() {
