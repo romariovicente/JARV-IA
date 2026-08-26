@@ -16,7 +16,8 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';
+// MODELO CORRIGIDO PARA UM OFICIAL DA GROQ
+const ULTRA_FAST_MODEL = 'llama3-70b-8192';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
