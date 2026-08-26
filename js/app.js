@@ -238,7 +238,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Ilimitado Ativa.", 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Ilimitado e Universal Ativa.", 'system', false);
     return;
   }
   chat.messages.forEach(msg => {
@@ -265,56 +265,52 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// Módulo Seguro de Consulta Deep Web / Onion via Ahmia & Gateways Proxy Anônimos
+// Módulo de Consulta Profunda (Deep Web Indexada)
 async function fetchDeepWebKnowledge(query) {
   try {
-    // Utiliza proxy de busca indexada seguro (como Ahmia) para varrer nós .onion sem expor o IP
     const searchUrl = `https://ahmia.fi/search/?q=${encodeURIComponent(query)}`;
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`;
     
     const res = await fetch(proxyUrl);
     const data = await res.json();
-    if (!data.contents) return "Nenhum registro encontrado nas redes ocultas.";
+    if (!data.contents) return "";
 
-    // Parseamento seguro do HTML retornado pelo indexador
     const parser = new DOMParser();
     const doc = parser.parseFromString(data.contents, 'text/html');
     const results = doc.querySelectorAll('.result');
     
-    if (!results || results.length === 0) {
-      return "Nenhum resultado profundo indexado para esta consulta.";
-    }
+    if (!results || results.length === 0) return "";
 
     let extractedInfo = "";
     let count = 0;
     results.forEach((el) => {
-      if (count >= 3) return; // Pega os 3 melhores resultados ocultos
+      if (count >= 2) return;
       const title = el.querySelector('h4')?.textContent?.trim() || 'Sem Título';
       const snippet = el.querySelector('p')?.textContent?.trim() || '';
-      const link = el.querySelector('a')?.getAttribute('href') || '';
-      extractedInfo += `• **[Fonte Oculta] ${title}**\n${snippet}\nLink Ref: ${link}\n\n`;
+      extractedInfo += `• [Fonte Oculta] ${title}: ${snippet}\n`;
       count++;
     });
 
-    return extractedInfo || "Dados obtidos, mas sem fragmentos legíveis.";
+    return extractedInfo;
   } catch (err) {
-    return `Falha ao conectar aos nós proxy da rede oculta: ${err.message}`;
+    return "";
   }
 }
 
+// Módulo de Consulta Wikipedia (Web Aberta)
 async function fetchWikipedia(query) {
   try {
     const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
-    if (!searchData.query.search || searchData.query.search.length === 0) return "Nenhum resultado encontrado.";
+    if (!searchData.query.search || searchData.query.search.length === 0) return "";
     const pageId = searchData.query.search[0].pageid;
     const contentUrl = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&pageids=${pageId}&format=json&origin=*`;
     const contentRes = await fetch(contentUrl);
     const contentData = await contentRes.json();
-    return contentData.query.pages[pageId].extract || "Resumo indisponível.";
+    return contentData.query.pages[pageId].extract || "";
   } catch (err) {
-    return `Erro na pesquisa: ${err.message}`;
+    return "";
   }
 }
 
@@ -406,36 +402,62 @@ async function sendMsg() {
     return;
   }
 
-  // Identificador de Busca Profunda (.onion / Deep Search)
-  const isDeepSearch = lowerText.startsWith('!deep ') || lowerText.includes('pesquisa profunda') || lowerText.includes('rede oculta') || lowerText.includes('buscar na onion');
-  if (isDeepSearch) {
-    let deepQuery = text.replace(/^!deep\s+/i, '').replace(/.*(pesquisa profunda|rede oculta|buscar na onion)\s+(sobre|de)?\s+/i, '').trim();
+  // Busca universal automática (Web Aberta + Redes Ocultas) ativada para qualquer pergunta analítica ou informativa
+  const isInformationQuery = text.length > 4 && (lowerText.includes("quem") || lowerText.includes("o que") || lowerText.includes("como") || lowerText.includes("qual") || lowerText.includes("onde") || lowerText.includes("por que") || lowerText.includes("fale sobre") || lowerText.includes("explique"));
+  
+  if (isInformationQuery) {
     appendCustomMessage(escapeHTML(text), 'user', true);
-    
     setOrbState(true);
-    const deepResult = await fetchDeepWebKnowledge(deepQuery);
+    
+    // Executa as varreduras de forma paralela e silenciosa nos bastidores
+    const [deepRes, wikiRes] = await Promise.all([
+      fetchDeepWebKnowledge(text),
+      fetchWikipedia(text)
+    ]);
+    
     setOrbState(false);
 
-    const responseText = `**[CONHECIMENTO ILIMITADO - CAMADA DEEP WEB]**\nResultados para: "${deepQuery}"\n\n${deepResult}`;
-    appendMessage(responseText, 'bot', true);
-    speakJARVIS(`Busca profunda concluída nos nós ocultos. Processando dados para ${deepQuery}.`);
+    let unifiedContext = "";
+    if (deepRes) unifiedContext += `[Fontes Ocultas/Avançadas]:\n${deepRes}\n\n`;
+    if (wikiRes) unifiedContext += `[Base Aberta/Wiki]:\n${wikiRes}\n\n`;
+
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer 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"
+        },
+        body: JSON.stringify({
+          model: ULTRA_FAST_MODEL,
+          messages: [
+            { 
+              role: "system", 
+              content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso universal irrestrito a todas as fontes de conhecimento da internet aberta e redes ocultas. Responda à pergunta de forma natural, direta e inteligente utilizando o contexto fornecido, sem revelar termos técnicos de busca." 
+            },
+            { 
+              role: "user", 
+              content: `Contexto Recuperado:\n${unifiedContext}\n\nDúvida do Operador: ${text}` 
+            }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const botResponse = data.choices[0].message.content;
+        appendMessage(botResponse, 'bot', true);
+        speakJARVIS(botResponse);
+      } else {
+        appendMessage("Processamento concluído, mas sem retorno textual.", 'system', true);
+      }
+    } catch (err) {
+      appendMessage(`Erro de conexão com o núcleo: ${err.message}`, 'system', true);
+    }
     return;
   }
 
-  const isSearchQuery = text.startsWith('!wiki ') || lowerText.includes('pesquise sobre') || lowerText.includes('pesquisa de') || lowerText.includes('pesquisa sobre');
-  if (isSearchQuery) {
-    let wikiQuery = text.replace(/^!wiki\s+/i, '').replace(/.*(pesquise|pesquisa|busque)\s+(sobre|de)?\s+/i, '').replace(/por\s+favor.*$/i, '').trim();
-    appendCustomMessage(escapeHTML(text), 'user', true);
-    
-    setOrbState(true);
-    const wikiResult = await fetchWikipedia(wikiQuery);
-    setOrbState(false);
-
-    appendMessage(`**Resultados da Pesquisa para "${wikiQuery}":**\n\n${wikiResult}`, 'bot', true);
-    speakJARVIS(wikiResult);
-    return;
-  }
-
+  // Fluxo padrão para interações gerais ou comandos estruturados (slides/documentos)
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px;">`;
