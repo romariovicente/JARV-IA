@@ -16,9 +16,12 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-// MODELO ATUALIZADO (O anterior foi desligado pela Groq)
-const ULTRA_FAST_MODEL = 'llama-3.1-70b-versatile';
-localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
+// MODELO ATUALIZADO (Substituindo modelos descontinuados)[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span)
+const DEFAULT_MODEL = 'openai/gpt-oss-120b';
+let selectedModel = localStorage.getItem('jarv_model') || DEFAULT_MODEL;
+if (!localStorage.getItem('jarv_model')) {
+  localStorage.setItem('jarv_model', selectedModel);
+}
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
 let ttsEnabled = true;
@@ -47,6 +50,15 @@ document.addEventListener("DOMContentLoaded", () => {
   startRealTimeClock();
   initAudioAnalyzer();
 
+  const modelSelect = document.getElementById('modelSelect');
+  if (modelSelect) {
+    modelSelect.value = selectedModel;
+    modelSelect.addEventListener('change', () => {
+      selectedModel = modelSelect.value;
+      localStorage.setItem('jarv_model', selectedModel);
+    });
+  }
+
   // Lógica de Autenticação
   if (auth) {
     auth.onAuthStateChanged((user) => {
@@ -70,7 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
         auth.signInWithPopup(provider).catch(err => alert("Erro na autenticação: " + err.message));
       });
     }
-
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
         auth.signOut().then(() => window.location.reload()).catch(err => console.error("Erro ao deslogar:", err));
@@ -82,43 +93,82 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();
   setupToolbarButtons();
 
-  // FIX: Força os botões de "Nova Conversa" e "Lixeira" a executarem a limpeza
-  document.querySelectorAll('button, a, div').forEach(el => {
-    const txt = (el.textContent || '').toLowerCase();
-    const html = (el.innerHTML || '').toLowerCase();
-    
-    // Se o elemento for o botão de nova conversa ou o ícone de lixeira
-    if (txt.includes('nova conversa') || html.includes('fa-trash') || html.includes('lixeira') || html.includes('trash')) {
-      el.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        resetSystem();
-      });
-    }
-  });
-
-  // Garantia extra para ícones avulsos
-  document.querySelectorAll('.fa-trash, i[class*="trash"], svg').forEach(icon => {
-    icon.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      resetSystem();
+  const newChatBtn = document.querySelector('.btn-new-chat');
+  if (newChatBtn) {
+    newChatBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      createNewChat(true);
     });
-  });
+  }
+
+  const clearChatBtn = document.querySelector('.btn-clear-chat');
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      clearCurrentChat();
+    });
+  }
 });
 
 function resetSystem() {
-  chatsStore = {}; // Zera as conversas
-  localStorage.removeItem('jarv_chats_v2'); // Remove do cache
-  localStorage.removeItem('jarv_active_chat'); // Remove ID atual
+  chatsStore = {};
+  localStorage.removeItem('jarv_chats_v2');
+  localStorage.removeItem('jarv_active_chat');
   activeChatId = null;
-  
-  if (msgArea) msgArea.innerHTML = ''; // Limpa a tela
-  
+
+  if (msgArea) msgArea.innerHTML = '';
+
   const historyList = document.getElementById('chatHistoryList');
-  if (historyList) historyList.innerHTML = ''; // Limpa a barra lateral
-  
-  createNewChat(true); // Reinicia zerado
+  if (historyList) historyList.innerHTML = '';
+
+  createNewChat(true);
+}
+
+function clearCurrentChat() {
+  if (!activeChatId || !chatsStore[activeChatId]) return;
+  chatsStore[activeChatId].messages = [];
+  saveStore();
+  loadChatMessages(activeChatId);
+}
+
+function switchView(view) {
+  document.querySelectorAll('.jarv-nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
+}
+
+function openSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function changeLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('jarv_lang', lang);
+}
+
+function signInWithGoogle() {
+  if (!auth || !provider) {
+    alert('Firebase não está disponível.');
+    return;
+  }
+  auth.signInWithPopup(provider).catch(err => alert('Erro na autenticação: ' + err.message));
+}
+
+function toggleTTS(enabled = !ttsEnabled) {
+  ttsEnabled = Boolean(enabled);
+  const toggle = document.getElementById('voiceToggle');
+  if (toggle) toggle.checked = ttsEnabled;
+  if (!ttsEnabled && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    isJarvisSpeaking = false;
+    setOrbState(false);
+  }
 }
 
 function injectJarvisOrbStyles() {
@@ -145,7 +195,7 @@ function injectJarvisOrbStyles() {
 }
 
 function createJarvisOrbElement() {
-  const sidebar = document.querySelector('.sidebar') || document.body;
+  const sidebar = document.querySelector('.jarv-sidebar') || document.body;[span_6](start_span)[span_6](end_span)
   if (document.getElementById('jarvisOrbWidget')) return;
   const container = document.createElement('div');
   container.id = 'jarvisOrbWidget';
@@ -167,7 +217,7 @@ function createJarvisOrbElement() {
 }
 
 function injectContinuousVoiceButton() {
-  const sidebar = document.querySelector('.sidebar') || document.body;
+  const sidebar = document.querySelector('.jarv-sidebar') || document.body;[span_7](start_span)[span_7](end_span)
   const orbWidget = document.getElementById('jarvisOrbWidget');
   if (document.getElementById('continuousVoiceBtn')) return;
   const btn = document.createElement('button');
@@ -201,7 +251,10 @@ function toggleContinuousListening() {
     recognition.onresult = (event) => {
       if (isJarvisSpeaking) return;
       const transcript = event.results[event.results.length - 1][0].transcript.trim();
-      if (transcript) { chatInput.value = transcript; sendMsg(); }
+      if (transcript) {
+        chatInput.value = transcript;
+        sendMsg();
+      }
     };
     recognition.onend = () => {
       if (isContinuousActive && !isJarvisSpeaking) {
@@ -324,14 +377,14 @@ function saveStore() {
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  
+
   isJarvisSpeaking = true;
   if (recognition && isContinuousActive) { try { recognition.stop(); } catch(e) {} }
 
-  const cleanText = text.replace(/[*_#`\[\]]/g, '');
-  const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];
+  const cleanText = text.replace(/[_#`[]]/g, '');
+  const segments = cleanText.match(/[^.!?]+[.!?]+|\s[^.!?]+$/g) || [cleanText];
   let currentSegment = 0;
-  
+
   const speakNextSegment = () => {
     if (currentSegment >= segments.length) {
       isJarvisSpeaking = false;
@@ -342,23 +395,19 @@ function speakJARVIS(text) {
       }
       return;
     }
-    
+
     const segmentText = segments[currentSegment].trim();
     if (!segmentText) { currentSegment++; speakNextSegment(); return; }
-
     const utterance = new SpeechSynthesisUtterance(segmentText);
     utterance.lang = 'pt-BR';
-    utterance.rate = 0.82; 
-    utterance.pitch = 0.70; 
-
+    utterance.rate = 0.82;
+    utterance.pitch = 0.70;
     const voices = window.speechSynthesis.getVoices();
     const maleVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('antonio') || v.name.toLowerCase().includes('manoel') || v.name.toLowerCase().includes('google português do brasil') || v.name.toLowerCase().includes('male'))) || voices.find(v => v.lang.includes('pt'));
     if (maleVoice) utterance.voice = maleVoice;
-
     utterance.onstart = () => { if (currentSegment === 0) setOrbState(true); };
     utterance.onend = () => { currentSegment++; setTimeout(speakNextSegment, 300); };
     utterance.onerror = () => { isJarvisSpeaking = false; setOrbState(false); };
-
     window.speechSynthesis.speak(utterance);
   };
   speakNextSegment();
@@ -392,7 +441,7 @@ async function sendMsg() {
         "Authorization": "Bearer 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"
       },
       body: JSON.stringify({
-        model: ULTRA_FAST_MODEL,
+        model: selectedModel,
         messages: [
           { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado. Responda diretamente e de forma completa." },
           { role: "user", content: text }
@@ -402,17 +451,14 @@ async function sendMsg() {
 
     const data = await response.json();
     setOrbState(false);
-
     let botResponse = "";
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
       botResponse = data.choices[0].message.content;
     } else {
       botResponse = "Retorno bruto da API: " + JSON.stringify(data);
     }
-
     appendMessage(botResponse, 'bot', true);
     speakJARVIS(botResponse);
-
   } catch (err) {
     setOrbState(false);
     appendMessage(`Erro crítico de rede: ${err.message}`, 'system', true);
@@ -467,7 +513,9 @@ function appendCustomMessage(htmlContent, type, save = true) {
 
 function setupFileUploads() {
   hiddenImageInput = document.createElement('input');
-  hiddenImageInput.type = 'file'; hiddenImageInput.accept = 'image/*'; hiddenImageInput.style.display = 'none';
+  hiddenImageInput.type = 'file';
+  hiddenImageInput.accept = 'image/*';
+  hiddenImageInput.style.display = 'none';
   document.body.appendChild(hiddenImageInput);
   hiddenImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -478,7 +526,8 @@ function setupFileUploads() {
     }
   });
   hiddenFileInput = document.createElement('input');
-  hiddenFileInput.type = 'file'; hiddenFileInput.style.display = 'none';
+  hiddenFileInput.type = 'file';
+  hiddenFileInput.style.display = 'none';
   document.body.appendChild(hiddenFileInput);
 }
 
@@ -495,7 +544,7 @@ function setupToolbarButtons() {
 
 function escapeHTML(str) {
   if (typeof str !== 'string') return '';
-  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+  return str.replace(/[&<>'"]/g, tag => ({ '&': '&', '<': '<', '>': '>', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
 function formatMarkdown(text) {
