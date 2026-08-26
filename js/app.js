@@ -1,4 +1,89 @@
-// Configuração Firebase
+/**
+ * JARV.IA - Core Engine v3.0 (Quantum & Global Knowledge Edition)
+ * Desenvolvido para Romário - Kali Cyberpunk Architecture
+ */
+
+// -------------------------------------------------------------
+// 1. MOTOR DE COMPUTAÇÃO QUÂNTICA (Qubit & Gate Simulator)
+// -------------------------------------------------------------
+class QuantumSimulator {
+  constructor() {
+    // Estado inicial de 1 Qubit em estado puro |0>
+    this.alpha = { re: 1, im: 0 }; // Amplitude para |0>
+    this.beta = { re: 0, im: 0 };  // Amplitude para |1>
+  }
+
+  // Aplica Porta Lógica Hadamard (Cria Superposição 50/50)
+  applyHadamard() {
+    const invSqrt2 = 1 / Math.sqrt(2);
+    const newAlphaRe = invSqrt2 * (this.alpha.re + this.beta.re);
+    const newAlphaIm = invSqrt2 * (this.alpha.im + this.beta.im);
+    const newBetaRe  = invSqrt2 * (this.alpha.re - this.beta.re);
+    const newBetaIm  = invSqrt2 * (this.alpha.im - this.beta.im);
+
+    this.alpha = { re: newAlphaRe, im: newAlphaIm };
+    this.beta = { re: newBetaRe, im: newBetaIm };
+  }
+
+  // Aplica Porta Pauli-X (NOT Quântico)
+  applyPauliX() {
+    const temp = this.alpha;
+    this.alpha = this.beta;
+    this.beta = temp;
+  }
+
+  // Calcula Probabilidades de Medição P(|0>) e P(|1>)
+  getProbabilities() {
+    const prob0 = (this.alpha.re ** 2) + (this.alpha.im ** 2);
+    const prob1 = (this.beta.re ** 2) + (this.beta.im ** 2);
+    return {
+      p0: (prob0 * 100).toFixed(2),
+      p1: (prob1 * 100).toFixed(2)
+    };
+  }
+
+  // Colapso do Qubit na Medição (Observação)
+  measure() {
+    const probs = this.getProbabilities();
+    const random = Math.random() * 100;
+    const result = random < probs.p0 ? 0 : 1;
+    // Colapsa o estado
+    if (result === 0) {
+      this.alpha = { re: 1, im: 0 };
+      this.beta = { re: 0, im: 0 };
+    } else {
+      this.alpha = { re: 0, im: 0 };
+      this.beta = { re: 1, im: 0 };
+    }
+    return { result, probs };
+  }
+}
+
+// -------------------------------------------------------------
+// 2. CONEXÃO COM A WIKIPÉDIA (Conhecimento Global em Tempo Real)
+// -------------------------------------------------------------
+async function fetchWikipediaSummary(query) {
+  try {
+    const cleanQuery = encodeURIComponent(query.trim());
+    const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${cleanQuery}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.type === 'disambiguation' || !data.extract) return null;
+    return {
+      title: data.title,
+      extract: data.extract,
+      url: data.content_urls?.desktop?.page || ''
+    };
+  } catch (err) {
+    console.warn("Erro de busca na Wikipédia:", err);
+    return null;
+  }
+}
+
+// -------------------------------------------------------------
+// 3. CONFIGURAÇÕES E FIREBASE
+// -------------------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",
   authDomain: "jarv-ia.firebaseapp.com",
@@ -8,57 +93,39 @@ const firebaseConfig = {
   appId: "1:275886641350:web:69bd0e534fb71a3a1e47c7"
 };
 
-// Inicializa Firebase
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
 const auth = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth() : null;
 const db = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore() : null;
-const provider = (typeof firebase !== 'undefined' && firebase.auth) ? new firebase.auth.GoogleAuthProvider() : null;
 
-// Armazenamento global de conteúdos baixáveis
 window.downloadCache = {};
 
-// Configurações de Estado da Aplicação
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
 let selectedModel = localStorage.getItem('jarv_model') || 'llama-3.3-70b-versatile';
 let ttsEnabled = localStorage.getItem('jarv_tts') !== 'false';
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v2')) || {};
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 
-// Dicionário de Idiomas (i18n)
 const i18n = {
   'pt-BR': {
-    new_chat: "Nova Conversa",
-    history: "HISTÓRICO",
-    nav_terminal: "Terminal / Chat",
-    reset: "Reiniciar",
-    btn_send: "ENVIAR",
-    placeholder: "Digite um comando...",
-    system_init: "Sistema inicializado. Núcleo J.A.R.V.I.S. operacional. Aguardando comandos do operador."
+    new_chat: "Nova Conversa", history: "HISTÓRICO", nav_terminal: "Terminal / Chat",
+    reset: "Reiniciar", btn_send: "ENVIAR", placeholder: "Digite um comando (ou !wiki termo)...",
+    system_init: "Sistema inicializado. Núcleo J.A.R.V.I.S. operacional. Conexão quântica simulada ativa."
   },
   'en-US': {
-    new_chat: "New Chat",
-    history: "HISTORY",
-    nav_terminal: "Terminal / Chat",
-    reset: "Restart",
-    btn_send: "SEND",
-    placeholder: "Enter command...",
-    system_init: "System initialized. J.A.R.V.I.S. core active. Awaiting operator input."
+    new_chat: "New Chat", history: "HISTORY", nav_terminal: "Terminal / Chat",
+    reset: "Restart", btn_send: "SEND", placeholder: "Enter command (or !wiki term)...",
+    system_init: "System initialized. J.A.R.V.I.S. core active. Simulated quantum link ready."
   },
   'es-ES': {
-    new_chat: "Nueva Conversación",
-    history: "HISTORIAL",
-    nav_terminal: "Terminal / Chat",
-    reset: "Reiniciar",
-    btn_send: "ENVIAR",
-    placeholder: "Escriba un comando...",
-    system_init: "Sistema inicializado. Núcleo J.A.R.V.I.S. activo. Esperando comandos."
+    new_chat: "Nueva Conversación", history: "HISTORIAL", nav_terminal: "Terminal / Chat",
+    reset: "Reiniciar", btn_send: "ENVIAR", placeholder: "Escriba un comando...",
+    system_init: "Sistema inicializado. Núcleo J.A.R.V.I.S. activo. Enlace cuántico simulado listo."
   }
 };
 
-// Elementos Globais
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput;
 let attachedImageBase64 = null;
 
@@ -81,10 +148,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loginModal) loginModal.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "inline-block";
       } else {
-        if (userNameEl) userNameEl.textContent = "Visitante";
-        if (statusEl) statusEl.textContent = "Awaiting Authentication";
-        if (loginModal) loginModal.style.display = "flex";
-        if (logoutBtn) logoutBtn.style.display = "none";
+        if (userNameEl) userNameEl.textContent = "Romário (Local)";
+        if (statusEl) statusEl.textContent = "Secure Local Terminal";
+        if (loginModal) loginModal.style.display = "none";
       }
     });
   }
@@ -93,27 +159,124 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();
   setupToolbarButtons();
   applyLanguage(currentLang);
-  
-  const langSelect = document.getElementById('langSelect');
-  if (langSelect) langSelect.value = currentLang;
-  const modelSelect = document.getElementById('modelSelect');
-  if (modelSelect) modelSelect.value = selectedModel;
 });
 
-// 1. Relógio em Tempo Real
 function startRealTimeClock() {
   const clockEl = document.getElementById('clockDisplay');
-  function update() {
-    const now = new Date();
-    if (clockEl) {
-      clockEl.textContent = now.toLocaleTimeString();
-    }
-  }
-  update();
-  setInterval(update, 1000);
+  setInterval(() => {
+    if (clockEl) clockEl.textContent = new Date().toLocaleTimeString();
+  }, 1000);
 }
 
-// 2. Gerenciamento de Histórico e Conversas
+// -------------------------------------------------------------
+// 4. ENVIO DE MENSAGEM & PROCESSAMENTO DE INTENÇÃO
+// -------------------------------------------------------------
+async function sendMsg() {
+  if (!chatInput) return;
+  const rawText = chatInput.value.trim();
+  if (!rawText && !attachedImageBase64) return;
+
+  const safeText = escapeHTML(rawText);
+  let userDisplayHtml = safeText;
+
+  if (attachedImageBase64) {
+    userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`;
+  }
+
+  appendCustomMessage(userDisplayHtml, 'user', true);
+  chatInput.value = '';
+
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'jarv-msg jarv-msg-bot';
+  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando e acessando conhecimento global...`;
+  msgArea.appendChild(loadingDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
+
+  try {
+    let wikiContext = "";
+    
+    // Comando manual !wiki ou detecção de busca de conhecimento
+    if (rawText.startsWith('!wiki ')) {
+      const searchTerm = rawText.replace('!wiki ', '');
+      const wikiData = await fetchWikipediaSummary(searchTerm);
+      if (wikiData) {
+        wikiContext = `\n[Fonte Wikipédia Real-Time: ${wikiData.title}]\n${wikiData.extract}\n`;
+      }
+    }
+
+    let promptContent = rawText;
+    if (wikiContext) {
+      promptContent = `${rawText}\n\nUtilize o seguinte contexto verificado da Wikipédia para responder se relevante:${wikiContext}`;
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer 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"
+      },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages: [
+          {
+            role: "system",
+            content: `Você é o J.A.R.V.I.S., assistente avançado do Romário com acesso a simulador quântico e base de dados global. Responda em ${currentLang} com formato Markdown limpo.`
+          },
+          { role: "user", content: promptContent }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
+    
+    attachedImageBase64 = null;
+
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const botResponse = data.choices[0].message.content;
+      appendMessage(botResponse, 'bot', true);
+      speakJARVIS(botResponse);
+    } else {
+      appendMessage("Erro na resposta do núcleo principal.", 'system', true);
+    }
+  } catch (err) {
+    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
+    appendMessage(`Falha de Conexão: ${err.message}`, 'system', true);
+  }
+}
+
+// Demo do Simulador Quântico no Chat
+function runQuantumDemo() {
+  const q = new QuantumSimulator();
+  const initialProbs = q.getProbabilities();
+  
+  q.applyHadamard(); // Coloca em Superposição
+  const supProbs = q.getProbabilities();
+  
+  const measurement = q.measure(); // Colapsa
+  
+  const report = `**[SIMULAÇÃO QUÂNTICA DE QUBIT]**
+* **Estado Inicial |0⟩:** P(|0⟩) = ${initialProbs.p0}%, P(|1⟩) = ${initialProbs.p1}%
+* **Após Porta Hadamard (Superposição |ψ⟩):** P(|0⟩) = ${supProbs.p0}%, P(|1⟩) = ${supProbs.p1}%
+* **Medição do Observador (Colapso):** Qubit colapsou para **|${measurement.result}⟩**`;
+
+  appendMessage(report, 'bot', true);
+}
+
+// Busca rápida na Wikipédia pelo chat
+async function searchWikiPrompt() {
+  const term = prompt("Digite o tema para pesquisar na Wikipédia mundial:");
+  if (term) {
+    if (chatInput) {
+      chatInput.value = `!wiki ${term}`;
+      sendMsg();
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 5. RENDERIZAÇÃO E HISTÓRICO
+// -------------------------------------------------------------
 function initChatStore() {
   if (!activeChatId || !chatsStore[activeChatId]) {
     createNewChat(false);
@@ -125,11 +288,7 @@ function initChatStore() {
 
 function createNewChat(shouldRender = true) {
   const id = 'chat_' + Date.now();
-  chatsStore[id] = {
-    title: `Conversa ${Object.keys(chatsStore).length + 1}`,
-    timestamp: Date.now(),
-    messages: []
-  };
+  chatsStore[id] = { title: `Conversa ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [] };
   activeChatId = id;
   saveStore();
   if (shouldRender) {
@@ -143,19 +302,14 @@ function loadChatMessages(id) {
   saveStore();
   renderHistoryList();
   if (msgArea) msgArea.innerHTML = '';
-  
   const chat = chatsStore[id];
   if (!chat || chat.messages.length === 0) {
     appendMessage(i18n[currentLang].system_init, 'system', false);
     return;
   }
-
   chat.messages.forEach(msg => {
-    if (msg.type === 'user') {
-      appendCustomMessage(msg.content, 'user', false);
-    } else {
-      appendMessage(msg.content, msg.type, false);
-    }
+    if (msg.type === 'user') appendCustomMessage(msg.content, 'user', false);
+    else appendMessage(msg.content, msg.type, false);
   });
 }
 
@@ -170,7 +324,6 @@ function renderHistoryList() {
   const listEl = document.getElementById('chatHistoryList');
   if (!listEl) return;
   listEl.innerHTML = '';
-
   Object.keys(chatsStore).reverse().forEach(id => {
     const chat = chatsStore[id];
     const btn = document.createElement('button');
@@ -186,116 +339,6 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// 3. Download de Arquivos
-function downloadAsFile(filename, cacheKey) {
-  const textContent = window.downloadCache[cacheKey] || "";
-  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-// 4. Síntese de Voz (TTS)
-function speakJARVIS(text) {
-  if (!ttsEnabled || !('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  
-  const cleanText = text.replace(/[*_#`\[\]]/g, '');
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = currentLang;
-  utterance.rate = 1.0;
-  utterance.pitch = 0.95;
-  
-  window.speechSynthesis.speak(utterance);
-}
-
-function toggleTTS(state) {
-  if (typeof state === 'boolean') {
-    ttsEnabled = state;
-  } else {
-    ttsEnabled = !ttsEnabled;
-  }
-  localStorage.setItem('jarv_tts', ttsEnabled);
-  const btn = document.getElementById('ttsToggleBtn');
-  if (btn) {
-    btn.style.color = ttsEnabled ? '#00d2ff' : '#5c78a5';
-  }
-}
-
-// 5. Envio de Mensagem para IA
-async function sendMsg() {
-  if (!chatInput) return;
-  const text = chatInput.value.trim();
-  if (!text && !attachedImageBase64) return;
-
-  let userDisplayHtml = escapeHTML(text);
-  if (attachedImageBase64) {
-    userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`;
-  }
-
-  appendCustomMessage(userDisplayHtml, 'user', true);
-  
-  if (chatsStore[activeChatId] && chatsStore[activeChatId].messages.length <= 1) {
-    chatsStore[activeChatId].title = text.substring(0, 22) + '...';
-    renderHistoryList();
-  }
-
-  chatInput.value = '';
-
-  const loadingDiv = document.createElement('div');
-  loadingDiv.className = 'jarv-msg jarv-msg-bot';
-  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando...`;
-  msgArea.appendChild(loadingDiv);
-  msgArea.scrollTop = msgArea.scrollHeight;
-
-  try {
-    let messageContent = text || "Olá!";
-    if (attachedImageBase64) messageContent = `[Imagem Anexada] ${text}`;
-
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer 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"
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: [
-          {
-            role: "system",
-            content: `Você é o J.A.R.V.I.S., assistente inteligente integrado no sistema Kali Linux Cyberpunk do Romário. Responda em ${currentLang}. Seja direto, técnico e cortês.`
-          },
-          { role: "user", content: messageContent }
-        ]
-      })
-    });
-
-    const data = await response.json();
-    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
-    
-    attachedImageBase64 = null;
-    chatInput.placeholder = i18n[currentLang].placeholder;
-
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      const botResponse = data.choices[0].message.content;
-      appendMessage(botResponse, 'bot', true);
-      speakJARVIS(botResponse);
-    } else {
-      appendMessage("Erro: Resposta inesperada do servidor.", 'system', true);
-    }
-  } catch (err) {
-    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
-    appendMessage(`Erro de conexão: ${err.message}`, 'system', true);
-    attachedImageBase64 = null;
-  }
-}
-
-// Renderização de Mensagens
 function appendMessage(text, type, save = true) {
   if (!msgArea) return;
   const msgDiv = document.createElement('div');
@@ -306,17 +349,15 @@ function appendMessage(text, type, save = true) {
   } else if (type === 'bot') {
     msgDiv.className = 'jarv-msg jarv-msg-bot';
     let htmlContent = `<span class="jarv-code">[JARV]</span> ${formatMarkdown(text)}`;
-    
     if (text.toLowerCase().includes('slide') || text.includes('```')) {
       const cacheKey = 'slide_' + Date.now();
       window.downloadCache[cacheKey] = text;
       htmlContent += `
         <div class="msg-download-bar">
-          <button class="btn-download-file" onclick="downloadAsFile('slide_jarvis.md', '${cacheKey}')">
-            <i class="fa-solid fa-download"></i> Baixar Slide (.md / .txt)
+          <button class="btn-download-file" onclick="downloadAsFile('jarvis_doc.md', '${cacheKey}')">
+            <i class="fa-solid fa-download"></i> Baixar Documento (.md)
           </button>
-        </div>
-      `;
+        </div>`;
     }
     msgDiv.innerHTML = htmlContent;
   } else {
@@ -347,7 +388,35 @@ function appendCustomMessage(htmlContent, type, save = true) {
   }
 }
 
-// Configurações e Idiomas
+function downloadAsFile(filename, cacheKey) {
+  const textContent = window.downloadCache[cacheKey] || "";
+  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function speakJARVIS(text) {
+  if (!ttsEnabled || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const cleanText = text.replace(/[*_#`\[\]]/g, '');
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = currentLang;
+  window.speechSynthesis.speak(utterance);
+}
+
+function toggleTTS(state) {
+  ttsEnabled = typeof state === 'boolean' ? state : !ttsEnabled;
+  localStorage.setItem('jarv_tts', ttsEnabled);
+  const btn = document.getElementById('ttsToggleBtn');
+  if (btn) btn.style.color = ttsEnabled ? '#00d2ff' : '#5c78a5';
+}
+
 function openSettingsModal() {
   const modal = document.getElementById('settingsModal');
   if (modal) modal.style.display = 'flex';
@@ -378,29 +447,24 @@ function applyLanguage(lang) {
   if (chatInput) chatInput.placeholder = dict.placeholder;
 }
 
-// Uploads e Voz
 function setupFileUploads() {
   hiddenImageInput = document.createElement('input');
-  hiddenImageInput.type = 'file'; 
-  hiddenImageInput.accept = 'image/*'; 
-  hiddenImageInput.style.display = 'none';
+  hiddenImageInput.type = 'file'; hiddenImageInput.accept = 'image/*'; hiddenImageInput.style.display = 'none';
   document.body.appendChild(hiddenImageInput);
-  
   hiddenImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
         attachedImageBase64 = uploadEvent.target.result;
-        appendMessage(`[BUFFER] Imagem carregada: ${file.name}`, 'system', false);
+        appendMessage(`[BUFFER] Imagem anexada com sucesso: ${file.name}`, 'system', false);
       };
       reader.readAsDataURL(file);
     }
   });
 
   hiddenFileInput = document.createElement('input');
-  hiddenFileInput.type = 'file'; 
-  hiddenFileInput.style.display = 'none';
+  hiddenFileInput.type = 'file'; hiddenFileInput.style.display = 'none';
   document.body.appendChild(hiddenFileInput);
 }
 
@@ -408,24 +472,18 @@ function setupToolbarButtons() {
   const buttons = document.querySelectorAll('.action-toolbar button');
   buttons.forEach(btn => {
     const title = btn.getAttribute('title') || '';
-    if (title.includes('Câmera') || title.includes('Imagem')) {
-      btn.onclick = () => hiddenImageInput.click();
-    } else if (title.includes('Anexo')) {
-      btn.onclick = () => hiddenFileInput.click();
-    } else if (title.includes('Voz')) {
-      btn.onclick = () => startVoiceRecognition();
-    }
+    if (title.includes('Imagem')) btn.onclick = () => hiddenImageInput.click();
+    else if (title.includes('Anexo')) btn.onclick = () => hiddenFileInput.click();
+    else if (title.includes('Voz')) btn.onclick = () => startVoiceRecognition();
   });
 }
 
 function startVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return alert("Navegador sem suporte a STT.");
-
   const recognition = new SpeechRecognition();
   recognition.lang = currentLang;
   recognition.start();
-
   recognition.onresult = (e) => {
     if (chatInput) {
       chatInput.value = e.results[0][0].transcript;
@@ -440,32 +498,21 @@ function switchView(viewName) {
   if (btn) btn.classList.add('active');
 }
 
-function resetSystem() {
-  clearCurrentChat();
-}
+function resetSystem() { clearCurrentChat(); }
 
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, (tag) => {
-    const chars = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#039;',
-      '"': '&quot;'
-    };
-    return chars[tag] || tag;
-  });
+  return str.replace(/[&<>'"]/g, (tag) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+  }[tag] || tag));
 }
 
 function formatMarkdown(text) {
-  if (typeof marked !== 'undefined') {
-    return marked.parse(text);
-  }
+  if (typeof marked !== 'undefined') return marked.parse(text);
   return escapeHTML(text).replace(/\n/g, '<br>');
 }
 
-// Exposição explícita das funções para o escopo global (window)
+// Exposição global segura
 window.sendMsg = sendMsg;
 window.createNewChat = createNewChat;
 window.clearCurrentChat = clearCurrentChat;
@@ -476,3 +523,5 @@ window.closeSettingsModal = closeSettingsModal;
 window.changeLanguage = changeLanguage;
 window.switchView = switchView;
 window.resetSystem = resetSystem;
+window.runQuantumDemo = runQuantumDemo;
+window.searchWikiPrompt = searchWikiPrompt;
