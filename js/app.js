@@ -8,36 +8,24 @@ const firebaseConfig = {
   appId: "1:275886641350:web:69bd0e534fb71a3a1e47c7"
 };
 
-// Inicializa Firebase se disponível
 let auth, db, provider;
 if (typeof firebase !== 'undefined') {
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
+  if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
   auth = firebase.auth();
   db = firebase.firestore();
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-// FIXAÇÃO PERMANENTE DO MODELO ATUALIZADO: LLaMA 3.1 8B Instant
-const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';
+// MODELO ATIVO ESTÁVEL NA GROQ
+const ULTRA_FAST_MODEL = 'llama3-70b-8192';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
-let selectedModel = ULTRA_FAST_MODEL;
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
-let ttsEnabled = true; // Voz ativa por padrão
+let ttsEnabled = true;
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v2')) || {};
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 
-// Dicionário i18n
-const i18n = {
-  'pt-BR': {
-    placeholder: "Digite um comando (ex: pesquise sobre, crie slides, gere imagem, crie documento)...",
-    system_init: "J.A.R.V.I.S. Operacional em modo Ultra Rápido (LLaMA 3.1 8B). Recursos ativados: Voz, Pesquisa, Slides, Word, Imagens e Vídeos."
-  }
-};
-
-let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput;
+let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput, jarvisOrb;
 let attachedImageBase64 = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -48,6 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
   userNameEl = document.getElementById('userName');
   logoutBtn = document.getElementById('logoutBtn');
 
+  injectJarvisOrbStyles();
+  createJarvisOrbElement();
   startRealTimeClock();
 
   if (auth) {
@@ -55,14 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user) {
         const name = user.displayName || user.email;
         if (userNameEl) userNameEl.textContent = name;
-        if (statusEl) statusEl.textContent = `Autenticado (${name}) - Mod: LLaMA 3.1 8B`;
+        if (statusEl) statusEl.textContent = `Autenticado (${name}) - J.A.R.V.I.S. Ativo`;
         if (loginModal) loginModal.style.display = "none";
-        if (logoutBtn) logoutBtn.style.display = "inline-block";
       } else {
         if (userNameEl) userNameEl.textContent = "Operador";
-        if (statusEl) statusEl.textContent = "Modo Convidado - Mod: LLaMA 3.1 8B";
-        if (loginModal) loginModal.style.display = "flex";
-        if (logoutBtn) logoutBtn.style.display = "none";
+        if (statusEl) statusEl.textContent = "Modo Operacional - J.A.R.V.I.S. Ativo";
       }
     });
   }
@@ -71,6 +58,94 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();
   setupToolbarButtons();
 });
+
+// 1. Criação Visual da Esfera Holográfica (Orb Matrix / Waveform Sphere)
+function injectJarvisOrbStyles() {
+  if (document.getElementById('jarvisOrbStyle')) return;
+  const style = document.createElement('style');
+  style.id = 'jarvisOrbStyle';
+  style.innerHTML = `
+    .jarvis-orb-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 15px auto;
+      padding: 10px;
+    }
+    .jarvis-orb {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00ffff 0%, #0077ff 60%, #001133 100%);
+      box-shadow: 0 0 20px #00ffff, inset 0 0 15px #ffffff;
+      animation: orb-pulse 2s infinite ease-in-out;
+      position: relative;
+    }
+    .jarvis-orb::after {
+      content: '';
+      position: absolute;
+      top: -5px; left: -5px; right: -5px; bottom: -5px;
+      border-radius: 50%;
+      border: 2px dashed rgba(0, 255, 255, 0.6);
+      animation: orb-rotate 8s linear infinite;
+    }
+    .jarvis-orb.active-speaking {
+      animation: orb-speaking 0.5s infinite alternate ease-in-out;
+      box-shadow: 0 0 35px #00ffcc, 0 f 0 15px rgba(0, 255, 204, 0.4);
+    }
+    @keyframes orb-pulse {
+      0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 15px #00ffff; }
+      50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 30px #00ffff; }
+      100% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 15px #00ffff; }
+    }
+    @keyframes orb-speaking {
+      0% { transform: scale(0.9); box-shadow: 0 0 20px #ff0055; background: radial-gradient(circle, #ff0055 0%, #770033 100%); }
+      100% { transform: scale(1.2); box-shadow: 0 0 40px #00ffcc; background: radial-gradient(circle, #00ffcc 0%, #007777 100%); }
+    }
+    @keyframes orb-rotate {
+      100% { transform: rotate(360deg); }
+    }
+    .jarvis-orb-label {
+      margin-top: 8px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #00ffff;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function createJarvisOrbElement() {
+  const sidebar = document.querySelector('.sidebar') || document.body;
+  if (document.getElementById('jarvisOrbWidget')) return;
+  
+  const container = document.createElement('div');
+  container.id = 'jarvisOrbWidget';
+  container.className = 'jarvis-orb-container';
+  container.innerHTML = `
+    <div id="visualOrb" class="jarvis-orb"></div>
+    <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>
+  `;
+  
+  const historyList = document.getElementById('chatHistoryList');
+  if (historyList && historyList.parentNode) {
+    historyList.parentNode.insertBefore(container, historyList);
+  } else {
+    sidebar.appendChild(container);
+  }
+  jarvisOrb = document.getElementById('visualOrb');
+}
+
+function setOrbState(active) {
+  if (!jarvisOrb) jarvisOrb = document.getElementById('visualOrb');
+  if (jarvisOrb) {
+    if (active) jarvisOrb.classList.add('active-speaking');
+    else jarvisOrb.classList.remove('active-speaking');
+  }
+}
 
 // Relógio em Tempo Real
 function startRealTimeClock() {
@@ -81,7 +156,7 @@ function startRealTimeClock() {
   setInterval(update, 1000);
 }
 
-// Gerenciador de Histórico
+// Histórico
 function initChatStore() {
   if (!activeChatId || !chatsStore[activeChatId]) {
     createNewChat(false);
@@ -105,13 +180,11 @@ function loadChatMessages(id) {
   renderHistoryList();
   if (!msgArea) return;
   msgArea.innerHTML = '';
-  
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage(i18n['pt-BR'].system_init, 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Esfera holográfica ativa.", 'system', false);
     return;
   }
-  
   chat.messages.forEach(msg => {
     if (msg.type === 'user') appendCustomMessage(msg.content, 'user', false);
     else appendMessage(msg.content, msg.type, false);
@@ -136,15 +209,13 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// 1. Pesquisa Web na Wikipédia
+// Pesquisa Web na Wikipédia
 async function fetchWikipedia(query) {
   try {
     const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
-    if (!searchData.query.search || searchData.query.search.length === 0) {
-      return "Nenhum resultado encontrado para a pesquisa.";
-    }
+    if (!searchData.query.search || searchData.query.search.length === 0) return "Nenhum resultado encontrado.";
     const pageId = searchData.query.search[0].pageid;
     const contentUrl = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&pageids=${pageId}&format=json&origin=*`;
     const contentRes = await fetch(contentUrl);
@@ -155,7 +226,7 @@ async function fetchWikipedia(query) {
   }
 }
 
-// 2. Sistema de Download de Arquivos (.md, .txt, .doc)
+// Arquivos
 function downloadAsFile(filename, textContent, mimeType = 'text/plain;charset=utf-8') {
   const blob = new Blob([textContent], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -177,24 +248,27 @@ function downloadAsWord(filename, textContent) {
       <hr>
       <div>${formatMarkdown(textContent)}</div>
     </body>
-    </html>
-  `;
+    </html>`;
   downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
-// 3. Resposta em Voz (Síntese Falada)
+// Voz (TTS com ativação da Esfera Holográfica)
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const cleanText = text.replace(/[*_#`\[\]]/g, '').substring(0, 300);
+  const cleanText = text.replace(/[*_#`\[\]]/g, '').substring(0, 350);
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = 'pt-BR';
   utterance.rate = 1.05;
-  utterance.pitch = 0.95;
+  
+  setOrbState(true);
+  utterance.onend = () => setOrbState(false);
+  utterance.onerror = () => setOrbState(false);
+  
   window.speechSynthesis.speak(utterance);
 }
 
-// 4. Fluxo Principal de Processamento de Comandos
+// Comando Principal
 async function sendMsg() {
   const text = chatInput.value.trim();
   if (!text && !attachedImageBase64) return;
@@ -202,64 +276,44 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();
   chatInput.value = '';
 
-  // A. Geração de Imagem
+  // Imagem
   if (lowerText.startsWith("gere uma imagem de") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem")) {
     const promptImg = text.replace(/^(gere|gerar|criar)\s+(uma\s+)?imagem\s+(de\s+)?/i, '').trim();
     appendCustomMessage(escapeHTML(text), 'user', true);
-    
     const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;
-    const botHtml = `
-      <strong>[J.A.R.V.I.S. GERADOR DE IMAGENS]</strong><br>
-      Imagem gerada para: <em>"${escapeHTML(promptImg)}"</em><br><br>
-      <img src="${imgUrl}" alt="Imagem Gerada" style="max-width: 100%; border-radius: 8px; border: 1px solid #00d2ff;"><br><br>
-      <a href="${imgUrl}" target="_blank" style="color: #00d2ff; text-decoration: none;">🔍 Abrir Imagem em Alta Resolução</a>
-    `;
+    const botHtml = `<strong>[J.A.R.V.I.S. IMAGEM]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00d2ff;"><br><a href="${imgUrl}" target="_blank" style="color:#00d2ff;">Abrir em Alta Resolução</a>`;
     appendCustomHtml(botHtml, 'bot', true);
-    speakJARVIS(`Imagem gerada com sucesso para ${promptImg}`);
+    speakJARVIS(`Imagem gerada para ${promptImg}`);
     return;
   }
 
-  // B. Pesquisa Web Automática
-  const isSearchQuery = text.startsWith('!wiki ') || lowerText.includes('pesquise sobre') || lowerText.includes('pesquisar sobre') || lowerText.includes('busque sobre');
+  // Pesquisa
+  const isSearchQuery = text.startsWith('!wiki ') || lowerText.includes('pesquise sobre') || lowerText.includes('pesquisa de') || lowerText.includes('pesquisa sobre');
   if (isSearchQuery) {
-    let wikiQuery = text.replace(/^!wiki\s+/i, '').replace(/.*(pesquise|pesquisar|busque)\s+sobre\s+/i, '').replace(/por\s+favor.*$/i, '').trim();
+    let wikiQuery = text.replace(/^!wiki\s+/i, '').replace(/.*(pesquise|pesquisa|busque)\s+(sobre|de)?\s+/i, '').replace(/por\s+favor.*$/i, '').trim();
     appendCustomMessage(escapeHTML(text), 'user', true);
     
-    const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'jarv-msg jarv-msg-bot';
-    loadingDiv.innerHTML = `<span class="jarv-code">[PESQUISA]</span> Consultando base de conhecimento para "${escapeHTML(wikiQuery)}"...`;
-    msgArea.appendChild(loadingDiv);
-
+    setOrbState(true);
     const wikiResult = await fetchWikipedia(wikiQuery);
-    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
-    
+    setOrbState(false);
+
     appendMessage(`**Resultados da Pesquisa para "${wikiQuery}":**\n\n${wikiResult}`, 'bot', true);
     speakJARVIS(wikiResult);
     return;
   }
 
-  // C. Envio Padrão para Groq AI em Modo Ultra Rápido (LLaMA 3.1 8B Instant)
+  // IA Groq
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
-    userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`;
+    userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px;">`;
   }
   appendCustomMessage(userDisplayHtml, 'user', true);
 
-  const loadingDiv = document.createElement('div');
-  loadingDiv.className = 'jarv-msg jarv-msg-bot';
-  loadingDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> Processando em Alta Velocidade...`;
-  msgArea.appendChild(loadingDiv);
-  msgArea.scrollTop = msgArea.scrollHeight;
-
+  setOrbState(true);
   try {
     let promptInstruction = text;
-    if (lowerText.includes("slide")) {
-      promptInstruction += "\n\n(Aviso de Formatação: Monte uma apresentação de slides estruturada com Título, Slide 1, Slide 2, etc.)";
-    } else if (lowerText.includes("documento") || lowerText.includes("relatório") || lowerText.includes("word")) {
-      promptInstruction += "\n\n(Aviso de Formatação: Monte um documento formal estruturado com introdução, tópicos e conclusão.)";
-    } else if (lowerText.includes("vídeo") || lowerText.includes("video")) {
-      promptInstruction += "\n\n(Aviso de Formatação: Crie um Roteiro de Vídeo com Cenas, Prompt Visual de IA e Narração do Locutor.)";
-    }
+    if (lowerText.includes("slide")) promptInstruction += "\n\n(Formato: Crie uma apresentação de slides estruturada com títulos e tópicos)";
+    if (lowerText.includes("documento") || lowerText.includes("relatório")) promptInstruction += "\n\n(Formato: Crie um documento formal com introdução e conclusão)";
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -270,17 +324,15 @@ async function sendMsg() {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          {
-            role: "system",
-            content: "Você é o J.A.R.V.I.S., uma IA avançada e super rápida. Responda com altíssima qualidade, precisão e eficiência."
-          },
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado. Responda de forma precisa e eficiente." },
+          { role: { role: "user", content: promptInstruction } },
           { role: "user", content: promptInstruction }
         ]
       })
     });
 
     const data = await response.json();
-    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
+    setOrbState(false);
     attachedImageBase64 = null;
 
     if (data.choices && data.choices[0] && data.choices[0].message) {
@@ -288,54 +340,36 @@ async function sendMsg() {
       appendMessage(botResponse, 'bot', true);
       speakJARVIS(botResponse);
     } else {
-      appendMessage(`Erro no núcleo de IA: ${data.error ? data.error.message : 'Instabilidade temporária.'}`, 'system', true);
+      appendMessage(`Erro no núcleo de IA: ${data.error ? data.error.message : 'Falha na resposta.'}`, 'system', true);
     }
   } catch (err) {
-    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
-    appendMessage(`Erro de Conexão: ${err.message}`, 'system', true);
+    setOrbState(false);
+    appendMessage(`Erro de conexão: ${err.message}`, 'system', true);
   }
 }
 
-// Renderização de Mensagens com Botões Inteligentes de Download (Slides e Word)
 function appendMessage(text, type, save = true) {
   const msgDiv = document.createElement('div');
-
   if (type === 'user') {
     msgDiv.className = 'jarv-msg jarv-msg-user';
     msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;
   } else if (type === 'bot') {
     msgDiv.className = 'jarv-msg jarv-msg-bot';
     let htmlContent = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;
-    
     const uniqueId = 'doc_' + Date.now();
     window[uniqueId] = text;
 
     const lower = text.toLowerCase();
     if (lower.includes('slide') || lower.includes('apresentação')) {
-      htmlContent += `
-        <div style="margin-top: 10px; display: flex; gap: 8px;">
-          <button class="btn-send" style="padding: 5px 10px; font-size: 0.8rem;" onclick="downloadAsFile('apresentacao_slides.md', window['${uniqueId}'])">
-            📥 Baixar Slides (.md)
-          </button>
-          <button class="btn-send" style="padding: 5px 10px; font-size: 0.8rem; background: #0088cc;" onclick="downloadAsWord('apresentacao_slides.doc', window['${uniqueId}'])">
-            📄 Baixar em Word (.doc)
-          </button>
-        </div>`;
-    } else if (lower.includes('documento') || lower.includes('relatório') || lower.includes('artigo') || lower.includes('roteiro')) {
-      htmlContent += `
-        <div style="margin-top: 10px;">
-          <button class="btn-send" style="padding: 5px 10px; font-size: 0.8rem; background: #0088cc;" onclick="downloadAsWord('documento_jarvis.doc', window['${uniqueId}'])">
-            📄 Baixar Documento Word (.doc)
-          </button>
-        </div>`;
+      htmlContent += `<div style="margin-top:10px; display:flex; gap:8px;"><button class="btn-send" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadAsFile('slides.md', window['${uniqueId}'])">📥 Baixar Slides (.md)</button><button class="btn-send" style="padding:4px 8px; font-size:0.75rem; background:#0088cc;" onclick="downloadAsWord('slides.doc', window['${uniqueId}'])">📄 Word (.doc)</button></div>`;
+    } else if (lower.includes('documento') || lower.includes('relatório')) {
+      htmlContent += `<div style="margin-top:10px;"><button class="btn-send" style="padding:4px 8px; font-size:0.75rem; background:#0088cc;" onclick="downloadAsWord('relatorio.doc', window['${uniqueId}'])">📄 Word (.doc)</button></div>`;
     }
-
     msgDiv.innerHTML = htmlContent;
   } else {
     msgDiv.className = 'jarv-msg jarv-msg-system';
     msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${escapeHTML(text)}`;
   }
-
   msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 
@@ -347,11 +381,10 @@ function appendMessage(text, type, save = true) {
 
 function appendCustomHtml(htmlContent, type, save = true) {
   const msgDiv = document.createElement('div');
-  msgDiv.className = type === 'user' ? 'jarv-msg jarv-msg-user' : 'jarv-msg jarv-msg-bot';
+  msgDiv.className = 'jarv-msg jarv-msg-bot';
   msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${htmlContent}`;
   msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
-
   if (save && chatsStore[activeChatId]) {
     chatsStore[activeChatId].messages.push({ type: 'bot', content: htmlContent });
     saveStore();
@@ -364,42 +397,31 @@ function appendCustomMessage(htmlContent, type, save = true) {
   msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${htmlContent}`;
   msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
-
   if (save && chatsStore[activeChatId]) {
     chatsStore[activeChatId].messages.push({ type: 'user', content: htmlContent });
     saveStore();
   }
 }
 
-// Uploads e Ferramentas
 function setupFileUploads() {
   hiddenImageInput = document.createElement('input');
-  hiddenImageInput.type = 'file'; 
-  hiddenImageInput.accept = 'image/*'; 
-  hiddenImageInput.style.display = 'none';
+  hiddenImageInput.type = 'file'; hiddenImageInput.accept = 'image/*'; hiddenImageInput.style.display = 'none';
   document.body.appendChild(hiddenImageInput);
-  
   hiddenImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        attachedImageBase64 = uploadEvent.target.result;
-        appendMessage(`[IMAGEM CARREGADA] ${file.name}`, 'system', false);
-      };
+      reader.onload = (ev) => { attachedImageBase64 = ev.target.result; appendMessage(`Imagem carregada: ${file.name}`, 'system', false); };
       reader.readAsDataURL(file);
     }
   });
-
   hiddenFileInput = document.createElement('input');
-  hiddenFileInput.type = 'file'; 
-  hiddenFileInput.style.display = 'none';
+  hiddenFileInput.type = 'file'; hiddenFileInput.style.display = 'none';
   document.body.appendChild(hiddenFileInput);
 }
 
 function setupToolbarButtons() {
-  const buttons = document.querySelectorAll('.action-toolbar button');
-  buttons.forEach(btn => {
+  document.querySelectorAll('.action-toolbar button').forEach(btn => {
     const title = btn.getAttribute('title') || '';
     if (title.includes('Câmera') || title.includes('Imagem')) btn.onclick = () => hiddenImageInput.click();
     else if (title.includes('Anexo')) btn.onclick = () => hiddenFileInput.click();
@@ -409,16 +431,17 @@ function setupToolbarButtons() {
 
 function startVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return alert("Navegador sem suporte a microfone.");
-
+  if (!SpeechRecognition) return alert("Microfone não suportado.");
   const recognition = new SpeechRecognition();
   recognition.lang = 'pt-BR';
   recognition.start();
-
+  setOrbState(true);
   recognition.onresult = (e) => {
+    setOrbState(false);
     chatInput.value = e.results[0][0].transcript;
     sendMsg();
   };
+  recognition.onerror = () => setOrbState(false);
 }
 
 function resetSystem() {
