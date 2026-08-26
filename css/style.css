@@ -219,6 +219,26 @@ body.kali-theme {
   color: var(--accent-cyan);
 }
 
+/* ESTILO PARA TABELAS GERADAS PELO BOT */
+.jarv-msg-bot table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  color: var(--text-main);
+}
+
+.jarv-msg-bot th, .jarv-msg-bot td {
+  border: 1px solid var(--accent-cyan);
+  padding: 8px;
+  text-align: left;
+}
+
+.jarv-msg-bot th {
+  background-color: rgba(0, 210, 255, 0.15);
+  color: var(--accent-cyan);
+}
+
 /* TERMINAL CLI INFERIOR */
 .terminal-cli-panel {
   background-color: rgba(5, 9, 16, 0.9);
