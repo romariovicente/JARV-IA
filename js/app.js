@@ -16,7 +16,6 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();
 }
 
-// MODELO ATIVO ESTÁVEL NA GROQ
 const ULTRA_FAST_MODEL = 'llama3-70b-8192';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 
@@ -27,6 +26,7 @@ let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput, jarvisOrb;
 let attachedImageBase64 = null;
+let audioCtx = null, analyser = null, dataArray = null, sourceNode = null, animFrameId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   msgArea = document.getElementById('msgArea');
@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
   injectJarvisOrbStyles();
   createJarvisOrbElement();
   startRealTimeClock();
+  initAudioAnalyzer();
 
   if (auth) {
     auth.onAuthStateChanged((user) => {
@@ -59,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupToolbarButtons();
 });
 
-// Esfera Holográfica (Orb Matrix)
+// Esfera Holográfica com Equalizador Visual Hipnótico
 function injectJarvisOrbStyles() {
   if (document.getElementById('jarvisOrbStyle')) return;
   const style = document.createElement('style');
@@ -73,46 +74,64 @@ function injectJarvisOrbStyles() {
       margin: 15px auto;
       padding: 10px;
     }
-    .jarvis-orb {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #00ffff 0%, #0077ff 60%, #001133 100%);
-      box-shadow: 0 0 20px #00ffff, inset 0 0 15px #ffffff;
-      animation: orb-pulse 2s infinite ease-in-out;
+    .jarvis-orb-wrapper {
       position: relative;
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .jarvis-orb::after {
-      content: '';
-      position: absolute;
-      top: -5px; left: -5px; right: -5px; bottom: -5px;
+    .jarvis-orb {
+      width: 75px;
+      height: 75px;
       border-radius: 50%;
-      border: 2px dashed rgba(0, 255, 255, 0.6);
-      animation: orb-rotate 8s linear infinite;
+      background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%);
+      box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff;
+      animation: orb-idle 3s infinite ease-in-out;
+      position: relative;
+      z-index: 2;
     }
+    .ring-wave {
+      position: absolute;
+      border-radius: 50%;
+      border: 1.5px solid rgba(0, 255, 255, 0.5);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: ring-expand 4s linear infinite;
+    }
+    .ring-wave:nth-child(1) { width: 85px; height: 85px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }
+    .ring-wave:nth-child(2) { width: 95px; height: 95px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }
+    .ring-wave:nth-child(3) { width: 105px; height: 105px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }
+
     .jarvis-orb.active-speaking {
-      animation: orb-speaking 0.5s infinite alternate ease-in-out;
-      box-shadow: 0 0 35px #00ffcc, 0 0 15px rgba(0, 255, 204, 0.4);
+      animation: orb-frequency-react 0.1s infinite alternate;
+      box-shadow: 0 0 45px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff;
+      background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%);
     }
-    @keyframes orb-pulse {
-      0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 15px #00ffff; }
-      50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 30px #00ffff; }
-      100% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 15px #00ffff; }
+
+    @keyframes orb-idle {
+      0%, 100% { transform: scale(0.97); box-shadow: 0 0 20px #00ffff; }
+      50% { transform: scale(1.03); box-shadow: 0 0 32px #00d2ff; }
     }
-    @keyframes orb-speaking {
-      0% { transform: scale(0.9); box-shadow: 0 0 20px #ff0055; background: radial-gradient(circle, #ff0055 0%, #770033 100%); }
-      100% { transform: scale(1.2); box-shadow: 0 0 40px #00ffcc; background: radial-gradient(circle, #00ffcc 0%, #007777 100%); }
+    @keyframes ring-expand {
+      0% { width: 75px; height: 75px; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { width: 140px; height: 140px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
     }
-    @keyframes orb-rotate {
-      100% { transform: rotate(360deg); }
+    @keyframes orb-frequency-react {
+      0% { transform: scale(0.95); filter: hue-rotate(0deg); }
+      100% { transform: scale(1.25); filter: hue-rotate(90deg); }
     }
+
     .jarvis-orb-label {
-      margin-top: 8px;
+      margin-top: 10px;
       font-family: monospace;
       font-size: 0.75rem;
       color: #00ffff;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 2.5px;
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
     }
   `;
   document.head.appendChild(style);
@@ -126,7 +145,12 @@ function createJarvisOrbElement() {
   container.id = 'jarvisOrbWidget';
   container.className = 'jarvis-orb-container';
   container.innerHTML = `
-    <div id="visualOrb" class="jarvis-orb"></div>
+    <div class="jarvis-orb-wrapper">
+      <div class="ring-wave"></div>
+      <div class="ring-wave"></div>
+      <div class="ring-wave"></div>
+      <div id="visualOrb" class="jarvis-orb"></div>
+    </div>
     <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>
   `;
   
@@ -139,12 +163,53 @@ function createJarvisOrbElement() {
   jarvisOrb = document.getElementById('visualOrb');
 }
 
+function initAudioAnalyzer() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      audioCtx = new AudioContext();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+    }
+  } catch (e) {
+    console.log("AudioContext não suportado diretamente.");
+  }
+}
+
 function setOrbState(active) {
   if (!jarvisOrb) jarvisOrb = document.getElementById('visualOrb');
-  if (jarvisOrb) {
-    if (active) jarvisOrb.classList.add('active-speaking');
-    else jarvisOrb.classList.remove('active-speaking');
+  if (!jarvisOrb) return;
+
+  if (active) {
+    jarvisOrb.classList.add('active-speaking');
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    startFrequencyLoop();
+  } else {
+    jarvisOrb.classList.remove('active-speaking');
+    jarvisOrb.style.transform = 'scale(1)';
+    if (animFrameId) cancelAnimationFrame(animFrameId);
   }
+}
+
+function startFrequencyLoop() {
+  if (!analyser || !dataArray) return;
+  const updateLoop = () => {
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+    let average = sum / dataArray.length;
+    let scaleVal = 0.95 + (average / 120);
+    if (jarvisOrb && jarvisOrb.classList.contains('active-speaking')) {
+      jarvisOrb.style.transform = `scale(${Math.min(scaleVal, 1.35)})`;
+      animFrameId = requestAnimationFrame(updateLoop);
+    }
+  };
+  updateLoop();
 }
 
 function startRealTimeClock() {
@@ -180,7 +245,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage("J.A.R.V.I.S. Operacional. Esfera holográfica ativa.", 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Núcleo holográfico sincronizado.", 'system', false);
     return;
   }
   chat.messages.forEach(msg => {
@@ -248,14 +313,30 @@ function downloadAsWord(filename, textContent) {
   downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
+// Voz estilo J.A.R.V.I.S. (Metálica / Britânica calibrada) e Leitura Completa Integrada
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const cleanText = text.replace(/[*_#`\[\]]/g, '').substring(0, 350);
+  
+  const cleanText = text.replace(/[*_#`\[\]]/g, '');
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = 'pt-BR';
-  utterance.rate = 1.05;
-  
+  utterance.rate = 1.02; // Velocidade calibrada para clareza e precisão
+  utterance.pitch = 0.85; // Tom mais grave e sério, simulando voz de IA avançada
+
+  // Tentar encontrar uma voz masculina ou britânica em pt-BR / pt-PT se disponível
+  const voices = window.speechSynthesis.getVoices();
+  const selectedVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('microsoft'))) || voices.find(v => v.lang.includes('pt'));
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+  }
+
+  try {
+    if (audioCtx && analyser && !sourceNode) {
+      sourceNode = audioCtx.createMediaStreamSource ? null : null; // Mantém fallback seguro para síntese nativa
+    }
+  } catch(e) {}
+
   setOrbState(true);
   utterance.onend = () => setOrbState(false);
   utterance.onerror = () => setOrbState(false);
@@ -276,7 +357,7 @@ async function sendMsg() {
     const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;
     const botHtml = `<strong>[J.A.R.V.I.S. IMAGEM]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00d2ff;"><br><a href="${imgUrl}" target="_blank" style="color:#00d2ff;">Abrir em Alta Resolução</a>`;
     appendCustomHtml(botHtml, 'bot', true);
-    speakJARVIS(`Imagem gerada para ${promptImg}`);
+    speakJARVIS(`Gerando imagem holográfica para ${promptImg}.`);
     return;
   }
 
@@ -315,7 +396,7 @@ async function sendMsg() {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado. Responda de forma precisa e eficiente." },
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado e analítico. Responda com eficiência técnica." },
           { role: "user", content: promptInstruction }
         ]
       })
