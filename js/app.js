@@ -28,7 +28,6 @@ let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileI
 let attachedImageBase64 = null;
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;
 
-// Variáveis de Controle de Voz Contínua
 let recognition = null;
 let isContinuousActive = false;
 let isJarvisSpeaking = false;
@@ -66,100 +65,25 @@ document.addEventListener("DOMContentLoaded", () => {
   setupToolbarButtons();
 });
 
-// Esfera Holográfica com Equalizador Visual Hipnótico
 function injectJarvisOrbStyles() {
   if (document.getElementById('jarvisOrbStyle')) return;
   const style = document.createElement('style');
   style.id = 'jarvisOrbStyle';
   style.innerHTML = `
-    .jarvis-orb-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin: 15px auto;
-      padding: 10px;
-    }
-    .jarvis-orb-wrapper {
-      position: relative;
-      width: 100px;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .jarvis-orb {
-      width: 75px;
-      height: 75px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%);
-      box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff;
-      animation: orb-idle 3s infinite ease-in-out;
-      position: relative;
-      z-index: 2;
-    }
-    .ring-wave {
-      position: absolute;
-      border-radius: 50%;
-      border: 1.5px solid rgba(0, 255, 255, 0.5);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      animation: ring-expand 4s linear infinite;
-    }
+    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 15px auto; padding: 10px; }
+    .jarvis-orb-wrapper { position: relative; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; }
+    .jarvis-orb { width: 75px; height: 75px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }
+    .ring-wave { position: absolute; border-radius: 50%; border: 1.5px solid rgba(0, 255, 255, 0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; animation: ring-expand 4s linear infinite; }
     .ring-wave:nth-child(1) { width: 85px; height: 85px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }
     .ring-wave:nth-child(2) { width: 95px; height: 95px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }
     .ring-wave:nth-child(3) { width: 105px; height: 105px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }
-
-    .jarvis-orb.active-speaking {
-      animation: orb-frequency-react 0.1s infinite alternate;
-      box-shadow: 0 0 45px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff;
-      background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%);
-    }
-
-    @keyframes orb-idle {
-      0%, 100% { transform: scale(0.97); box-shadow: 0 0 20px #00ffff; }
-      50% { transform: scale(1.03); box-shadow: 0 0 32px #00d2ff; }
-    }
-    @keyframes ring-expand {
-      0% { width: 75px; height: 75px; opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      100% { width: 140px; height: 140px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
-    }
-    @keyframes orb-frequency-react {
-      0% { transform: scale(0.95); filter: hue-rotate(0deg); }
-      100% { transform: scale(1.25); filter: hue-rotate(90deg); }
-    }
-
-    .jarvis-orb-label {
-      margin-top: 10px;
-      font-family: monospace;
-      font-size: 0.75rem;
-      color: #00ffff;
-      text-transform: uppercase;
-      letter-spacing: 2.5px;
-      text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
-    }
-    
-    .continuous-btn {
-      background: rgba(0, 210, 255, 0.1);
-      border: 1px solid #00d2ff;
-      color: #00d2ff;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-family: monospace;
-      font-size: 0.75rem;
-      margin: 5px 0 15px 0;
-      width: 100%;
-      text-transform: uppercase;
-      transition: all 0.3s;
-    }
-    .continuous-btn.active {
-      background: #00d2ff;
-      color: #000;
-      box-shadow: 0 0 15px #00d2ff;
-      font-weight: bold;
-    }
+    .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 45px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }
+    @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 20px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 32px #00d2ff; } }
+    @keyframes ring-expand { 0% { width: 75px; height: 75px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 140px; height: 140px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }
+    @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.25); filter: hue-rotate(90deg); } }
+    .jarvis-orb-label { margin-top: 10px; font-family: monospace; font-size: 0.75rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2.5px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }
+    .continuous-btn { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #00d2ff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: monospace; font-size: 0.75rem; margin: 5px 0 15px 0; width: 100%; text-transform: uppercase; transition: all 0.3s; }
+    .continuous-btn.active { background: #00d2ff; color: #000; box-shadow: 0 0 15px #00d2ff; font-weight: bold; }
   `;
   document.head.appendChild(style);
 }
@@ -167,20 +91,16 @@ function injectJarvisOrbStyles() {
 function createJarvisOrbElement() {
   const sidebar = document.querySelector('.sidebar') || document.body;
   if (document.getElementById('jarvisOrbWidget')) return;
-  
   const container = document.createElement('div');
   container.id = 'jarvisOrbWidget';
   container.className = 'jarvis-orb-container';
   container.innerHTML = `
     <div class="jarvis-orb-wrapper">
-      <div class="ring-wave"></div>
-      <div class="ring-wave"></div>
-      <div class="ring-wave"></div>
+      <div class="ring-wave"></div><div class="ring-wave"></div><div class="ring-wave"></div>
       <div id="visualOrb" class="jarvis-orb"></div>
     </div>
     <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>
   `;
-  
   const historyList = document.getElementById('chatHistoryList');
   if (historyList && historyList.parentNode) {
     historyList.parentNode.insertBefore(container, historyList);
@@ -194,13 +114,11 @@ function injectContinuousVoiceButton() {
   const sidebar = document.querySelector('.sidebar') || document.body;
   const orbWidget = document.getElementById('jarvisOrbWidget');
   if (document.getElementById('continuousVoiceBtn')) return;
-
   const btn = document.createElement('button');
   btn.id = 'continuousVoiceBtn';
   btn.className = 'continuous-btn';
-  btn.innerHTML = '🎙️ Ativar Escuta Contínua';
+  btn.innerHTML = '🎙️ Escuta Contínua';
   btn.onclick = toggleContinuousListening;
-
   if (orbWidget && orbWidget.parentNode) {
     orbWidget.parentNode.insertBefore(btn, orbWidget.nextSibling);
   } else {
@@ -210,11 +128,7 @@ function injectContinuousVoiceButton() {
 
 function toggleContinuousListening() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Seu navegador não suporta reconhecimento de voz.");
-    return;
-  }
-
+  if (!SpeechRecognition) { alert("Navegador sem suporte a voz."); return; }
   const btn = document.getElementById('continuousVoiceBtn');
 
   if (!isContinuousActive) {
@@ -225,49 +139,26 @@ function toggleContinuousListening() {
 
     recognition.onstart = () => {
       isContinuousActive = true;
-      if (btn) {
-        btn.classList.add('active');
-        btn.innerHTML = '🔴 Escuta Contínua Ativa';
-      }
+      if (btn) { btn.classList.add('active'); btn.innerHTML = '🔴 Escuta Ativa'; }
       setOrbState(true);
     };
-
     recognition.onresult = (event) => {
-      if (isJarvisSpeaking) return; // Ignora se o Jarvis estiver falando
+      if (isJarvisSpeaking) return;
       const transcript = event.results[event.results.length - 1][0].transcript.trim();
-      if (transcript) {
-        chatInput.value = transcript;
-        sendMsg();
-      }
+      if (transcript) { chatInput.value = transcript; sendMsg(); }
     };
-
-    recognition.onerror = (e) => {
-      console.log("Erro de reconhecimento:", e.error);
-    };
-
     recognition.onend = () => {
-      // Reinicia automaticamente se o modo contínuo estiver ativado e o Jarvis não estiver falando
       if (isContinuousActive && !isJarvisSpeaking) {
         try { recognition.start(); } catch (err) {}
       } else if (!isJarvisSpeaking) {
         setOrbState(false);
       }
     };
-
-    try {
-      recognition.start();
-    } catch (e) {
-      console.log(e);
-    }
+    try { recognition.start(); } catch (e) {}
   } else {
     isContinuousActive = false;
-    if (recognition) {
-      try { recognition.stop(); } catch (e) {}
-    }
-    if (btn) {
-      btn.classList.remove('active');
-      btn.innerHTML = '🎙️ Ativar Escuta Contínua';
-    }
+    if (recognition) { try { recognition.stop(); } catch (e) {} }
+    if (btn) { btn.classList.remove('active'); btn.innerHTML = '🎙️ Escuta Contínua'; }
     setOrbState(false);
   }
 }
@@ -287,12 +178,9 @@ function initAudioAnalyzer() {
 function setOrbState(active) {
   if (!jarvisOrb) jarvisOrb = document.getElementById('visualOrb');
   if (!jarvisOrb) return;
-
   if (active || isJarvisSpeaking || isContinuousActive) {
     jarvisOrb.classList.add('active-speaking');
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+    if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
     startFrequencyLoop();
   } else if (!isContinuousActive && !isJarvisSpeaking) {
     jarvisOrb.classList.remove('active-speaking');
@@ -306,9 +194,7 @@ function startFrequencyLoop() {
   const updateLoop = () => {
     analyser.getByteFrequencyData(dataArray);
     let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      sum += dataArray[i];
-    }
+    for (let i = 0; i < dataArray.length; i++) { sum += dataArray[i]; }
     let average = sum / dataArray.length;
     let scaleVal = 0.95 + (average / 120);
     if (jarvisOrb && jarvisOrb.classList.contains('active-speaking')) {
@@ -352,7 +238,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage("J.A.R.V.I.S. Operacional. Núcleo holográfico sincronizado.", 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Ilimitado Ativa.", 'system', false);
     return;
   }
   chat.messages.forEach(msg => {
@@ -377,6 +263,43 @@ function renderHistoryList() {
 function saveStore() {
   localStorage.setItem('jarv_chats_v2', JSON.stringify(chatsStore));
   localStorage.setItem('jarv_active_chat', activeChatId);
+}
+
+// Módulo Seguro de Consulta Deep Web / Onion via Ahmia & Gateways Proxy Anônimos
+async function fetchDeepWebKnowledge(query) {
+  try {
+    // Utiliza proxy de busca indexada seguro (como Ahmia) para varrer nós .onion sem expor o IP
+    const searchUrl = `https://ahmia.fi/search/?q=${encodeURIComponent(query)}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`;
+    
+    const res = await fetch(proxyUrl);
+    const data = await res.json();
+    if (!data.contents) return "Nenhum registro encontrado nas redes ocultas.";
+
+    // Parseamento seguro do HTML retornado pelo indexador
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data.contents, 'text/html');
+    const results = doc.querySelectorAll('.result');
+    
+    if (!results || results.length === 0) {
+      return "Nenhum resultado profundo indexado para esta consulta.";
+    }
+
+    let extractedInfo = "";
+    let count = 0;
+    results.forEach((el) => {
+      if (count >= 3) return; // Pega os 3 melhores resultados ocultos
+      const title = el.querySelector('h4')?.textContent?.trim() || 'Sem Título';
+      const snippet = el.querySelector('p')?.textContent?.trim() || '';
+      const link = el.querySelector('a')?.getAttribute('href') || '';
+      extractedInfo += `• **[Fonte Oculta] ${title}**\n${snippet}\nLink Ref: ${link}\n\n`;
+      count++;
+    });
+
+    return extractedInfo || "Dados obtidos, mas sem fragmentos legíveis.";
+  } catch (err) {
+    return `Falha ao conectar aos nós proxy da rede oculta: ${err.message}`;
+  }
 }
 
 async function fetchWikipedia(query) {
@@ -420,15 +343,12 @@ function downloadAsWord(filename, textContent) {
   downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
-// Voz Masculina J.A.R.V.I.S. com pausa temporária da escuta para não se auto-ouvir
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   
   isJarvisSpeaking = true;
-  if (recognition && isContinuousActive) {
-    try { recognition.stop(); } catch(e) {}
-  }
+  if (recognition && isContinuousActive) { try { recognition.stop(); } catch(e) {} }
 
   const cleanText = text.replace(/[*_#`\[\]]/g, '');
   const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];
@@ -447,11 +367,7 @@ function speakJARVIS(text) {
     }
     
     const segmentText = segments[currentSegment].trim();
-    if (!segmentText) {
-      currentSegment++;
-      speakNextSegment();
-      return;
-    }
+    if (!segmentText) { currentSegment++; speakNextSegment(); return; }
 
     const utterance = new SpeechSynthesisUtterance(segmentText);
     utterance.lang = 'pt-BR';
@@ -461,23 +377,11 @@ function speakJARVIS(text) {
     const voices = window.speechSynthesis.getVoices();
     const maleVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('antonio') || v.name.toLowerCase().includes('manoel') || v.name.toLowerCase().includes('google português do brasil') || v.name.toLowerCase().includes('male'))) || voices.find(v => v.lang.includes('pt'));
     
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    }
+    if (maleVoice) utterance.voice = maleVoice;
 
-    utterance.onstart = () => {
-      if (currentSegment === 0) setOrbState(true);
-    };
-
-    utterance.onend = () => {
-      currentSegment++;
-      setTimeout(speakNextSegment, 300);
-    };
-
-    utterance.onerror = () => {
-      isJarvisSpeaking = false;
-      setOrbState(false);
-    };
+    utterance.onstart = () => { if (currentSegment === 0) setOrbState(true); };
+    utterance.onend = () => { currentSegment++; setTimeout(speakNextSegment, 300); };
+    utterance.onerror = () => { isJarvisSpeaking = false; setOrbState(false); };
 
     window.speechSynthesis.speak(utterance);
   };
@@ -499,6 +403,22 @@ async function sendMsg() {
     const botHtml = `<strong>[J.A.R.V.I.S. IMAGEM]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00d2ff;"><br><a href="${imgUrl}" target="_blank" style="color:#00d2ff;">Abrir em Alta Resolução</a>`;
     appendCustomHtml(botHtml, 'bot', true);
     speakJARVIS(`Gerando imagem holográfica para ${promptImg}.`);
+    return;
+  }
+
+  // Identificador de Busca Profunda (.onion / Deep Search)
+  const isDeepSearch = lowerText.startsWith('!deep ') || lowerText.includes('pesquisa profunda') || lowerText.includes('rede oculta') || lowerText.includes('buscar na onion');
+  if (isDeepSearch) {
+    let deepQuery = text.replace(/^!deep\s+/i, '').replace(/.*(pesquisa profunda|rede oculta|buscar na onion)\s+(sobre|de)?\s+/i, '').trim();
+    appendCustomMessage(escapeHTML(text), 'user', true);
+    
+    setOrbState(true);
+    const deepResult = await fetchDeepWebKnowledge(deepQuery);
+    setOrbState(false);
+
+    const responseText = `**[CONHECIMENTO ILIMITADO - CAMADA DEEP WEB]**\nResultados para: "${deepQuery}"\n\n${deepResult}`;
+    appendMessage(responseText, 'bot', true);
+    speakJARVIS(`Busca profunda concluída nos nós ocultos. Processando dados para ${deepQuery}.`);
     return;
   }
 
@@ -537,7 +457,7 @@ async function sendMsg() {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado e analítico. Responda com eficiência técnica." },
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso a conhecimentos irrestritos. Responda com eficiência técnica." },
           { role: "user", content: promptInstruction }
         ]
       })
