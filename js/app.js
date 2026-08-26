@@ -8,7 +8,7 @@ const firebaseConfig = {
   appId: "1:275886641350:web:69bd0e534fb71a3a1e47c7"
 };
 
-// Inicializa Firebase apenas se a biblioteca carregou com sucesso
+// Inicializa Firebase se disponível
 let auth, db, provider;
 if (typeof firebase !== 'undefined') {
   if (!firebase.apps.length) {
@@ -17,49 +17,26 @@ if (typeof firebase !== 'undefined') {
   auth = firebase.auth();
   db = firebase.firestore();
   provider = new firebase.auth.GoogleAuthProvider();
-} else {
-  console.error("[ERRO CRÍTICO] Firebase não foi carregado. Verifique o HTML.");
 }
 
-// Configurações de Estado da Aplicação (Modelo padrão alterado para llama3-8b-8192)
+// FIXAÇÃO PERMANENTE DO MODELO RÁPIDO: LLaMA 3 8B
+const ULTRA_FAST_MODEL = 'llama3-8b-8192';
+localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
+let selectedModel = ULTRA_FAST_MODEL;
+
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
-let selectedModel = localStorage.getItem('jarv_model') || 'llama3-8b-8192';
-let ttsEnabled = localStorage.getItem('jarv_tts') !== 'false';
+let ttsEnabled = true; // Voz ativa por padrão
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v2')) || {};
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 
-// Dicionário de Idiomas (i18n)
+// Dicionário i18n
 const i18n = {
   'pt-BR': {
-    new_chat: "Nova Conversa",
-    history: "HISTÓRICO",
-    nav_terminal: "Terminal / Chat",
-    reset: "Reiniciar",
-    btn_send: "ENVIAR",
-    placeholder: "Digite um comando...",
-    system_init: "Sistema inicializado. Núcleo J.A.R.V.I.S. operacional. Aguardando comandos do operador."
-  },
-  'en-US': {
-    new_chat: "New Chat",
-    history: "HISTORY",
-    nav_terminal: "Terminal / Chat",
-    reset: "Restart",
-    btn_send: "SEND",
-    placeholder: "Enter command...",
-    system_init: "System initialized. J.A.R.V.I.S. core active. Awaiting operator input."
-  },
-  'es-ES': {
-    new_chat: "Nueva Conversación",
-    history: "HISTORIAL",
-    nav_terminal: "Terminal / Chat",
-    reset: "Reiniciar",
-    btn_send: "ENVIAR",
-    placeholder: "Escriba un comando...",
-    system_init: "Sistema inicializado. Núcleo J.A.R.V.I.S. activo. Esperando comandos."
+    placeholder: "Digite um comando (ex: pesquise sobre, crie slides, gere imagem, crie documento)...",
+    system_init: "J.A.R.V.I.S. Operacional em modo Ultra Rápido (LLaMA 3 8B). Recursos ativados: Voz, Pesquisa, Slides, Word, Imagens e Vídeos."
   }
 };
 
-// Elementos Globais
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput;
 let attachedImageBase64 = null;
 
@@ -71,53 +48,40 @@ document.addEventListener("DOMContentLoaded", () => {
   userNameEl = document.getElementById('userName');
   logoutBtn = document.getElementById('logoutBtn');
 
-  // Relógio do Sistema em Tempo Real
   startRealTimeClock();
 
-  // Autenticação Firebase (se disponível)
   if (auth) {
     auth.onAuthStateChanged((user) => {
       if (user) {
         const name = user.displayName || user.email;
         if (userNameEl) userNameEl.textContent = name;
-        if (statusEl) statusEl.textContent = `Authenticated (${name})`;
+        if (statusEl) statusEl.textContent = `Autenticado (${name}) - Mod: LLaMA 3 8B`;
         if (loginModal) loginModal.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "inline-block";
       } else {
-        if (userNameEl) userNameEl.textContent = "Visitante";
-        if (statusEl) statusEl.textContent = "Awaiting Authentication";
+        if (userNameEl) userNameEl.textContent = "Operador";
+        if (statusEl) statusEl.textContent = "Modo Convidado - Mod: LLaMA 3 8B";
         if (loginModal) loginModal.style.display = "flex";
         if (logoutBtn) logoutBtn.style.display = "none";
       }
     });
   }
 
-  // Configuração de sessões e histórico
   initChatStore();
   setupFileUploads();
   setupToolbarButtons();
-  applyLanguage(currentLang);
-  
-  // Atualiza controles do modal
-  const langSelect = document.getElementById('langSelect');
-  if (langSelect) langSelect.value = currentLang;
-  const modelSelect = document.getElementById('modelSelect');
-  if (modelSelect) modelSelect.value = selectedModel;
 });
 
-// 1. Relógio em Tempo Real
+// Relógio em Tempo Real
 function startRealTimeClock() {
   const clockEl = document.getElementById('clockDisplay');
   if (!clockEl) return;
-  function update() {
-    const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString('pt-BR');
-  }
+  const update = () => { clockEl.textContent = new Date().toLocaleTimeString('pt-BR'); };
   update();
   setInterval(update, 1000);
 }
 
-// 2. Gerenciamento de Histórico e Conversas
+// Gerenciador de Histórico
 function initChatStore() {
   if (!activeChatId || !chatsStore[activeChatId]) {
     createNewChat(false);
@@ -129,17 +93,10 @@ function initChatStore() {
 
 function createNewChat(shouldRender = true) {
   const id = 'chat_' + Date.now();
-  chatsStore[id] = {
-    title: `Conversa ${Object.keys(chatsStore).length + 1}`,
-    timestamp: Date.now(),
-    messages: []
-  };
+  chatsStore[id] = { title: `Sessão ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [] };
   activeChatId = id;
   saveStore();
-  if (shouldRender) {
-    renderHistoryList();
-    loadChatMessages(activeChatId);
-  }
+  if (shouldRender) { renderHistoryList(); loadChatMessages(activeChatId); }
 }
 
 function loadChatMessages(id) {
@@ -151,36 +108,24 @@ function loadChatMessages(id) {
   
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage(i18n[currentLang].system_init, 'system', false);
+    appendMessage(i18n['pt-BR'].system_init, 'system', false);
     return;
   }
   
   chat.messages.forEach(msg => {
-    if (msg.type === 'user') {
-      appendCustomMessage(msg.content, 'user', false);
-    } else {
-      appendMessage(msg.content, msg.type, false);
-    }
+    if (msg.type === 'user') appendCustomMessage(msg.content, 'user', false);
+    else appendMessage(msg.content, msg.type, false);
   });
-}
-
-function clearCurrentChat() {
-  if (activeChatId && chatsStore[activeChatId]) {
-    delete chatsStore[activeChatId];
-    createNewChat(true);
-  }
 }
 
 function renderHistoryList() {
   const listEl = document.getElementById('chatHistoryList');
   if (!listEl) return;
   listEl.innerHTML = '';
-  
   Object.keys(chatsStore).reverse().forEach(id => {
-    const chat = chatsStore[id];
     const btn = document.createElement('button');
     btn.className = `history-item ${id === activeChatId ? 'active' : ''}`;
-    btn.textContent = chat.title;
+    btn.textContent = chatsStore[id].title;
     btn.onclick = () => loadChatMessages(id);
     listEl.appendChild(btn);
   });
@@ -191,42 +136,28 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-// 3. Integração com a Wikipédia
+// 1. Pesquisa Web na Wikipédia
 async function fetchWikipedia(query) {
   try {
     const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
-    
     if (!searchData.query.search || searchData.query.search.length === 0) {
-      return "Nenhum resultado encontrado na Wikipédia para o termo solicitado.";
+      return "Nenhum resultado encontrado para a pesquisa.";
     }
-
     const pageId = searchData.query.search[0].pageid;
     const contentUrl = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&pageids=${pageId}&format=json&origin=*`;
     const contentRes = await fetch(contentUrl);
     const contentData = await contentRes.json();
-
-    const extract = contentData.query.pages[pageId].extract;
-    return extract ? extract : "Resumo indisponível na Wikipédia.";
+    return contentData.query.pages[pageId].extract || "Resumo indisponível.";
   } catch (err) {
-    return `Erro ao consultar a Wikipédia: ${err.message}`;
+    return `Erro na pesquisa: ${err.message}`;
   }
 }
 
-// 4. Simulador Quântico Integrado
-function runQuantumSimulation() {
-  const r = Math.random();
-  const state = r > 0.5 ? "|1⟩" : "|0⟩";
-  const prob0 = "50.00%";
-  const prob1 = "50.00%";
-  
-  return `[SIMULAÇÃO QUÂNTICA DE QUBIT]\n• Estado Inicial |0⟩: P(|0⟩) = 100.00%, P(|1⟩) = 0.00%\n• Após Porta Hadamard (Superposição |ψ⟩): P(|0⟩) = ${prob0}, P(\vert{}1⟩) =${prob1}\n• Medição do Observador (Colapso): Qubit colapsou para ${state}`;
-}
-
-// 5. Download de Arquivos
-function downloadAsFile(filename, textContent) {
-  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+// 2. Sistema de Download de Arquivos (.md, .txt, .doc)
+function downloadAsFile(filename, textContent, mimeType = 'text/plain;charset=utf-8') {
+  const blob = new Blob([textContent], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -237,113 +168,97 @@ function downloadAsFile(filename, textContent) {
   URL.revokeObjectURL(url);
 }
 
-// 6. Voz do JARVIS (Text-to-Speech)
+function downloadAsWord(filename, textContent) {
+  const htmlDoc = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>${filename}</title></head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; padding: 20px;">
+      <h2>Documento Gerado por J.A.R.V.I.S.</h2>
+      <hr>
+      <div>${formatMarkdown(textContent)}</div>
+    </body>
+    </html>
+  `;
+  downloadAsFile(filename, htmlDoc, 'application/msword');
+}
+
+// 3. Resposta em Voz (Síntese Falada)
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  
-  const cleanText = text.replace(/[*_#`\[\]]/g, '');
+  const cleanText = text.replace(/[*_#`\[\]]/g, '').substring(0, 300); // Fala o resumo inicial
   const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = currentLang;
-  utterance.rate = 1.0;
+  utterance.lang = 'pt-BR';
+  utterance.rate = 1.05;
   utterance.pitch = 0.95;
-  
   window.speechSynthesis.speak(utterance);
 }
 
-function toggleTTS(state) {
-  if (typeof state === 'boolean') {
-    ttsEnabled = state;
-  } else {
-    ttsEnabled = !ttsEnabled;
-  }
-  localStorage.setItem('jarv_tts', ttsEnabled);
-  const btn = document.getElementById('ttsToggleBtn');
-  if (btn) {
-    btn.style.color = ttsEnabled ? '#00d2ff' : '#5c78a5';
-  }
-}
-
-// 7. Envio de Mensagem para a Groq API com Detecção de Pesquisa
+// 4. Fluxo Principal de Processamento de Comandos
 async function sendMsg() {
   const text = chatInput.value.trim();
   if (!text && !attachedImageBase64) return;
 
   const lowerText = text.toLowerCase();
-  const isSearchQuery = text.startsWith('!wiki ') || 
-                        lowerText.startsWith('pesquise sobre') || 
-                        lowerText.startsWith('pesquise para mim sobre') ||
-                        lowerText.startsWith('pesquisa sobre') ||
-                        lowerText.startsWith('busque sobre');
+  chatInput.value = '';
 
-  // Processamento de Pesquisa Automática na Wikipédia
-  if (isSearchQuery) {
-    let wikiQuery = text
-      .replace(/^!wiki\s+/i, '')
-      .replace(/^pesquise\s+para\s+mim\s+sobre\s+/i, '')
-      .replace(/^pesquise\s+sobre\s+/i, '')
-      .replace(/^pesquisa\s+sobre\s+/i, '')
-      .replace(/^busque\s+sobre\s+/i, '')
-      .replace(/por\s+favor.*$/i, '')
-      .trim();
-
-    chatInput.value = '';
+  // A. Geração de Imagem
+  if (lowerText.startsWith("gere uma imagem de") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem")) {
+    const promptImg = text.replace(/^(gere|gerar|criar)\s+(uma\s+)?imagem\s+(de\s+)?/i, '').trim();
     appendCustomMessage(escapeHTML(text), 'user', true);
     
-    const loadingWiki = document.createElement('div');
-    loadingWiki.className = 'jarv-msg jarv-msg-bot';
-    loadingWiki.innerHTML = `<span class="jarv-code">[WIKI]</span> Pesquisando na Wikipédia sobre "${escapeHTML(wikiQuery)}"...`;
-    msgArea.appendChild(loadingWiki);
-    msgArea.scrollTop = msgArea.scrollHeight;
+    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;
+    const botHtml = `
+      <strong>[J.A.R.V.I.S. GERADOR DE IMAGENS]</strong><br>
+      Imagem gerada para: <em>"${escapeHTML(promptImg)}"</em><br><br>
+      <img src="${imgUrl}" alt="Imagem Gerada" style="max-width: 100%; border-radius: 8px; border: 1px solid #00d2ff;"><br><br>
+      <a href="${imgUrl}" target="_blank" style="color: #00d2ff; text-decoration: none;">🔍 Abrir Imagem em Alta Resolução</a>
+    `;
+    appendCustomHtml(botHtml, 'bot', true);
+    speakJARVIS(`Imagem gerada com sucesso para ${promptImg}`);
+    return;
+  }
+
+  // B. Pesquisa Web Automática
+  const isSearchQuery = text.startsWith('!wiki ') || lowerText.includes('pesquise sobre') || lowerText.includes('pesquisar sobre') || lowerText.includes('busque sobre');
+  if (isSearchQuery) {
+    let wikiQuery = text.replace(/^!wiki\s+/i, '').replace(/.*(pesquise|pesquisar|busque)\s+sobre\s+/i, '').replace(/por\s+favor.*$/i, '').trim();
+    appendCustomMessage(escapeHTML(text), 'user', true);
+    
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'jarv-msg jarv-msg-bot';
+    loadingDiv.innerHTML = `<span class="jarv-code">[PESQUISA]</span> Consultando base de conhecimento para "${escapeHTML(wikiQuery)}"...`;
+    msgArea.appendChild(loadingDiv);
 
     const wikiResult = await fetchWikipedia(wikiQuery);
-    if (msgArea.contains(loadingWiki)) msgArea.removeChild(loadingWiki);
-    appendMessage(wikiResult, 'bot', true);
+    if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
+    
+    appendMessage(`**Resultados da Pesquisa para "${wikiQuery}":**\n\n${wikiResult}`, 'bot', true);
     speakJARVIS(wikiResult);
     return;
   }
 
+  // C. Envio Padrão para Groq AI em Modo Ultra Rápido (LLaMA 3 8B)
   let userDisplayHtml = escapeHTML(text);
   if (attachedImageBase64) {
     userDisplayHtml += `<br><img src="${attachedImageBase64}" style="max-width: 200px; border-radius: 6px; margin-top: 8px; border: 1px solid #00ffcc;">`;
   }
-
   appendCustomMessage(userDisplayHtml, 'user', true);
-  
-  if (chatsStore[activeChatId] && chatsStore[activeChatId].messages.length <= 1) {
-    chatsStore[activeChatId].title = text.substring(0, 22) + '...';
-    renderHistoryList();
-  }
-
-  chatInput.value = '';
 
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'jarv-msg jarv-msg-bot';
-  loadingDiv.innerHTML = `<span class="jarv-code">[JARV]</span> Processando comando...`;
+  loadingDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> Processando em Alta Velocidade...`;
   msgArea.appendChild(loadingDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 
   try {
-    let messageContent = text || "Olá!";
-    if (attachedImageBase64) messageContent = `[Imagem Anexada] ${text}`;
-
-    const groqMessages = [
-      {
-        role: "system",
-        content: `Você é o J.A.R.V.I.S., assistente inteligente integrado no sistema Kali Linux Cyberpunk do Romário. Responda em ${currentLang}. Seja direto, técnico e cortês.`
-      }
-    ];
-
-    if (chatsStore[activeChatId] && chatsStore[activeChatId].messages) {
-      chatsStore[activeChatId].messages.slice(-6).forEach(m => {
-        if (m.type === 'user' || m.type === 'bot') {
-          const role = m.type === 'user' ? 'user' : 'assistant';
-          const cleanText = typeof m.content === 'string' ? m.content.replace(/<[^>]*>?/gm, '') : '';
-          if (cleanText.trim()) {
-            groqMessages.push({ role, content: cleanText });
-          }
-        }
-      });
+    let promptInstruction = text;
+    if (lowerText.includes("slide")) {
+      promptInstruction += "\n\n(Aviso de Formatação: Monte uma apresentação de slides estruturada com Título, Slide 1, Slide 2, etc.)";
+    } else if (lowerText.includes("documento") || lowerText.includes("relatório") || lowerText.includes("word")) {
+      promptInstruction += "\n\n(Aviso de Formatação: Monte um documento formal estruturado com introdução, tópicos e conclusão.)";
+    } else if (lowerText.includes("vídeo") || lowerText.includes("video")) {
+      promptInstruction += "\n\n(Aviso de Formatação: Crie um Roteiro de Vídeo com Cenas, Prompt Visual de IA e Narração do Locutor.)";
     }
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -353,32 +268,35 @@ async function sendMsg() {
         "Authorization": "Bearer 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"
       },
       body: JSON.stringify({
-        model: selectedModel,
-        messages: groqMessages
+        model: ULTRA_FAST_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "Você é o J.A.R.V.I.S., uma IA avançada e super rápida. Responda com altíssima qualidade, precisão e eficiência."
+          },
+          { role: "user", content: promptInstruction }
+        ]
       })
     });
 
     const data = await response.json();
     if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
-    
     attachedImageBase64 = null;
-    chatInput.placeholder = i18n[currentLang].placeholder;
 
     if (data.choices && data.choices[0] && data.choices[0].message) {
       const botResponse = data.choices[0].message.content;
       appendMessage(botResponse, 'bot', true);
       speakJARVIS(botResponse);
     } else {
-      appendMessage(`Erro na Groq API: ${data.error ? data.error.message : 'Resposta inesperada do servidor.'}`, 'system', true);
+      appendMessage(`Erro no núcleo de IA: ${data.error ? data.error.message : 'Instabilidade temporária.'}`, 'system', true);
     }
   } catch (err) {
     if (msgArea.contains(loadingDiv)) msgArea.removeChild(loadingDiv);
-    appendMessage(`Erro de conexão: ${err.message}`, 'system', true);
-    attachedImageBase64 = null;
+    appendMessage(`Erro de Conexão: ${err.message}`, 'system', true);
   }
 }
 
-// Renderização de Mensagens
+// Renderização de Mensagens com Botões Inteligentes de Download (Slides e Word)
 function appendMessage(text, type, save = true) {
   const msgDiv = document.createElement('div');
 
@@ -387,19 +305,31 @@ function appendMessage(text, type, save = true) {
     msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;
   } else if (type === 'bot') {
     msgDiv.className = 'jarv-msg jarv-msg-bot';
-    let htmlContent = `<span class="jarv-code">[JARV]</span> ${formatMarkdown(text)}`;
+    let htmlContent = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;
     
-    if (text.toLowerCase().includes('slide') || text.includes('```')) {
-      const uniqueId = 'slide_' + Date.now();
-      window[uniqueId] = text;
+    const uniqueId = 'doc_' + Date.now();
+    window[uniqueId] = text;
+
+    const lower = text.toLowerCase();
+    if (lower.includes('slide') || lower.includes('apresentação')) {
       htmlContent += `
-        <div class="msg-download-bar">
-          <button class="btn-download-file" onclick="downloadAsFile('slide_jarvis.md', window['${uniqueId}'])">
-            <i class="fa-solid fa-download"></i> Baixar Arquivo (.md / .txt)
+        <div style="margin-top: 10px; display: flex; gap: 8px;">
+          <button class="btn-send" style="padding: 5px 10px; font-size: 0.8rem;" onclick="downloadAsFile('apresentacao_slides.md', window['${uniqueId}'])">
+            📥 Baixar Slides (.md)
           </button>
-        </div>
-      `;
+          <button class="btn-send" style="padding: 5px 10px; font-size: 0.8rem; background: #0088cc;" onclick="downloadAsWord('apresentacao_slides.doc', window['${uniqueId}'])">
+            📄 Baixar em Word (.doc)
+          </button>
+        </div>`;
+    } else if (lower.includes('documento') || lower.includes('relatório') || lower.includes('artigo') || lower.includes('roteiro')) {
+      htmlContent += `
+        <div style="margin-top: 10px;">
+          <button class="btn-send" style="padding: 5px 10px; font-size: 0.8rem; background: #0088cc;" onclick="downloadAsWord('documento_jarvis.doc', window['${uniqueId}'])">
+            📄 Baixar Documento Word (.doc)
+          </button>
+        </div>`;
     }
+
     msgDiv.innerHTML = htmlContent;
   } else {
     msgDiv.className = 'jarv-msg jarv-msg-system';
@@ -411,6 +341,19 @@ function appendMessage(text, type, save = true) {
 
   if (save && chatsStore[activeChatId]) {
     chatsStore[activeChatId].messages.push({ type, content: text });
+    saveStore();
+  }
+}
+
+function appendCustomHtml(htmlContent, type, save = true) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = type === 'user' ? 'jarv-msg jarv-msg-user' : 'jarv-msg jarv-msg-bot';
+  msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${htmlContent}`;
+  msgArea.appendChild(msgDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
+
+  if (save && chatsStore[activeChatId]) {
+    chatsStore[activeChatId].messages.push({ type: 'bot', content: htmlContent });
     saveStore();
   }
 }
@@ -428,51 +371,7 @@ function appendCustomMessage(htmlContent, type, save = true) {
   }
 }
 
-// Modais e Navegação Lateral
-function openSettingsModal() {
-  document.getElementById('settingsModal').style.display = 'flex';
-}
-
-function closeSettingsModal() {
-  const chosenModel = document.getElementById('modelSelect').value;
-  selectedModel = chosenModel;
-  localStorage.setItem('jarv_model', chosenModel);
-  document.getElementById('settingsModal').style.display = 'none';
-}
-
-function changeLanguage(lang) {
-  currentLang = lang;
-  localStorage.setItem('jarv_lang', lang);
-  applyLanguage(lang);
-}
-
-function applyLanguage(lang) {
-  const dict = i18n[lang] || i18n['pt-BR'];
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (dict[key]) el.textContent = dict[key];
-  });
-  if (chatInput) chatInput.placeholder = dict.placeholder;
-}
-
-function switchView(viewName) {
-  document.querySelectorAll('.jarv-nav-item').forEach(el => el.classList.remove('active'));
-  const btn = document.querySelector(`.jarv-nav-item[data-view="${viewName}"]`);
-  if (btn) btn.classList.add('active');
-
-  if (viewName === 'quantum') {
-    const result = runQuantumSimulation();
-    appendMessage(result, 'bot', true);
-  } else if (viewName === 'wiki') {
-    const topic = prompt("Digite o termo que deseja pesquisar na Wikipédia:");
-    if (topic) {
-      chatInput.value = `!wiki ${topic}`;
-      sendMsg();
-    }
-  }
-}
-
-// Uploads e Voz
+// Uploads e Ferramentas
 function setupFileUploads() {
   hiddenImageInput = document.createElement('input');
   hiddenImageInput.type = 'file'; 
@@ -486,7 +385,7 @@ function setupFileUploads() {
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
         attachedImageBase64 = uploadEvent.target.result;
-        appendMessage(`[BUFFER] Imagem carregada: ${file.name}`, 'system', false);
+        appendMessage(`[IMAGEM CARREGADA] ${file.name}`, 'system', false);
       };
       reader.readAsDataURL(file);
     }
@@ -502,22 +401,18 @@ function setupToolbarButtons() {
   const buttons = document.querySelectorAll('.action-toolbar button');
   buttons.forEach(btn => {
     const title = btn.getAttribute('title') || '';
-    if (title.includes('Câmera') || title.includes('Imagem')) {
-      btn.onclick = () => hiddenImageInput.click();
-    } else if (title.includes('Anexo')) {
-      btn.onclick = () => hiddenFileInput.click();
-    } else if (title.includes('Voz')) {
-      btn.onclick = () => startVoiceRecognition();
-    }
+    if (title.includes('Câmera') || title.includes('Imagem')) btn.onclick = () => hiddenImageInput.click();
+    else if (title.includes('Anexo')) btn.onclick = () => hiddenFileInput.click();
+    else if (title.includes('Voz')) btn.onclick = () => startVoiceRecognition();
   });
 }
 
 function startVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return alert("Navegador sem suporte a STT.");
+  if (!SpeechRecognition) return alert("Navegador sem suporte a microfone.");
 
   const recognition = new SpeechRecognition();
-  recognition.lang = currentLang;
+  recognition.lang = 'pt-BR';
   recognition.start();
 
   recognition.onresult = (e) => {
@@ -526,28 +421,22 @@ function startVoiceRecognition() {
   };
 }
 
-function signInWithGoogle() {
-  if (auth && provider) {
-    auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider));
-  } else {
-    alert("Erro: O sistema de autenticação Firebase não está operante.");
-  }
-}
-
 function resetSystem() {
-  clearCurrentChat();
+  chatsStore = {};
+  localStorage.removeItem('jarv_chats_v2');
+  createNewChat(true);
 }
 
 function escapeHTML(str) {
   if (typeof str !== 'string') return '';
-  return str.replace(/[&<>'"]/g, tag => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  }[tag] || tag));
+  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
 function formatMarkdown(text) {
-  if (typeof marked !== 'undefined') {
-    return marked.parse(text);
-  }
-  return escapeHTML(text).replace(/\n/g, '<br>');
+  if (typeof text !== 'string') return '';
+  let formatted = escapeHTML(text);
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/\n/g, '<br>');
+  return formatted;
 }
