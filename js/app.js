@@ -28,6 +28,11 @@ let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileI
 let attachedImageBase64 = null;
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;
 
+// Variáveis de Controle de Voz Contínua
+let recognition = null;
+let isContinuousActive = false;
+let isJarvisSpeaking = false;
+
 document.addEventListener("DOMContentLoaded", () => {
   msgArea = document.getElementById('msgArea');
   chatInput = document.getElementById('chatInput');
@@ -38,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   injectJarvisOrbStyles();
   createJarvisOrbElement();
+  injectContinuousVoiceButton();
   startRealTimeClock();
   initAudioAnalyzer();
 
@@ -133,6 +139,27 @@ function injectJarvisOrbStyles() {
       letter-spacing: 2.5px;
       text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
     }
+    
+    .continuous-btn {
+      background: rgba(0, 210, 255, 0.1);
+      border: 1px solid #00d2ff;
+      color: #00d2ff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 0.75rem;
+      margin: 5px 0 15px 0;
+      width: 100%;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+    .continuous-btn.active {
+      background: #00d2ff;
+      color: #000;
+      box-shadow: 0 0 15px #00d2ff;
+      font-weight: bold;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -163,6 +190,88 @@ function createJarvisOrbElement() {
   jarvisOrb = document.getElementById('visualOrb');
 }
 
+function injectContinuousVoiceButton() {
+  const sidebar = document.querySelector('.sidebar') || document.body;
+  const orbWidget = document.getElementById('jarvisOrbWidget');
+  if (document.getElementById('continuousVoiceBtn')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'continuousVoiceBtn';
+  btn.className = 'continuous-btn';
+  btn.innerHTML = '🎙️ Ativar Escuta Contínua';
+  btn.onclick = toggleContinuousListening;
+
+  if (orbWidget && orbWidget.parentNode) {
+    orbWidget.parentNode.insertBefore(btn, orbWidget.nextSibling);
+  } else {
+    sidebar.appendChild(btn);
+  }
+}
+
+function toggleContinuousListening() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Seu navegador não suporta reconhecimento de voz.");
+    return;
+  }
+
+  const btn = document.getElementById('continuousVoiceBtn');
+
+  if (!isContinuousActive) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      isContinuousActive = true;
+      if (btn) {
+        btn.classList.add('active');
+        btn.innerHTML = '🔴 Escuta Contínua Ativa';
+      }
+      setOrbState(true);
+    };
+
+    recognition.onresult = (event) => {
+      if (isJarvisSpeaking) return; // Ignora se o Jarvis estiver falando
+      const transcript = event.results[event.results.length - 1][0].transcript.trim();
+      if (transcript) {
+        chatInput.value = transcript;
+        sendMsg();
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.log("Erro de reconhecimento:", e.error);
+    };
+
+    recognition.onend = () => {
+      // Reinicia automaticamente se o modo contínuo estiver ativado e o Jarvis não estiver falando
+      if (isContinuousActive && !isJarvisSpeaking) {
+        try { recognition.start(); } catch (err) {}
+      } else if (!isJarvisSpeaking) {
+        setOrbState(false);
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.log(e);
+    }
+  } else {
+    isContinuousActive = false;
+    if (recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
+    if (btn) {
+      btn.classList.remove('active');
+      btn.innerHTML = '🎙️ Ativar Escuta Contínua';
+    }
+    setOrbState(false);
+  }
+}
+
 function initAudioAnalyzer() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -179,13 +288,13 @@ function setOrbState(active) {
   if (!jarvisOrb) jarvisOrb = document.getElementById('visualOrb');
   if (!jarvisOrb) return;
 
-  if (active) {
+  if (active || isJarvisSpeaking || isContinuousActive) {
     jarvisOrb.classList.add('active-speaking');
     if (audioCtx && audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
     startFrequencyLoop();
-  } else {
+  } else if (!isContinuousActive && !isJarvisSpeaking) {
     jarvisOrb.classList.remove('active-speaking');
     jarvisOrb.style.transform = 'scale(1)';
     if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -311,22 +420,29 @@ function downloadAsWord(filename, textContent) {
   downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
-// Voz Masculina J.A.R.V.I.S. (Lenta, Cadenciada, Respeitando Vírgulas e Raciocínio Lógico)
+// Voz Masculina J.A.R.V.I.S. com pausa temporária da escuta para não se auto-ouvir
 function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   
-  // Limpeza de marcações markdown mantendo a pontuação correta para pausas naturais
+  isJarvisSpeaking = true;
+  if (recognition && isContinuousActive) {
+    try { recognition.stop(); } catch(e) {}
+  }
+
   const cleanText = text.replace(/[*_#`\[\]]/g, '');
-  
-  // Quebrar o texto em blocos menores baseados em pontuação para garantir respeito total a vírgulas e pontos
   const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];
   
   let currentSegment = 0;
   
   const speakNextSegment = () => {
     if (currentSegment >= segments.length) {
-      setOrbState(false);
+      isJarvisSpeaking = false;
+      if (isContinuousActive && recognition) {
+        try { recognition.start(); } catch(e) {}
+      } else {
+        setOrbState(false);
+      }
       return;
     }
     
@@ -339,11 +455,10 @@ function speakJARVIS(text) {
 
     const utterance = new SpeechSynthesisUtterance(segmentText);
     utterance.lang = 'pt-BR';
-    utterance.rate = 0.82; // Velocidade bem compassada para acompanhar o raciocínio lógico
-    utterance.pitch = 0.70; // Tom de voz masculino grave, sério e metálico
+    utterance.rate = 0.82; 
+    utterance.pitch = 0.70; 
 
     const voices = window.speechSynthesis.getVoices();
-    // Priorizar vozes masculinas em português (como Daniel, Antonio, Google português masculino, etc.)
     const maleVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('antonio') || v.name.toLowerCase().includes('manoel') || v.name.toLowerCase().includes('google português do brasil') || v.name.toLowerCase().includes('male'))) || voices.find(v => v.lang.includes('pt'));
     
     if (maleVoice) {
@@ -356,11 +471,11 @@ function speakJARVIS(text) {
 
     utterance.onend = () => {
       currentSegment++;
-      // Pequena pausa calculada entre as frases para simular respiração e processamento lógico
       setTimeout(speakNextSegment, 300);
     };
 
     utterance.onerror = () => {
+      isJarvisSpeaking = false;
       setOrbState(false);
     };
 
@@ -522,23 +637,10 @@ function setupToolbarButtons() {
     const title = btn.getAttribute('title') || '';
     if (title.includes('Câmera') || title.includes('Imagem')) btn.onclick = () => hiddenImageInput.click();
     else if (title.includes('Anexo')) btn.onclick = () => hiddenFileInput.click();
-    else if (title.includes('Voz')) btn.onclick = () => startVoiceRecognition();
+    else if (title.includes('Voz')) btn.onclick = () => {
+      if (!isContinuousActive) toggleContinuousListening();
+    };
   });
-}
-
-function startVoiceRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return alert("Microfone não suportado.");
-  const recognition = new SpeechRecognition();
-  recognition.lang = 'pt-BR';
-  recognition.start();
-  setOrbState(true);
-  recognition.onresult = (e) => {
-    setOrbState(false);
-    chatInput.value = e.results[0][0].transcript;
-    sendMsg();
-  };
-  recognition.onerror = () => setOrbState(false);
 }
 
 function resetSystem() {
