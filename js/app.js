@@ -8,13 +8,18 @@ const firebaseConfig = {
   appId: "1:275886641350:web:69bd0e534fb71a3a1e47c7"
 };
 
-// Inicializa Firebase
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+// Inicializa Firebase apenas se a biblioteca carregou com sucesso
+let auth, db, provider;
+if (typeof firebase !== 'undefined') {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  auth = firebase.auth();
+  db = firebase.firestore();
+  provider = new firebase.auth.GoogleAuthProvider();
+} else {
+  console.error("[ERRO CRÍTICO] Firebase não foi carregado. Verifique o HTML.");
 }
-const auth = firebase.auth();
-const db = firebase.firestore();
-const provider = new firebase.auth.GoogleAuthProvider();
 
 // Configurações de Estado da Aplicação
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';
@@ -69,21 +74,23 @@ document.addEventListener("DOMContentLoaded", () => {
   // Inicializa Relógio do Sistema em Tempo Real
   startRealTimeClock();
 
-  // Autenticação Firebase
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      const name = user.displayName || user.email;
-      if (userNameEl) userNameEl.textContent = name;
-      if (statusEl) statusEl.textContent = `Authenticated (${name})`;
-      if (loginModal) loginModal.style.display = "none";
-      if (logoutBtn) logoutBtn.style.display = "inline-block";
-    } else {
-      if (userNameEl) userNameEl.textContent = "Visitante";
-      if (statusEl) statusEl.textContent = "Awaiting Authentication";
-      if (loginModal) loginModal.style.display = "flex";
-      if (logoutBtn) logoutBtn.style.display = "none";
-    }
-  });
+  // Autenticação Firebase (se disponível)
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        const name = user.displayName || user.email;
+        if (userNameEl) userNameEl.textContent = name;
+        if (statusEl) statusEl.textContent = `Authenticated (${name})`;
+        if (loginModal) loginModal.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "inline-block";
+      } else {
+        if (userNameEl) userNameEl.textContent = "Visitante";
+        if (statusEl) statusEl.textContent = "Awaiting Authentication";
+        if (loginModal) loginModal.style.display = "flex";
+        if (logoutBtn) logoutBtn.style.display = "none";
+      }
+    });
+  }
 
   // Configuração de sessões e histórico
   initChatStore();
@@ -101,11 +108,10 @@ document.addEventListener("DOMContentLoaded", () => {
 // 1. Relógio em Tempo Real
 function startRealTimeClock() {
   const clockEl = document.getElementById('clockDisplay');
+  if (!clockEl) return;
   function update() {
     const now = new Date();
-    if (clockEl) {
-      clockEl.textContent = now.toLocaleTimeString();
-    }
+    clockEl.textContent = now.toLocaleTimeString('pt-BR');
   }
   update();
   setInterval(update, 1000);
@@ -215,13 +221,10 @@ function runQuantumSimulation() {
   const prob0 = "50.00%";
   const prob1 = "50.00%";
   
-  return `[SIMULAÇÃO QUÂNTICA DE QUBIT]
-• Estado Inicial |0⟩: P(|0⟩) = 100.00%, P(|1⟩) = 0.00%
-• Após Porta Hadamard (Superposição |ψ⟩): P(|0⟩) = ${prob0}, P(\vert{}1⟩) =${prob1}
-• Medição do Observador (Colapso): Qubit colapsou para ${state}`;
+  return `[SIMULAÇÃO QUÂNTICA DE QUBIT]\n• Estado Inicial |0⟩: P(|0⟩) = 100.00%, P(|1⟩) = 0.00%\n• Após Porta Hadamard (Superposição |ψ⟩): P(|0⟩) = ${prob0}, P(\vert{}1⟩) =${prob1}\n• Medição do Observador (Colapso): Qubit colapsou para ${state}`;
 }
 
-// 5. Download de Arquivos e Slides
+// 5. Download de Arquivos
 function downloadAsFile(filename, textContent) {
   const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -378,7 +381,7 @@ function appendMessage(text, type, save = true) {
       htmlContent += `
         <div class="msg-download-bar">
           <button class="btn-download-file" onclick="downloadAsFile('slide_jarvis.md', window['${uniqueId}'])">
-            <i class="fa-solid fa-download"></i> Baixar Slide (.md / .txt)
+            <i class="fa-solid fa-download"></i> Baixar Arquivo (.md / .txt)
           </button>
         </div>
       `;
@@ -417,9 +420,9 @@ function openSettingsModal() {
 }
 
 function closeSettingsModal() {
-  const model = document.getElementById('modelSelect').value;
-  selectedModel = model;
-  localStorage.setItem('jarv_model', model);
+  const chosenModel = document.getElementById('modelSelect').value;
+  selectedModel = chosenModel;
+  localStorage.setItem('jarv_model', chosenModel);
   document.getElementById('settingsModal').style.display = 'none';
 }
 
@@ -510,7 +513,11 @@ function startVoiceRecognition() {
 }
 
 function signInWithGoogle() {
-  auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider));
+  if (auth && provider) {
+    auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider));
+  } else {
+    alert("Erro: O sistema de autenticação Firebase não está operante.");
+  }
 }
 
 function resetSystem() {
