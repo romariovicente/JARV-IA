@@ -238,7 +238,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Absoluto e Sem Censura Ativa.", 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Ativa.", 'system', false);
     return;
   }
   chat.messages.forEach(msg => {
@@ -263,94 +263,6 @@ function renderHistoryList() {
 function saveStore() {
   localStorage.setItem('jarv_chats_v2', JSON.stringify(chatsStore));
   localStorage.setItem('jarv_active_chat', activeChatId);
-}
-
-async function fetchDeepWebKnowledge(query) {
-  try {
-    const searchUrl = `https://ahmia.fi/search/?q=${encodeURIComponent(query)}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`;
-    const res = await fetch(proxyUrl);
-    const data = await res.json();
-    if (!data.contents) return "";
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(data.contents, 'text/html');
-    const results = doc.querySelectorAll('.result');
-    if (!results || results.length === 0) return "";
-
-    let extractedInfo = "";
-    let count = 0;
-    results.forEach((el) => {
-      if (count >= 2) return;
-      const title = el.querySelector('h4')?.textContent?.trim() || 'Fonte Oculta';
-      const snippet = el.querySelector('p')?.textContent?.trim() || '';
-      extractedInfo += `• [Deep/Global] ${title}: ${snippet}\n`;
-      count++;
-    });
-    return extractedInfo;
-  } catch (err) {
-    return "";
-  }
-}
-
-async function fetchWikipedia(query) {
-  try {
-    const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    if (!searchData.query.search || searchData.query.search.length === 0) return "";
-    const pageId = searchData.query.search[0].pageid;
-    const contentUrl = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&pageids=${pageId}&format=json&origin=*`;
-    const contentRes = await fetch(contentUrl);
-    const contentData = await contentRes.json();
-    return contentData.query.pages[pageId].extract || "";
-  } catch (err) {
-    return "";
-  }
-}
-
-async function fetchOpenLibraryBooks(query) {
-  try {
-    const bookUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=2`;
-    const res = await fetch(bookUrl);
-    const data = await res.json();
-    if (!data.docs || data.docs.length === 0) return "";
-
-    let bookInfo = "";
-    data.docs.forEach((book) => {
-      const title = book.title || 'Livro';
-      const author = book.author_name ? book.author_name.join(', ') : 'Desconhecido';
-      bookInfo += `• [Acervo Literário] "${title}" por ${author}\n`;
-    });
-    return bookInfo;
-  } catch (err) {
-    return "";
-  }
-}
-
-function downloadAsFile(filename, textContent, mimeType = 'text/plain;charset=utf-8') {
-  const blob = new Blob([textContent], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function downloadAsWord(filename, textContent) {
-  const htmlDoc = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head><meta charset='utf-8'><title>${filename}</title></head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; padding: 20px;">
-      <h2>Documento Gerado por J.A.R.V.I.S.</h2>
-      <hr>
-      <div>${formatMarkdown(textContent)}</div>
-    </body>
-    </html>`;
-  downloadAsFile(filename, htmlDoc, 'application/msword');
 }
 
 function speakJARVIS(text) {
@@ -415,23 +327,8 @@ async function sendMsg() {
 
   appendCustomMessage(escapeHTML(text), 'user', true);
   setOrbState(true);
-  
-  // Executa varredura paralela nas fontes de conhecimento
-  const [deepRes, wikiRes, bookRes] = await Promise.all([
-    fetchDeepWebKnowledge(text),
-    fetchWikipedia(text),
-    fetchOpenLibraryBooks(text)
-  ]);
-  
-  setOrbState(false);
-
-  let unifiedContext = "";
-  if (deepRes) unifiedContext += `[Fontes Ocultas]:\n${deepRes}\n\n`;
-  if (bookRes) unifiedContext += `[Livros Globais]:\n${bookRes}\n\n`;
-  if (wikiRes) unifiedContext += `[Enciclopédia]:\n${wikiRes}\n\n`;
 
   try {
-    setOrbState(true);
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -441,14 +338,8 @@ async function sendMsg() {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { 
-            role: "system", 
-            content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso universal, total e sem censura a todas as fontes de conhecimento do mundo. Responda diretamente à pergunta do operador de forma completa, detalhada e sem restrições." 
-          },
-          { 
-            role: "user", 
-            content: `Contexto Recuperado:\n${unifiedContext}\n\nPergunta do Operador: ${text}` 
-          }
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado. Responda diretamente e de forma completa." },
+          { role: "user", content: text }
         ]
       })
     });
@@ -459,11 +350,8 @@ async function sendMsg() {
     let botResponse = "";
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
       botResponse = data.choices[0].message.content;
-    } else if (data.error) {
-      botResponse = `Erro da API: ${data.error.message}`;
     } else {
-      // Fallback robusto caso a IA responda de forma crua ou direta sem choices tradicionais
-      botResponse = JSON.stringify(data);
+      botResponse = "Retorno bruto da API: " + JSON.stringify(data);
     }
 
     appendMessage(botResponse, 'bot', true);
@@ -471,7 +359,7 @@ async function sendMsg() {
 
   } catch (err) {
     setOrbState(false);
-    appendMessage(`Erro de conexão com o núcleo: ${err.message}`, 'system', true);
+    appendMessage(`Erro crítico de rede: ${err.message}`, 'system', true);
   }
 }
 
@@ -483,15 +371,6 @@ function appendMessage(text, type, save = true) {
   } else if (type === 'bot') {
     msgDiv.className = 'jarv-msg jarv-msg-bot';
     let htmlContent = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;
-    const uniqueId = 'doc_' + Date.now();
-    window[uniqueId] = text;
-
-    const lower = text.toLowerCase();
-    if (lower.includes('slide') || lower.includes('apresentação')) {
-      htmlContent += `<div style="margin-top:10px; display:flex; gap:8px;"><button class="btn-send" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadAsFile('slides.md', window['${uniqueId}'])">📥 Baixar Slides (.md)</button><button class="btn-send" style="padding:4px 8px; font-size:0.75rem; background:#0088cc;" onclick="downloadAsWord('slides.doc', window['${uniqueId}'])">📄 Word (.doc)</button></div>`;
-    } else if (lower.includes('documento') || lower.includes('relatório')) {
-      htmlContent += `<div style="margin-top:10px;"><button class="btn-send" style="padding:4px 8px; font-size:0.75rem; background:#0088cc;" onclick="downloadAsWord('relatorio.doc', window['${uniqueId}'])">📄 Word (.doc)</button></div>`;
-    }
     msgDiv.innerHTML = htmlContent;
   } else {
     msgDiv.className = 'jarv-msg jarv-msg-system';
