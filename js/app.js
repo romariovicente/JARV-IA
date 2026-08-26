@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   startRealTimeClock();
   initAudioAnalyzer();
 
+  // Lógica de Autenticação Restaurada
   if (auth) {
     auth.onAuthStateChanged((user) => {
       if (user) {
@@ -54,11 +55,31 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userNameEl) userNameEl.textContent = name;
         if (statusEl) statusEl.textContent = `Autenticado (${name}) - J.A.R.V.I.S. Ativo`;
         if (loginModal) loginModal.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "flex"; // Mostra botão de sair
       } else {
         if (userNameEl) userNameEl.textContent = "Operador";
         if (statusEl) statusEl.textContent = "Modo Operacional - J.A.R.V.I.S. Ativo";
+        if (loginModal) loginModal.style.display = "flex"; // Força exibir o modal
+        if (logoutBtn) logoutBtn.style.display = "none"; // Oculta o botão de sair
       }
     });
+
+    // Evento de Login (Busca o botão pelo ID ou classe)
+    const btnLogin = document.getElementById('loginBtn') || document.querySelector('.login-btn');
+    if (btnLogin) {
+      btnLogin.addEventListener('click', () => {
+        auth.signInWithPopup(provider).catch(err => alert("Erro na autenticação: " + err.message));
+      });
+    }
+
+    // Evento de Logout
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        auth.signOut().then(() => {
+          window.location.reload(); // Recarrega a página ao sair
+        }).catch(err => console.error("Erro ao deslogar:", err));
+      });
+    }
   }
 
   initChatStore();
