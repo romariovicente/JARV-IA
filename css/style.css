@@ -11,7 +11,7 @@
   --text-muted: #5c78a5;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -315,33 +315,6 @@ body.kali-theme {
   font-family: monospace;
   font-weight: bold;
   color: var(--accent-cyan);
-}
-
-/* BOTÕES DE AÇÃO DE ARQUIVO E SLIDE DENTRO DAS MENSAGENS */
-.msg-download-bar {
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border-color);
-  display: flex;
-  gap: 10px;
-}
-
-.btn-download-file {
-  background: #005bb5;
-  border: none;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: bold;
-}
-
-.btn-download-file:hover {
-  background: #0078d4;
 }
 
 /* ESTILO PARA TABELAS GERADAS PELO BOT */
