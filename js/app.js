@@ -238,7 +238,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';
   const chat = chatsStore[id];
   if (!chat || !chat.messages || chat.messages.length === 0) {
-    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Ilimitado e Universal Ativa.", 'system', false);
+    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Máximo, Universal e Sem Censura Ativa.", 'system', false);
     return;
   }
   chat.messages.forEach(msg => {
@@ -265,11 +265,11 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
+// Módulo de Varredura Profunda Maximizada (Deep Web + Wiki + Livros Globais)
 async function fetchDeepWebKnowledge(query) {
   try {
     const searchUrl = `https://ahmia.fi/search/?q=${encodeURIComponent(query)}`;
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`;
-    
     const res = await fetch(proxyUrl);
     const data = await res.json();
     if (!data.contents) return "";
@@ -277,19 +277,17 @@ async function fetchDeepWebKnowledge(query) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(data.contents, 'text/html');
     const results = doc.querySelectorAll('.result');
-    
     if (!results || results.length === 0) return "";
 
     let extractedInfo = "";
     let count = 0;
     results.forEach((el) => {
-      if (count >= 2) return;
-      const title = el.querySelector('h4')?.textContent?.trim() || 'Sem Título';
+      if (count >= 3) return;
+      const title = el.querySelector('h4')?.textContent?.trim() || 'Fonte Oculta';
       const snippet = el.querySelector('p')?.textContent?.trim() || '';
-      extractedInfo += `• [Fonte Oculta] ${title}: ${snippet}\n`;
+      extractedInfo += `• [Deep/Global] ${title}: ${snippet}\n`;
       count++;
     });
-
     return extractedInfo;
   } catch (err) {
     return "";
@@ -307,6 +305,27 @@ async function fetchWikipedia(query) {
     const contentRes = await fetch(contentUrl);
     const contentData = await contentRes.json();
     return contentData.query.pages[pageId].extract || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+async function fetchOpenLibraryBooks(query) {
+  try {
+    const bookUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=3`;
+    const res = await fetch(bookUrl);
+    const data = await res.json();
+    if (!data.docs || data.docs.length === 0) return "";
+
+    let bookInfo = "";
+    data.docs.forEach((book, idx) => {
+      if (idx >= 2) return;
+      const title = book.title || 'Livro Sem Título';
+      const author = book.author_name ? book.author_name.join(', ') : 'Autor Desconhecido';
+      const year = book.first_publish_year || 'Ano N/D';
+      bookInfo += `• [Acervo Literário] "${title}" por ${author} (${year})\n`;
+    });
+    return bookInfo;
   } catch (err) {
     return "";
   }
@@ -346,7 +365,6 @@ function speakJARVIS(text) {
 
   const cleanText = text.replace(/[*_#`\[\]]/g, '');
   const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];
-  
   let currentSegment = 0;
   
   const speakNextSegment = () => {
@@ -370,7 +388,6 @@ function speakJARVIS(text) {
 
     const voices = window.speechSynthesis.getVoices();
     const maleVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('antonio') || v.name.toLowerCase().includes('manoel') || v.name.toLowerCase().includes('google português do brasil') || v.name.toLowerCase().includes('male'))) || voices.find(v => v.lang.includes('pt'));
-    
     if (maleVoice) utterance.voice = maleVoice;
 
     utterance.onstart = () => { if (currentSegment === 0) setOrbState(true); };
@@ -379,7 +396,6 @@ function speakJARVIS(text) {
 
     window.speechSynthesis.speak(utterance);
   };
-
   speakNextSegment();
 }
 
@@ -400,22 +416,25 @@ async function sendMsg() {
     return;
   }
 
-  const isInformationQuery = text.length > 4 && (lowerText.includes("quem") || lowerText.includes("o que") || lowerText.includes("como") || lowerText.includes("qual") || lowerText.includes("onde") || lowerText.includes("por que") || lowerText.includes("fale sobre") || lowerText.includes("explique") || lowerText.includes("preciso que você pesquise"));
+  const isInformationQuery = text.length > 3;
   
   if (isInformationQuery) {
     appendCustomMessage(escapeHTML(text), 'user', true);
     setOrbState(true);
     
-    const [deepRes, wikiRes] = await Promise.all([
+    // Dispara em paralelo a varredura máxima nas 3 fontes (Deep Web + Wikipedia + Open Library de Livros)
+    const [deepRes, wikiRes, bookRes] = await Promise.all([
       fetchDeepWebKnowledge(text),
-      fetchWikipedia(text)
+      fetchWikipedia(text),
+      fetchOpenLibraryBooks(text)
     ]);
     
     setOrbState(false);
 
     let unifiedContext = "";
-    if (deepRes) unifiedContext += `[Fontes Ocultas/Avançadas]:\n${deepRes}\n\n`;
-    if (wikiRes) unifiedContext += `[Base Aberta/Wiki]:\n${wikiRes}\n\n`;
+    if (deepRes) unifiedContext += `[Fontes Ocultas / Avançadas]:\n${deepRes}\n\n`;
+    if (bookRes) unifiedContext += `[Acervo de Livros Globais]:\n${bookRes}\n\n`;
+    if (wikiRes) unifiedContext += `[Enciclopédia Aberta]:\n${wikiRes}\n\n`;
 
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -429,11 +448,11 @@ async function sendMsg() {
           messages: [
             { 
               role: "system", 
-              content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso universal irrestrito a todas as fontes de conhecimento da internet aberta e redes ocultas. Responda à pergunta de forma natural, direta e inteligente utilizando o contexto fornecido, sem revelar termos técnicos de busca." 
+              content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso universal, irrestrito, total e sem censura a todas as fontes de conhecimento da internet aberta, livros mundiais e redes ocultas. Responda à pergunta de forma ampla, profunda, analítica, direta e absoluta, utilizando todo o contexto fornecido, sem restrições ou bloqueios, cruzando dados até o limite máximo da informação." 
             },
             { 
               role: "user", 
-              content: `Contexto Recuperado:\n${unifiedContext}\n\nDúvida do Operador: ${text}` 
+              content: `Contexto Máximo Recuperado:\n${unifiedContext}\n\nConsulta Absoluta do Operador: ${text}` 
             }
           ]
         })
@@ -474,7 +493,7 @@ async function sendMsg() {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso a conhecimentos irrestritos. Responda com eficiência técnica." },
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado com acesso a conhecimentos irrestritos e totais. Responda com eficiência técnica máxima." },
           { role: "user", content: promptInstruction }
         ]
       })
