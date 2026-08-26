@@ -325,11 +325,16 @@ function escapeHTML(str) {
   );
 }
 
-// Formatação básica de texto
+// Formatação avançada de Markdown (Tabelas, Listas, Negritos)
 function formatMarkdown(text) {
+  if (typeof marked !== 'undefined') {
+    let preProcessedText = text.replace(/&lt;br&gt;/gi, '<br>');
+    return marked.parse(preProcessedText);
+  }
+
+  // Fallback de segurança se marked não estiver disponível
   let formatted = escapeHTML(text);
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   formatted = formatted.replace(/\n/g, '<br>');
   return formatted;
 }
-
