@@ -3,36 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARV.IA - Secure Access Portal v3.0 Quantum</title>
-  
-  <!-- Content Security Policy (CSP) para mitigação de XSS e controle de conexões -->
-  <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
-    style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
-    font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;
-    img-src 'self' data: https:;
-    connect-src 'self' https://api.groq.com https://pt.wikipedia.org https://*.firebaseio.com https://*.googleapis.com;
-  ">
-
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' [https://api.groq.com](https://api.groq.com) [https://pt.wikipedia.org](https://pt.wikipedia.org) https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com;">
+  <title>JARV.IA v3.0 Quantum & Wiki</title>
   <link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+  <script src="[https://cdn.jsdelivr.net/npm/marked/marked.min.js](https://cdn.jsdelivr.net/npm/marked/marked.min.js)"></script>
 </head>
 <body class="kali-theme">
 
   <!-- BARRA SUPERIOR (HEADER) -->
   <header class="jarv-header">
     <div class="header-left">
-      <i class="fa-solid fa-atom logo-icon" title="Núcleo Quântico Ativo"></i>
+      <i class="fa-solid fa-atom logo-icon"></i>
       <span class="brand-title">JARV.IA <small>v3.0 Quantum & Wiki</small></span>
     </div>
     <div class="header-right">
       <div class="system-controls">
-        <i class="fa-solid fa-globe text-cyan" title="Conexão Global Wikipédia Ativa"></i>
-        <i class="fa-solid fa-terminal" title="Terminal CLI Safe"></i>
-        <i class="fa-solid fa-volume-high" id="ttsToggleBtn" title="Voz do JARVIS (Ativada)" onclick="toggleTTS()"></i>
+        <i class="fa-solid fa-terminal" title="Terminal Ativo"></i>
+        <i class="fa-solid fa-volume-high" id="ttsToggleBtn" title="Voz do JARVIS" onclick="toggleTTS()"></i>
+        <i class="fa-solid fa-bell" title="Notificações"></i>
         <span class="clock-display" id="clockDisplay">00:00:00</span>
-        <i class="fa-solid fa-shield-halved text-cyan" title="Proteção CSP / XSS Ativa"></i>
+        <i class="fa-solid fa-shield-halved text-cyan" title="CSP Security Active"></i>
       </div>
       <div class="user-profile">
         <span id="userName" class="user-name">Romário</span>
@@ -44,7 +35,7 @@
   <!-- CONTAINER PRINCIPAL -->
   <div class="jarv-container">
 
-    <!-- MENU LATERAL -->
+    <!-- MENU LATERAL (SIDEBAR) -->
     <aside class="jarv-sidebar">
       <div class="sidebar-top-actions">
         <button class="btn-new-chat" onclick="createNewChat()" title="Nova Conversa">
@@ -55,21 +46,23 @@
         </button>
       </div>
 
-      <!-- HISTÓRICO -->
+      <!-- LISTA DE HISTÓRICO DE CONVERSAS -->
       <div class="chat-history-container">
         <span class="history-label" data-i18n="history">HISTÓRICO</span>
-        <div id="chatHistoryList" class="chat-history-list"></div>
+        <div id="chatHistoryList" class="chat-history-list">
+          <!-- Renderizado dinamicamente pelo JS -->
+        </div>
       </div>
 
       <nav class="sidebar-nav">
         <button class="jarv-nav-item active" data-view="chat" onclick="switchView('chat')">
           <i class="fa-solid fa-terminal"></i> <span data-i18n="nav_terminal">Terminal / Chat</span>
         </button>
-        <button class="jarv-nav-item" data-view="quantum" onclick="runQuantumDemo()">
+        <button class="jarv-nav-item" data-view="quantum" onclick="switchView('quantum')">
           <i class="fa-solid fa-atom"></i> Quântico (Qubit)
         </button>
-        <button class="jarv-nav-item" data-view="wiki" onclick="searchWikiDirect()">
-          <i class="fa-solid fa-globe"></i> Wikipédia Real-Time
+        <button class="jarv-nav-item" data-view="wiki" onclick="switchView('wiki')">
+          <i class="fa-solid fa-book-atlas"></i> Wikipédia Real-Time
         </button>
         <button class="jarv-nav-item" data-view="dashboard" onclick="switchView('dashboard')">
           <i class="fa-solid fa-chart-line"></i> Dashboard
@@ -83,39 +76,40 @@
       </div>
     </aside>
 
-    <!-- ÁREA PRINCIPAL -->
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
     <main class="jarv-main" id="chatView">
       <div class="watermark-bg"></div>
 
-      <!-- MENSAGENS -->
+      <!-- ÁREA DE MENSAGENS -->
       <div id="msgArea" class="msg-container">
         <div class="jarv-msg jarv-msg-system">
           <span class="jarv-code">[JARV]</span> Núcleo v3.0 operacional. Conexão quântica simulada e ponte Wikipédia prontas.
         </div>
       </div>
 
-      <!-- PAINEL TERMINAL CLI -->
+      <!-- PAINEL TERMINAL INFERIOR -->
       <div class="terminal-cli-panel">
-        <div class="cli-line"><span class="user-host">romario@jarv-quantum:~#</span> status: <span id="jarvStatus">Secure Protocol Active</span></div>
+        <div class="cli-line"><span class="user-host">romario@jarv-quantum:~#</span> status: <span id="jarvStatus">Awaiting Authentication</span></div>
         <div class="cli-line"><span class="user-host">romario@jarv-quantum:~#</span> <span class="blinking-cursor">_</span></div>
       </div>
 
-      <!-- INPUT & TOOLBAR -->
+      <!-- BARRA DE FERRAMENTAS E INPUT -->
       <div class="input-section">
         <div class="action-toolbar">
+          <button class="tool-btn" title="Câmera"><i class="fa-solid fa-camera"></i></button>
           <button class="tool-btn" title="Imagem"><i class="fa-solid fa-image"></i></button>
           <button class="tool-btn" title="Anexo"><i class="fa-solid fa-paperclip"></i></button>
           <button class="tool-btn" title="Voz (Falar)"><i class="fa-solid fa-microphone"></i></button>
-          <button class="tool-btn" title="Buscar Wikipédia" onclick="searchWikiPrompt()"><i class="fa-solid fa-globe"></i></button>
-          <button class="tool-btn" title="Simular Qubit" onclick="runQuantumDemo()"><i class="fa-solid fa-atom"></i></button>
+          <button class="tool-btn" title="Buscar Web"><i class="fa-solid fa-magnifying-glass"></i></button>
           <button class="tool-btn" title="Configurações" onclick="openSettingsModal()"><i class="fa-solid fa-gear"></i></button>
         </div>
 
         <div class="input-wrapper">
-          <input type="text" id="chatInput" placeholder="Digite um comando (ou !wiki termo para consultar a Wikipédia)..." onkeydown="if(event.key==='Enter') sendMsg()">
+          <input type="text" id="chatInput" placeholder="Digite um comando (ou !wiki termo)..." onkeydown="if(event.key==='Enter') sendMsg()">
           <button class="btn-send" onclick="sendMsg()" data-i18n="btn_send">ENVIAR</button>
         </div>
       </div>
+
     </main>
   </div>
 
@@ -160,21 +154,20 @@
   <!-- MODAL DE LOGIN -->
   <div id="loginModal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
-      <i class="fa-solid fa-dragon modal-logo"></i>
+      <i class="fa-solid fa-atom modal-logo"></i>
       <h2>JARV.IA</h2>
-      <p class="subtitle">v3.0 Quantum Release</p>
-      <button id="loginBtn" class="btn-google-login">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      <p class="subtitle">v3.0 Quantum & Wiki Edition</p>
+      <button id="loginBtn" class="btn-google-login" onclick="signInWithGoogle()">
+        <img src="[https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg](https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg)" alt="Google">
         Sign in with Google
       </button>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Scripts Firebase & App -->
+  <script src="[https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js](https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js](https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js)"></script>
   <script src="./js/app.js"></script>
 </body>
 </html>
