@@ -75,9 +75,9 @@
       <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO (FIXADA) -->
       <div class="input-section">
         <div class="action-toolbar">
-          <button class="tool-btn" title="Anexar Imagem / Câmera"><i class="fa-solid fa-camera"></i></button>
-          <button class="tool-btn" title="Anexar Arquivo"><i class="fa-solid fa-paperclip"></i></button>
-          <button class="tool-btn" title="Comando de Voz"><i class="fa-solid fa-microphone"></i></button>
+          <button class="tool-btn" id="btnCamera" title="Anexar Imagem / Câmera"><i class="fa-solid fa-camera"></i></button>
+          <button class="tool-btn" id="btnAttachment" title="Anexar Arquivo"><i class="fa-solid fa-paperclip"></i></button>
+          <button class="tool-btn" id="btnMic" title="Comando de Voz"><i class="fa-solid fa-microphone"></i></button>
         </div>
         <div class="input-wrapper">
           <input type="text" id="chatInput" placeholder="Digite seu comando ou solicitação ao J.A.R.V.I.S..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
@@ -100,6 +100,10 @@
       </button>
     </div>
   </div>
+
+  <!-- INPUTS OCULTOS DE SISTEMA (ACIONADOS PELOS BOTÕES DE CÂMERA E ANEXO) -->
+  <input type="file" id="imageInput" style="display: none;" accept="image/*" capture="environment">
+  <input type="file" id="fileInput" style="display: none;" accept="*/*">
 
   <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
