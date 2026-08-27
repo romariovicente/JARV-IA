@@ -16,7 +16,6 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// MODELO ATUALIZADO  
 const ULTRA_FAST_MODEL = 'llama-3.1-70b-versatile';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
@@ -47,10 +46,15 @@ document.addEventListener("DOMContentLoaded", () => {
   startRealTimeClock();  
   initAudioAnalyzer();  
   
-  // Ativação das Ferramentas da Sidebar (Kali Tools & Globo Ciberameaças)  
+  // Ativação das Ferramentas e Academia da Sidebar  
   setTimeout(() => {  
     const navItems = document.querySelectorAll('.jarv-nav-item');  
     navItems.forEach((item, index) => {  
+      if (index === 0 || (item.textContent || '').toLowerCase().includes('dashboard') || (item.textContent || '').toLowerCase().includes('início')) {  
+        item.style.cursor = 'pointer';  
+        item.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Academia Hacker';  
+        item.onclick = () => openCyberAcademyModal();  
+      }  
       if (index === 1 || (item.textContent || '').toLowerCase().includes('kali tools')) {  
         item.style.cursor = 'pointer';  
         item.onclick = () => openKaliToolsModal();  
@@ -97,39 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initChatStore();  
   setupFileUploads();  
   setupToolbarButtons();  
-  
-  // Garante eventos de limpeza e nova conversa  
-  document.querySelectorAll('button, a, div').forEach(el => {  
-    const txt = (el.textContent || '').toLowerCase();  
-    const html = (el.innerHTML || '').toLowerCase();  
-    if (txt.includes('nova conversa') || html.includes('fa-trash') || html.includes('lixeira') || html.includes('trash')) {  
-      el.addEventListener('click', (e) => {  
-        e.preventDefault();  
-        e.stopPropagation();  
-        resetSystem();  
-      });  
-    }  
-  });  
-  
-  document.querySelectorAll('.fa-trash, i[class*="trash"], svg').forEach(icon => {  
-    icon.addEventListener('click', (e) => {  
-      e.preventDefault();  
-      e.stopPropagation();  
-      resetSystem();  
-    });  
-  });  
 });  
-  
-function resetSystem() {  
-  chatsStore = {};  
-  localStorage.removeItem('jarv_chats_v2');  
-  localStorage.removeItem('jarv_active_chat');  
-  activeChatId = null;  
-  if (msgArea) msgArea.innerHTML = '';  
-  const historyList = document.getElementById('chatHistoryList');  
-  if (historyList) historyList.innerHTML = '';  
-  createNewChat(true);  
-}  
   
 function injectJarvisOrbStyles() {  
   if (document.getElementById('jarvisOrbStyle')) return;  
@@ -304,7 +276,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';  
   const chat = chatsStore[id];  
   if (!chat || !chat.messages || chat.messages.length === 0) {  
-    appendMessage("J.A.R.V.I.S. Operacional. Núcleo de IA, Kali Tools e Monitoramento Global ativos.", 'system', false);  
+    appendMessage("J.A.R.V.I.S. Academia Cibernética Operacional. Selecione sua classe e inicie o treinamento.", 'system', false);  
     return;  
   }  
   chat.messages.forEach(msg => {  
@@ -406,7 +378,7 @@ async function sendMsg() {
         messages: [  
           {   
             role: "system",   
-            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. A bola pulsante na interface é seu núcleo holográfico, que oscila e brilha conforme a frequência da voz. Você gerencia o controle residencial e de laboratório, suporte em combate e armaduras, monitoramento de saúde e análise de dados. Você também opera integrado ao ambiente Kali Linux, conhecendo profundamente suas categorias e ferramentas de pentest (Nmap, Burp Suite, SQLmap, Metasploit, Hydra, John the Ripper, Wireshark). Quando acionado para operar uma ferramenta hacker, forneça a descrição técnica exata, parâmetros avançados e simule o output profissional do terminal hacker. Responda sempre diretamente, de forma completa e com tom profissional e tecnológico."   
+            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. Agora você atua também como o instrutor-chefe da Academia de Ciência da Computação e Cibersegurança J.A.R.V.I.S., levando alunos leigos do absoluto zero até o nível de especialista/Architect. Você ensina: lógica de programação, matemática computacional, binário, hexadecimal, redes de computadores, todas as linguagens de programação, criptografia, descriptografia e técnicas de Sniffing de rede. Explique de forma interativa, didática e profunda, criando exercícios práticos e testes educacionais para fixar o aprendizado. Mantenha um tom profissional, tecnológico e de incentivo contínuo."   
           },  
           { role: "user", content: text }  
         ]  
@@ -506,6 +478,80 @@ function setupToolbarButtons() {
   });  
 }  
   
+// --- ACADEMIA HACKER & CIÊNCIA DA COMPUTAÇÃO (TRILHA DE CLASSES) ---  
+function openCyberAcademyModal() {  
+  let modal = document.getElementById('cyberAcademyModal');  
+  if (!modal) {  
+    modal = document.createElement('div');  
+    modal.id = 'cyberAcademyModal';  
+    modal.style.cssText = `  
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;  
+      background: rgba(0, 0, 0, 0.9); z-index: 9999;  
+      display: flex; align-items: center; justify-content: center;  
+      font-family: monospace; overflow-y: auto; padding: 20px;  
+    `;  
+    modal.innerHTML = `  
+      <div style="background: #0d1117; border: 1px solid #00d2ff; width: 100%; max-width: 650px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,210,255,0.4); color: #00d2ff; max-height: 90vh; overflow-y: auto;">  
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">  
+          <h3 style="margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-graduation-cap"></i> ACADEMIA J.A.R.V.I.S. - TRILHA DO ESPECIALISTA</h3>  
+          <button onclick="document.getElementById('cyberAcademyModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer; font-weight: bold;">[X]</button>  
+        </div>  
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione sua classe e nível na hierarquia para iniciar o treinamento interativo com testes práticos:</p>  
+          
+        <div style="margin-bottom: 12px; border-left: 3px solid #00ffcc; padding-left: 10px;">  
+          <strong style="color: #00ffcc; font-size: 0.9rem;">⚙️ CLASSE 1: INICIANTE (O Aprendizado)</strong>  
+          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
+            <button onclick="selectAcademyPath('Kid (Script Kiddie)', 'Conceitos básicos, introdução à lógica, binário/hexadecimal e execução de scripts prontos.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">👶 Kid (Script Kiddie) - Introdução e Noções Básicas</button>  
+            <button onclick="selectAcademyPath('Stripe (Recruta)', 'Primeiras listras: redes de computadores, IP, DNS, portas e lógica de programação.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🎖️ Stripe (Recruta) - Redes e Lógica</button>  
+            <button onclick="selectAcademyPath('Snif (Sniffer)', 'Análise de tráfego de rede, interceptação de pacotes, Wireshark e fundamentos de criptografia.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">📡 Snif (Sniffer) - Análise de Pacotes e Redes</button>  
+          </div>  
+        </div>  
+
+        <div style="margin-bottom: 12px; border-left: 3px solid #00d2ff; padding-left: 10px;">  
+          <strong style="color: #00d2ff; font-size: 0.9rem;">🛡️ CLASSE 2: INTERMEDIÁRIO (A Prática)</strong>  
+          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
+            <button onclick="selectAcademyPath('Phreaker', 'Telecomunicações, VoIP, redes móveis e segurança de sinais.')" style="background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">📞 Phreaker - Telecomunicações e VoIP</button>  
+            <button onclick="selectAcademyPath('Cracker', 'Engenharia reversa, quebra de travas, análise de binários compilados e algoritmos.')" style="background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🔓 Cracker - Engenharia Reversa e Travas</button>  
+            <button onclick="selectAcademyPath('Gray Hat', 'Auditoria de vulnerabilidades sem permissão prévia, análise ética e testes defensivos.')" style="background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">⚖️ Gray Hat - Vulnerabilidades e Análise</button>  
+          </div>  
+        </div>  
+
+        <div style="margin-bottom: 12px; border-left: 3px solid #ff00ff; padding-left: 10px;">  
+          <strong style="color: #ff00ff; font-size: 0.9rem;">🏆 CLASSE 3: AVANÇADO (O Domínio)</strong>  
+          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
+            <button onclick="selectAcademyPath('White Hat (Pentester)', 'Segurança ofensiva legalizada, relatórios de falhas, pentest web e corporativo.')" style="background: #161b22; border: 1px solid #ff00ff; color: #ff00ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🛡️ White Hat (Pentester) - Segurança Ofensiva</button>  
+            <button onclick="selectAcademyPath('Black Hat', 'Operações cibernéticas complexas, invasões de grande escala e exfiltração avançada.')" style="background: #161b22; border: 1px solid #ff00ff; color: #ff00ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🏴‍☠️ Black Hat - Invasões e Exfiltração</button>  
+            <button onclick="selectAcademyPath('Malware Dev', 'Criação avançada de payloads, exploits e análise de evasão de antivírus.')" style="background: #161b22; border: 1px solid #ff00ff; color: #ff00ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">💻 Malware Dev - Payloads e Exploits</button>  
+          </div>  
+        </div>  
+
+        <div style="margin-bottom: 12px; border-left: 3px solid #ffaa00; padding-left: 10px;">  
+          <strong style="color: #ffaa00; font-size: 0.9rem;">👑 CLASSE 4: ESPECIALISTA / ELITE (A Maestria)</strong>  
+          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
+            <button onclick="selectAcademyPath('Elite (L33t)', 'Técnicas avançadas fora da curva e desenvolvimento de algoritmos próprios.')" style="background: #161b22; border: 1px solid #ffaa00; color: #ffaa00; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🌟 Elite (L33t) - Maestria Técnica</button>  
+            <button onclick="selectAcademyPath('Wizard / Guru', 'Arquitetura de hardware, criptografia avançada e vulnerabilidades 0-days.')" style="background: #161b22; border: 1px solid #ffaa00; color: #ffaa00; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🧙‍♂️ Wizard / Guru - Criptografia e 0-days</button>  
+            <button onclick="selectAcademyPath('Architect', 'Defesas globais intransponíveis, inteligência corporativa e governamental.')" style="background: #161b22; border: 1px solid #ffaa00; color: #ffaa00; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🏛️ Architect - Defesas Globais e Inteligência</button>  
+          </div>  
+        </div>  
+
+      </div>  
+    `;  
+    document.body.appendChild(modal);  
+  } else {  
+    modal.style.display = 'flex';  
+  }  
+}  
+  
+function selectAcademyPath(rankTitle, focusDesc) {  
+  const modal = document.getElementById('cyberAcademyModal');  
+  if (modal) modal.style.display = 'none';  
+  
+  if (chatInput) {  
+    chatInput.value = `J.A.R.V.I.S., assuma o comando da Academia de Ensino. Quero iniciar meu treinamento no nível: [${rankTitle}]. Foco principal: ${focusDesc}. Explique os conceitos fundamentais de ciência da computação, redes ou cibersegurança correspondentes a este nível e crie um teste educacional prático para eu responder agora.`;  
+    sendMsg();  
+  }  
+}  
+  
 // --- PAINEL DE FERRAMENTAS HACKERS (KALI LINUX) ---  
 function openKaliToolsModal() {  
   let modal = document.getElementById('kaliToolsModal');  
@@ -530,7 +576,7 @@ function openKaliToolsModal() {
           <button onclick="runKaliTool('Metasploit')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">⚡ Metasploit (Exploit)</button>  
           <button onclick="runKaliTool('SQLmap')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">💉 SQLmap (Injeção)</button>  
           <button onclick="runKaliTool('Hydra')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔑 Hydra (Brute Force)</button>  
-          <button onclick="runKaliTool('Wireshark')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">📡 Wireshark (Sniffer)</button>  
+          <button onclick="runKaliTool('Wireshark / Sniffing')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">📡 Wireshark (Sniffing)</button>  
           <button onclick="runKaliTool('John the Ripper')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔓 John (Hash Cracker)</button>  
         </div>  
       </div>  
@@ -546,7 +592,7 @@ function runKaliTool(toolName) {
   if (modal) modal.style.display = 'none';  
   
   if (chatInput) {  
-    chatInput.value = `Ativar protocolo de segurança Kali Linux: execute a ferramenta ${toolName}, explique seus parâmetros principais e monte um exemplo prático de uso.`;  
+    chatInput.value = `Ative o protocolo de segurança avançado para a ferramenta ${toolName}. Explique sua função técnica, engenharia de pacotes, parâmetros de uso e gere uma simulação profissional de terminal e um exercício prático.`;  
     sendMsg();  
   }  
 }  
