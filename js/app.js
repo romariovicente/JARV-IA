@@ -16,9 +16,9 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Modelo Groq Atualizado
+// Endpoint do Worker na Cloudflare e Modelo Ajustado
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
-const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';  
+const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -536,13 +536,13 @@ async function sendMsg() {
   setOrbState(true);  
   
   try {  
-    // Requisição para o Worker na Cloudflare com o modelo Groq atualizado
     const response = await fetch(WORKER_URL, {  
       method: "POST",  
       headers: {  
         "Content-Type": "application/json"  
       },  
       body: JSON.stringify({  
+        prompt: text || "Analise o anexo fornecido.",
         model: ULTRA_FAST_MODEL,  
         messages: [  
           {   
@@ -554,7 +554,7 @@ async function sendMsg() {
       })  
     });  
   
-    attachedImageBase64 = null; // Limpa imagem anexada após envio
+    attachedImageBase64 = null; 
     const data = await response.json();  
     setOrbState(false);  
 
@@ -566,6 +566,8 @@ async function sendMsg() {
     let botResponse = "";  
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {  
       botResponse = data.choices[0].message.content;  
+    } else if (data.response) {
+      botResponse = data.response;
     } else {  
       botResponse = "Retorno inesperado da API: " + JSON.stringify(data);  
     }  
@@ -692,7 +694,7 @@ function setupToolbarButtons() {
   const btnMic = document.getElementById('btnMic');
 
   if (btnCamera) {
-    btnCamera.addEventListener('click', openCameraOrGalleryModal);
+    btnCamera.addEventListener('click', startCameraCapture);
   }
 
   if (btnAttachment && hiddenFileInput) {
@@ -710,16 +712,6 @@ function setupToolbarButtons() {
         sendMsg();
       }
     });
-  }
-}
-
-// Modal de Escolha: Câmera em Tempo Real ou Galeria
-function openCameraOrGalleryModal() {
-  const choice = confirm("Deseja ativar a CÂMERA em tempo real?\n\n- [OK]: Abrir Câmera do dispositivo (solicita permissão)\n- [Cancelar]: Escolher foto da Galeria do dispositivo");
-  if (choice) {
-    startCameraCapture();
-  } else {
-    if (hiddenImageInput) hiddenImageInput.click();
   }
 }
 
@@ -741,7 +733,7 @@ function startCameraCapture() {
     });
 }
 
-// Modal de Captura e Preview da Câmera
+// Modal de Captura com Opção de Galeria Integrada
 function createCameraPreviewModal(stream) {
   let modal = document.getElementById('jarvisCamModal');
   if (modal) modal.remove();
@@ -751,13 +743,14 @@ function createCameraPreviewModal(stream) {
   modal.style.cssText = `position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;`;
   
   modal.innerHTML = `
-    <div style="background:#0d1117; border:1px solid #00ffcc; padding:15px; border-radius:8px; text-align:center; max-width:90%; width:400px; box-shadow: 0 0 20px rgba(0,255,204,0.3);">
+    <div style="background:#0d1117; border:1px solid #00ffcc; padding:15px; border-radius:8px; text-align:center; max-width:90%; width:420px; box-shadow: 0 0 20px rgba(0,255,204,0.3);">
       <h3 style="color:#00ffcc; font-family:monospace; margin-top:0;">📷 CAPTURA DE IMAGEM AO VIVO</h3>
       <video id="jarvisCamVideo" autoplay playsinline style="width:100%; max-height:300px; border-radius:6px; background:#000; border:1px solid #30363d;"></video>
       <canvas id="jarvisCamCanvas" style="display:none;"></canvas>
-      <div style="margin-top:15px; display:flex; gap:10px; justify-content:center;">
-        <button id="btnTakePhoto" style="background:#00ffcc; color:#000; font-weight:bold; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-family:monospace;">Tirar Foto</button>
-        <button id="btnCloseCam" style="background:#ff0055; color:#fff; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-family:monospace;">Cancelar</button>
+      <div style="margin-top:15px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button id="btnTakePhoto" style="background:#00ffcc; color:#000; font-weight:bold; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-family:monospace;">Tirar Foto</button>
+        <button id="btnOpenGalleryModal" style="background:#00d2ff; color:#000; font-weight:bold; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-family:monospace;">Abrir Galeria</button>
+        <button id="btnCloseCam" style="background:#ff0055; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-family:monospace;">Cancelar</button>
       </div>
     </div>
   `;
@@ -778,6 +771,12 @@ function createCameraPreviewModal(stream) {
     
     stream.getTracks().forEach(track => track.stop());
     modal.remove();
+  };
+
+  document.getElementById('btnOpenGalleryModal').onclick = () => {
+    stream.getTracks().forEach(track => track.stop());
+    modal.remove();
+    if (hiddenImageInput) hiddenImageInput.click();
   };
 
   document.getElementById('btnCloseCam').onclick = () => {
