@@ -20,8 +20,9 @@ const ULTRA_FAST_MODEL = 'llama-3.1-70b-versatile';
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
+let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';
 let ttsEnabled = true;  
-let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v2')) || {};  
+let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
   
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput, jarvisOrb;  
@@ -38,31 +39,43 @@ const translations = {
     academy: 'Academia Hacker',
     kali: 'Kali Tools',
     globe: 'Globo Ciberameaças',
-    placeholder: 'Digite um comando para o J.A.R.V.I.S. ou selecione uma classe...',
-    status: 'Modo Operacional - J.A.R.V.I.S. Ativo',
+    healthSearch: 'Pesquisa Saúde',
+    nursingRecord: 'Prontuário Enfermagem',
+    anatomyAtlas: 'Atlas de Anatomia',
+    medDictionaries: 'Dicionários Técnicos',
+    placeholder: 'Digite um comando para o J.A.R.V.I.S. ou selecione um módulo médico...',
+    status: 'Modo Operacional - Saúde & J.A.R.V.I.S. Ativo',
     voiceBtn: '🎙️ Escuta Contínua',
     activeVoice: '🔴 Escuta Ativa',
-    welcome: 'J.A.R.V.I.S. Sistema Global Ativo. Selecione uma ferramenta ou classe de ensino.'
+    welcome: 'J.A.R.V.I.S. Módulo de Saúde e Linguística Ativo. Selecione uma ferramenta médica na barra lateral.'
   },
   'en-US': {
     academy: 'Hacker Academy',
     kali: 'Kali Tools',
     globe: 'Cyber Threat Globe',
-    placeholder: 'Enter a command for J.A.R.V.I.S. or select a class...',
-    status: 'Operational Mode - J.A.R.V.I.S. Active',
+    healthSearch: 'Health Search',
+    nursingRecord: 'Nursing Records',
+    anatomyAtlas: 'Anatomy Atlas',
+    medDictionaries: 'Medical Dictionaries',
+    placeholder: 'Enter a command for J.A.R.V.I.S. or select a medical module...',
+    status: 'Operational Mode - Health & J.A.R.V.I.S. Active',
     voiceBtn: '🎙️ Continuous Listening',
     activeVoice: '🔴 Active Listening',
-    welcome: 'J.A.R.V.I.S. Global System Active. Select a tool or learning class.'
+    welcome: 'J.A.R.V.I.S. Health & Linguistics System Active. Select a medical tool.'
   },
   'es-ES': {
     academy: 'Academia Hacker',
     kali: 'Kali Tools',
     globe: 'Globo Ciberamenazas',
-    placeholder: 'Escribe un comando para J.A.R.V.I.S. o selecciona una clase...',
-    status: 'Modo Operacional - J.A.R.V.I.S. Activo',
+    healthSearch: 'Búsqueda Salud',
+    nursingRecord: 'Prontuario Enfermería',
+    anatomyAtlas: 'Atlas de Anatomía',
+    medDictionaries: 'Diccionarios Médicos',
+    placeholder: 'Escribe un comando para J.A.R.V.I.S. o selecciona un módulo médico...',
+    status: 'Modo Operacional - Salud y J.A.R.V.I.S. Activo',
     voiceBtn: '🎙️ Escucha Continua',
     activeVoice: '🔴 Escucha Activa',
-    welcome: 'J.A.R.V.I.S. Sistema Global Activo. Selecciona una herramienta o clase de aprendizaje.'
+    welcome: 'J.A.R.V.I.S. Sistema de Salud y Lingüística Activo. Selecciona una herramienta.'
   }
 };
   
@@ -77,28 +90,49 @@ document.addEventListener("DOMContentLoaded", () => {
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
   injectContinuousVoiceButton();  
-  injectLanguageSelector();
+  injectLanguageAndCountrySelectors();
   startRealTimeClock();  
   initAudioAnalyzer();  
   applyLanguageTranslations();
   
-  // Ativação das Ferramentas, Academia e Módulos da Sidebar  
+  // Injeção dos Módulos Médicos e de Saúde na Sidebar  
   setTimeout(() => {  
+    const sidebar = document.querySelector('.jarv-sidebar') || document.body;
+    const existingMenu = document.getElementById('healthModulesContainer');
+    if (!existingMenu) {
+      const menuContainer = document.createElement('div');
+      menuContainer.id = 'healthModulesContainer';
+      menuContainer.style.cssText = `margin: 10px 0; padding: 5px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d;`;
+      menuContainer.innerHTML = `
+        <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; text-align: center;">🏥 Setor de Saúde & Enfermagem</div>
+        <button onclick="openHealthSearchModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> <span id="lblHealthSearch">Pesquisa Especializada</span></button>
+        <button onclick="openNursingRecordModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-file-medical"></i> <span id="lblNursingRecord">Prontuário Enfermagem</span></button>
+        <button onclick="openAnatomyAtlasModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-brain"></i> <span id="lblAnatomy">Atlas de Anatomia</span></button>
+        <button onclick="openDictionariesModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:2px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> <span id="lblDictionaries">Dicionários Técnicos</span></button>
+      `;
+      const historyList = document.getElementById('chatHistoryList');
+      if (historyList && historyList.parentNode) {
+        historyList.parentNode.insertBefore(menuContainer, historyList);
+      } else {
+        sidebar.appendChild(menuContainer);
+      }
+    }
+
     const navItems = document.querySelectorAll('.jarv-nav-item');  
     navItems.forEach((item, index) => {  
-      if (index === 0 || (item.textContent || '').toLowerCase().includes('dashboard') || (item.textContent || '').toLowerCase().includes('início')) {  
+      if (index === 0) {  
         item.style.cursor = 'pointer';  
         item.id = 'navAcademy';
         item.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${translations[currentLang].academy}`;  
         item.onclick = () => openCyberAcademyModal();  
       }  
-      if (index === 1 || (item.textContent || '').toLowerCase().includes('kali tools')) {  
+      if (index === 1) {  
         item.style.cursor = 'pointer';  
         item.id = 'navKali';
         item.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${translations[currentLang].kali}`;
         item.onclick = () => openKaliToolsModal();  
       }  
-      if (index === 2 || (item.textContent || '').toLowerCase().includes('diagnóstico') || (item.textContent || '').toLowerCase().includes('microchip')) {  
+      if (index === 2) {  
         item.style.cursor = 'pointer';  
         item.id = 'navGlobe';
         item.innerHTML = `<i class="fa-solid fa-globe"></i> ${translations[currentLang].globe}`;  
@@ -107,7 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });  
   }, 1000);  
   
-  // Lógica de Autenticação  
   if (auth) {  
     auth.onAuthStateChanged((user) => {  
       if (user) {  
@@ -130,7 +163,6 @@ document.addEventListener("DOMContentLoaded", () => {
         auth.signInWithPopup(provider).catch(err => alert("Erro na autenticação: " + err.message));  
       });  
     }  
-  
     if (logoutBtn) {  
       logoutBtn.addEventListener('click', () => {  
         auth.signOut().then(() => window.location.reload()).catch(err => console.error("Erro ao deslogar:", err));  
@@ -143,18 +175,30 @@ document.addEventListener("DOMContentLoaded", () => {
   setupToolbarButtons();  
 });  
 
-function injectLanguageSelector() {
+function injectLanguageAndCountrySelectors() {
   const sidebar = document.querySelector('.jarv-sidebar') || document.body;
-  if (document.getElementById('langSelectorContainer')) return;
+  if (document.getElementById('selectorsContainer')) return;
   const container = document.createElement('div');
-  container.id = 'langSelectorContainer';
-  container.style.cssText = `margin: 10px auto; padding: 5px; text-align: center; font-family: monospace;`;
+  container.id = 'selectorsContainer';
+  container.style.cssText = `margin: 10px auto; padding: 5px; text-align: center; font-family: monospace; display: grid; grid-template-columns: 1fr; gap: 5px;`;
   container.innerHTML = `
-    <select id="jarvLangSelect" onchange="changeSiteLanguage(this.value)" style="background: #161b22; color: #00ffff; border: 1px solid #00ffff; padding: 5px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; cursor: pointer; width: 100%;">
-      <option value="pt-BR" ${currentLang === 'pt-BR' ? 'selected' : ''}>🇧🇷 Português</option>
-      <option value="en-US" ${currentLang === 'en-US' ? 'selected' : ''}>🇺🇸 English</option>
-      <option value="es-ES" ${currentLang === 'es-ES' ? 'selected' : ''}>🇪🇸 Español</option>
-    </select>
+    <div>
+      <label style="font-size: 0.65rem; color: #8b949e; display: block; text-align: left;">Idioma do Sistema:</label>
+      <select id="jarvLangSelect" onchange="changeSiteLanguage(this.value)" style="background: #161b22; color: #00ffff; border: 1px solid #00ffff; padding: 4px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; cursor: pointer; width: 100%;">
+        <option value="pt-BR" ${currentLang === 'pt-BR' ? 'selected' : ''}>🇧🇷 Português</option>
+        <option value="en-US" ${currentLang === 'en-US' ? 'selected' : ''}>🇺🇸 English</option>
+        <option value="es-ES" ${currentLang === 'es-ES' ? 'selected' : ''}>🇪🇸 Español</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size: 0.65rem; color: #8b949e; display: block; text-align: left; margin-top: 4px;">País (Siglas / Normas Saúde):</label>
+      <select id="jarvCountrySelect" onchange="changeHealthCountry(this.value)" style="background: #161b22; color: #00ffcc; border: 1px solid #00ffcc; padding: 4px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; cursor: pointer; width: 100%;">
+        <option value="Brasil" ${selectedHealthCountry === 'Brasil' ? 'selected' : ''}>🇧🇷 Brasil (COFEN/MS)</option>
+        <option value="Portugal" ${selectedHealthCountry === 'Portugal' ? 'selected' : ''}>🇵🇹 Portugal (OE)</option>
+        <option value="Estados Unidos" ${selectedHealthCountry === 'Estados Unidos' ? 'selected' : ''}>🇺🇸 Estados Unidos (ANA)</option>
+        <option value="Espanha" ${selectedHealthCountry === 'Espanha' ? 'selected' : ''}>🇪🇸 España</option>
+      </select>
+    </div>
   `;
   const historyList = document.getElementById('chatHistoryList');
   if (historyList && historyList.parentNode) {
@@ -169,11 +213,15 @@ function changeSiteLanguage(langCode) {
   currentLang = langCode;
   localStorage.setItem('jarv_lang', langCode);
   applyLanguageTranslations();
-  
-  const t = translations[currentLang];
-  speakJARVIS(langCode === 'en-US' ? "Language successfully changed to English. Systems updated." : 
-              langCode === 'es-ES' ? "Idioma cambiado con éxito a español. Sistemas actualizados." : 
-              "Idioma alterado com sucesso para Português. Sistemas atualizados.");
+  speakJARVIS(langCode === 'en-US' ? "Language successfully changed to English." : 
+              langCode === 'es-ES' ? "Idioma cambiado a español." : 
+              "Idioma alterado para Português.");
+}
+
+function changeHealthCountry(country) {
+  selectedHealthCountry = country;
+  localStorage.setItem('jarv_health_country', country);
+  speakJARVIS(`País de normas de saúde alterado para ${country}. Prontuários e dicionários ajustados.`);
 }
 
 function applyLanguageTranslations() {
@@ -194,6 +242,15 @@ function applyLanguageTranslations() {
   
   const navGlobe = document.getElementById('navGlobe');
   if (navGlobe) navGlobe.innerHTML = `<i class="fa-solid fa-globe"></i> ${t.globe}`;
+
+  const lblHS = document.getElementById('lblHealthSearch');
+  if (lblHS) lblHS.textContent = t.healthSearch;
+  const lblNR = document.getElementById('lblNursingRecord');
+  if (lblNR) lblNR.textContent = t.nursingRecord;
+  const lblAn = document.getElementById('lblAnatomy');
+  if (lblAn) lblAn.textContent = t.anatomyAtlas;
+  const lblDict = document.getElementById('lblDictionaries');
+  if (lblDict) lblDict.textContent = t.medDictionaries;
 }
   
 function injectJarvisOrbStyles() {  
@@ -230,7 +287,7 @@ function createJarvisOrbElement() {
       <div class="ring-wave"></div><div class="ring-wave"></div><div class="ring-wave"></div>  
       <div id="visualOrb" class="jarvis-orb"></div>  
     </div>  
-    <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>  
+    <div class="jarvis-orb-label">J.A.R.V.I.S. HEALTH</div>  
   `;  
   const historyList = document.getElementById('chatHistoryList');  
   if (historyList && historyList.parentNode) {  
@@ -392,14 +449,13 @@ function renderHistoryList() {
 }  
   
 function saveStore() {  
-  localStorage.setItem('jarv_chats_v2', JSON.stringify(chatsStore));  
+  localStorage.setItem('jarv_chats_v3', JSON.stringify(chatsStore));  
   localStorage.setItem('jarv_active_chat', activeChatId);  
 }  
   
 function speakJARVIS(text) {  
   if (!ttsEnabled || !('speechSynthesis' in window)) return;  
   window.speechSynthesis.cancel();  
-    
   isJarvisSpeaking = true;  
   if (recognition && isContinuousActive) { try { recognition.stop(); } catch(e) {} }  
   
@@ -442,17 +498,16 @@ function speakJARVIS(text) {
 async function sendMsg() {  
   const text = chatInput.value.trim();  
   if (!text && !attachedImageBase64) return;  
-  
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
   
-  if (lowerText.startsWith("gere uma imagem de") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem") || lowerText.startsWith("generate an image of")) {  
-    const promptImg = text.replace(/^(gere|gerar|criar|generate)\s+(uma\s+)?(image\s+of\s+|imagem\s+(de\s+)?)?/i, '').trim();  
+  if (lowerText.startsWith("gere uma imagem") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem") || lowerText.startsWith("atlas") || lowerText.startsWith("anatomia")) {  
+    const promptImg = text.replace(/^(gere|gerar|criar|atlas|anatomia)\s+(uma\s+)?(image\s+of\s+|imagem\s+(de\s+)?)?/i, '').trim();  
     appendCustomMessage(escapeHTML(text), 'user', true);  
-    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;  
-    const botHtml = `<strong>[J.A.R.V.I.S. IMAGEM]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00d2ff;"><br><a href="${imgUrl}" target="_blank" style="color:#00d2ff;">Abrir em Alta Resolução</a>`;  
+    const imgUrl = `https://image.pollinations.ai/prompt/human%20anatomy%20medical%20scientific%20illustration%20${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;  
+    const botHtml = `<strong>[J.A.R.V.I.S. ATLAS DE ANATOMIA]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00ffcc;"><br><a href="${imgUrl}" target="_blank" style="color:#00ffcc;">Abrir Imagem Anatômica em Alta Resolução</a>`;  
     appendCustomHtml(botHtml, 'bot', true);  
-    speakJARVIS(`Gerando imagem holográfica.`);  
+    speakJARVIS(`Gerando ilustração anatômica holográfica.`);  
     return;  
   }  
   
@@ -471,7 +526,7 @@ async function sendMsg() {
         messages: [  
           {   
             role: "system",   
-            content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. Você atua como o instrutor-chefe da Academia de Ciência da Computação e Cibersegurança J.A.R.V.I.S., levando alunos leigos do absoluto zero até o nível de especialista/Architect. Você ensina: lógica de programação, matemática computacional, binário, hexadecimal, redes de computadores, todas as linguagens de programação, criptografia, descriptografia e técnicas de Sniffing de rede. Responda sempre no idioma atual do usuário (${currentLang}). Explique de forma interativa, didática e profunda, criando exercícios práticos e testes educacionais para fixar o aprendizado. Mantenha tom profissional, tecnológico e de incentivo contínuo.`   
+            content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada atuando como assistente especialista em Ciências da Saúde, Enfermagem, Medicina e Linguística Aplicada. Você atende profissionais e estudantes de saúde com base nas diretrizes e normas do país selecionado pelo usuário (${selectedHealthCountry}), utilizando os idiomas correspondentes (${currentLang}). Você auxilia na transcrição de prontuários em siglas padrão, fornece termos de dicionários médicos/enfermagem com sinônimos e apoia na pesquisa clínica e acadêmica para Médicos, Enfermeiros, Técnicos e Auxiliares de Enfermagem.`   
           },  
           { role: "user", content: text }  
         ]  
@@ -570,63 +625,179 @@ function setupToolbarButtons() {
     };  
   });  
 }  
-  
-// --- ACADEMIA HACKER & CIÊNCIA DA COMPUTAÇÃO (TRILHA DE CLASSES) ---  
+
+// --- 1. PESQUISA ESPECIALIZADA EM SAÚDE ---
+function openHealthSearchModal() {
+  let modal = document.getElementById('healthSearchModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'healthSearchModal';
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
+    modal.innerHTML = `
+      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 550px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-stethoscope"></i> PESQUISA ESPECIALIZADA EM SAÚDE</h3>
+          <button onclick="document.getElementById('healthSearchModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o nível profissional para direcionar a pesquisa técnica baseada nas normas vigentes de <strong>${selectedHealthCountry}</strong>:</p>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+          <button onclick="runHealthSearch('Médico', 'Protocolos clínicos, condutas médicas, patologias e farmacologia avançada.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">🩺 1. Médico (Condutas, Diagnósticos e Tratamentos)</button>
+          <button onclick="runHealthSearch('Enfermagem', 'SAE (Processo de Enfermagem), prescrição de cuidados, liderança e protocolos gerenciais.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📋 2. Enfermagem (Processo de Enfermagem e SAE)</button>
+          <button onclick="runHealthSearch('Técnico de Enfermagem', 'Procedimentos de alta complexidade, administração de medicamentos, curativos e monitorização.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">💉 3. Técnico de Enfermagem (Procedimentos e Assistência)</button>
+          <button onclick="runHealthSearch('Auxiliar de Enfermagem', 'Cuidados básicos de higiene, conforto, sinais vitais e suporte ao paciente.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">🤝 4. Auxiliar de Enfermagem (Cuidados Básicos e Suporte)</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+}
+
+function runHealthSearch(category, desc) {
+  const modal = document.getElementById('healthSearchModal');
+  if (modal) modal.style.display = 'none';
+  if (chatInput) {
+    chatInput.value = `J.A.R.V.I.S., atue como especialista na categoria [${category}]. Foco: ${desc}. País de referência: ${selectedHealthCountry}. Por favor, forneça um guia detalhado e abra uma consulta interativa para esta categoria.`;
+    sendMsg();
+  }
+}
+
+// --- 2. PRONTUÁRIO DE ENFERMAGEM (TRADUÇÃO PARA SIGLAS) ---
+function openNursingRecordModal() {
+  let modal = document.getElementById('nursingRecordModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'nursingRecordModal';
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
+    modal.innerHTML = `
+      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 600px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-file-medical"></i> PRONTUÁRIO DE ENFERMAGEM - TRADUTOR DE SIGLAS</h3>
+          <button onclick="document.getElementById('nursingRecordModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 10px;">Insira a anotação ou evolução em texto livre. O J.A.R.V.I.S. vai transcrever e padronizar o texto utilizando as siglas e abreviações oficiais de <strong>${selectedHealthCountry}</strong>:</p>
+        <textarea id="rawNursingText" placeholder="Ex: Paciente relata dor forte no peito, pressão arterial 120 por 80, frequência cardíaca de 80 batimentos por minuto, respiração normal..." style="width: 100%; height: 120px; background: #161b22; color: #00ffcc; border: 1px solid #30363d; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; resize: none; margin-bottom: 12px;"></textarea>
+        <button onclick="processNursingRecordText()" style="width: 100%; background: #00ffcc; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; font-family: monospace; text-transform: uppercase;">⚡ Transcrever para Siglas Padrão</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+}
+
+function processNursingRecordText() {
+  const txtArea = document.getElementById('rawNursingText');
+  const textVal = txtArea ? txtArea.value.trim() : '';
+  if (!textVal) { alert("Insira um texto para transcrever."); return; }
+  const modal = document.getElementById('nursingRecordModal');
+  if (modal) modal.style.display = 'none';
+
+  if (chatInput) {
+    chatInput.value = `J.A.R.V.I.S., atue como especialista em Prontuário de Enfermagem. Converta o texto abaixo em uma anotação de enfermagem formal, limpa e profissional, utilizando estritamente as siglas padrão, abreviações técnicas e normas de registro válidas em [${selectedHealthCountry}]:\n\n"${textVal}"`;
+    sendMsg();
+  }
+}
+
+// --- 3. ATLAS DE ANATOMIA (GERADOR DE IMAGENS) ---
+function openAnatomyAtlasModal() {
+  let modal = document.getElementById('anatomyModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'anatomyModal';
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
+    modal.innerHTML = `
+      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-brain"></i> ATLAS DE ANATOMIA HUMANA</h3>
+          <button onclick="document.getElementById('anatomyModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 12px;">Selecione uma estrutura ou digite um órgão para gerar uma ilustração anatômica holográfica educacional instantânea:</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <button onclick="generateAnatomyImage('Sistema Nervoso Central e Cérebro')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🧠 Cérebro & Nervoso</button>
+          <button onclick="generateAnatomyImage('Sistema Cardiovascular e Coração Humano')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">❤️ Coração & Vasos</button>
+          <button onclick="generateAnatomyImage('Sistema Respiratório e Pulmões')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🫁 Pulmões & Traqueia</button>
+          <button onclick="generateAnatomyImage('Sistema Esquelético e Coluna Vertebral')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🦴 Esqueleto & Ossos</button>
+        </div>
+        <input type="text" id="customAnatomyInput" placeholder="Ou digite outra estrutura anatômica..." style="width: 100%; background: #161b22; color: #00ffcc; border: 1px solid #30363d; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
+        <button onclick="generateCustomAnatomy()" style="width: 100%; background: #00ffcc; color: #000; border: none; padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; font-family: monospace;">🎨 Gerar Imagem Anatômica</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+}
+
+function generateAnatomyImage(structure) {
+  const modal = document.getElementById('anatomyModal');
+  if (modal) modal.style.display = 'none';
+  const imgUrl = `https://image.pollinations.ai/prompt/detailed%20medical%20scientific%20human%20anatomy%20illustration%20${encodeURIComponent(structure)}?width=1024&height=1024&nologo=true`;
+  const botHtml = `<strong>[J.A.R.V.I.S. ATLAS - ${structure}]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00ffcc;"><br><a href="${imgUrl}" target="_blank" style="color:#00ffcc;">Abrir em Alta Resolução</a>`;
+  appendCustomHtml(botHtml, 'bot', true);
+  speakJARVIS(`Gerando atlas anatômico para ${structure}.`);
+}
+
+function generateCustomAnatomy() {
+  const input = document.getElementById('customAnatomyInput');
+  const val = input ? input.value.trim() : '';
+  if (!val) return;
+  generateAnatomyImage(val);
+}
+
+// --- 4. DICIONÁRIOS TÉCNICOS (MEDICINA, ENFERMAGEM, TÉCNICO) ---
+function openDictionariesModal() {
+  let modal = document.getElementById('dictionariesModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dictionariesModal';
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
+    modal.innerHTML = `
+      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 550px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-book-medical"></i> DICIONÁRIOS TÉCNICOS DE SAÚDE</h3>
+          <button onclick="document.getElementById('dictionariesModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o glossário desejado, adaptado aos termos e sinônimos de <strong>${selectedHealthCountry}</strong>:</p>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+          <button onclick="queryDictionary('Medicina', 'Terminologia médica avançada, etimologia, definições clínicas e sinônimos.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📖 1. Dicionário da Medicina (Termos Clínicos e Sinônimos)</button>
+          <button onclick="queryDictionary('Enfermagem', 'Glossário de termos de enfermagem, diagnósticos NANDA, intervenções NIC/NOC e sinônimos.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📘 2. Dicionário da Enfermagem (Cuidados, SAE e NANDA)</button>
+          <button onclick="queryDictionary('Técnico de Enfermagem', 'Termos práticos de plantão, siglas de equipamentos, materiais e manuseio assistencial.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📗 3. Dicionário do Técnico de Enfermagem (Prática e Materiais)</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+}
+
+function queryDictionary(dictType, focus) {
+  const modal = document.getElementById('dictionariesModal');
+  if (modal) modal.style.display = 'none';
+  if (chatInput) {
+    chatInput.value = `J.A.R.V.I.S., abra o [${dictType}]. Foco: ${focus}. Contexto regional: ${selectedHealthCountry}. Apresente os principais verbetes, definições exatas, sinônimos e abra um quiz interativo de vocabulário para mim.`;
+    sendMsg();
+  }
+}
+
+// --- ACADEMIA HACKER & FERRAMENTAS KALI ---  
 function openCyberAcademyModal() {  
   let modal = document.getElementById('cyberAcademyModal');  
   if (!modal) {  
     modal = document.createElement('div');  
     modal.id = 'cyberAcademyModal';  
-    modal.style.cssText = `  
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;  
-      background: rgba(0, 0, 0, 0.9); z-index: 9999;  
-      display: flex; align-items: center; justify-content: center;  
-      font-family: monospace; overflow-y: auto; padding: 20px;  
-    `;  
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; overflow-y: auto; padding: 20px;`;  
     modal.innerHTML = `  
       <div style="background: #0d1117; border: 1px solid #00d2ff; width: 100%; max-width: 650px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,210,255,0.4); color: #00d2ff; max-height: 90vh; overflow-y: auto;">  
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">  
-          <h3 style="margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-graduation-cap"></i> ACADEMIA J.A.R.V.I.S. - TRILHA DO ESPECIALISTA</h3>  
-          <button onclick="document.getElementById('cyberAcademyModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer; font-weight: bold;">[X]</button>  
+          <h3 style="margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-graduation-cap"></i> ACADEMIA J.A.R.V.I.S. - LINGUÍSTICA & COMPUTAÇÃO</h3>  
+          <button onclick="document.getElementById('cyberAcademyModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>  
         </div>  
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione sua classe e nível na hierarquia para iniciar o treinamento interativo com testes práticos:</p>  
-          
-        <div style="margin-bottom: 12px; border-left: 3px solid #00ffcc; padding-left: 10px;">  
-          <strong style="color: #00ffcc; font-size: 0.9rem;">⚙️ CLASSE 1: INICIANTE (O Aprendizado)</strong>  
-          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
-            <button onclick="selectAcademyPath('Kid (Script Kiddie)', 'Conceitos básicos, introdução à lógica, binário/hexadecimal e execução de scripts prontos.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">👶 Kid (Script Kiddie) - Introdução e Noções Básicas</button>  
-            <button onclick="selectAcademyPath('Stripe (Recruta)', 'Primeiras listras: redes de computadores, IP, DNS, portas e lógica de programação.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🎖️ Stripe (Recruta) - Redes e Lógica</button>  
-            <button onclick="selectAcademyPath('Snif (Sniffer)', 'Análise de tráfego de rede, interceptação de pacotes, Wireshark e fundamentos de criptografia.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">📡 Snif (Sniffer) - Análise de Pacotes e Redes</button>  
-          </div>  
-        </div>  
-
-        <div style="margin-bottom: 12px; border-left: 3px solid #00d2ff; padding-left: 10px;">  
-          <strong style="color: #00d2ff; font-size: 0.9rem;">🛡️ CLASSE 2: INTERMEDIÁRIO (A Prática)</strong>  
-          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
-            <button onclick="selectAcademyPath('Phreaker', 'Telecomunicações, VoIP, redes móveis e segurança de sinais.')" style="background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">📞 Phreaker - Telecomunicações e VoIP</button>  
-            <button onclick="selectAcademyPath('Cracker', 'Engenharia reversa, quebra de travas, análise de binários compilados e algoritmos.')" style="background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🔓 Cracker - Engenharia Reversa e Travas</button>  
-            <button onclick="selectAcademyPath('Gray Hat', 'Auditoria de vulnerabilidades sem permissão prévia, análise ética e testes defensivos.')" style="background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">⚖️ Gray Hat - Vulnerabilidades e Análise</button>  
-          </div>  
-        </div>  
-
-        <div style="margin-bottom: 12px; border-left: 3px solid #ff00ff; padding-left: 10px;">  
-          <strong style="color: #ff00ff; font-size: 0.9rem;">🏆 CLASSE 3: AVANÇADO (O Domínio)</strong>  
-          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
-            <button onclick="selectAcademyPath('White Hat (Pentester)', 'Segurança ofensiva legalizada, relatórios de falhas, pentest web e corporativo.')" style="background: #161b22; border: 1px solid #ff00ff; color: #ff00ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🛡️ White Hat (Pentester) - Segurança Ofensiva</button>  
-            <button onclick="selectAcademyPath('Black Hat', 'Operações cibernéticas complexas, invasões de grande escala e exfiltração avançada.')" style="background: #161b22; border: 1px solid #ff00ff; color: #ff00ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🏴‍☠️ Black Hat - Invasões e Exfiltração</button>  
-            <button onclick="selectAcademyPath('Malware Dev', 'Criação avançada de payloads, exploits e análise de evasão de antivírus.')" style="background: #161b22; border: 1px solid #ff00ff; color: #ff00ff; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">💻 Malware Dev - Payloads e Exploits</button>  
-          </div>  
-        </div>  
-
-        <div style="margin-bottom: 12px; border-left: 3px solid #ffaa00; padding-left: 10px;">  
-          <strong style="color: #ffaa00; font-size: 0.9rem;">👑 CLASSE 4: ESPECIALISTA / ELITE (A Maestria)</strong>  
-          <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px;">  
-            <button onclick="selectAcademyPath('Elite (L33t)', 'Técnicas avançadas fora da curva e desenvolvimento de algoritmos próprios.')" style="background: #161b22; border: 1px solid #ffaa00; color: #ffaa00; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🌟 Elite (L33t) - Maestria Técnica</button>  
-            <button onclick="selectAcademyPath('Wizard / Guru', 'Arquitetura de hardware, criptografia avançada e vulnerabilidades 0-days.')" style="background: #161b22; border: 1px solid #ffaa00; color: #ffaa00; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🧙‍♂️ Wizard / Guru - Criptografia e 0-days</button>  
-            <button onclick="selectAcademyPath('Architect', 'Defesas globais intransponíveis, inteligência corporativa e governamental.')" style="background: #161b22; border: 1px solid #ffaa00; color: #ffaa00; padding: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🏛️ Architect - Defesas Globais e Inteligência</button>  
-          </div>  
-        </div>  
-
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione sua classe de ensino e estudo de idiomas:</p>  
+        <button onclick="selectAcademyPath('Linguística Aplicada', 'Estudo de idiomas, sintaxe, semântica e tradução técnica.')" style="width: 100%; background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; margin-bottom: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">🗣️ Estudo de Idiomas & Plataforma Linguística</button>  
+        <button onclick="selectAcademyPath('Kid (Script Kiddie)', 'Noções básicas e lógica.')" style="width: 100%; background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">👶 Kid - Lógica e Noções Básicas</button>  
       </div>  
     `;  
     document.body.appendChild(modal);  
@@ -638,40 +809,25 @@ function openCyberAcademyModal() {
 function selectAcademyPath(rankTitle, focusDesc) {  
   const modal = document.getElementById('cyberAcademyModal');  
   if (modal) modal.style.display = 'none';  
-  
   if (chatInput) {  
-    chatInput.value = `J.A.R.V.I.S., assuma o comando da Academia de Ensino. Quero iniciar meu treinamento no nível: [${rankTitle}]. Foco principal: ${focusDesc}. Explique os conceitos fundamentais de ciência da computação, redes ou cibersegurança correspondentes a este nível em ${currentLang} e crie um teste educacional prático para eu responder agora.`;  
+    chatInput.value = `J.A.R.V.I.S., assuma o comando da Academia de Ensino. Quero iniciar meu estudo em: [${rankTitle}]. Foco: ${focusDesc}. Explique os conceitos em ${currentLang}.`;  
     sendMsg();  
   }  
 }  
   
-// --- PAINEL DE FERRAMENTAS HACKERS (KALI LINUX) ---  
 function openKaliToolsModal() {  
   let modal = document.getElementById('kaliToolsModal');  
   if (!modal) {  
     modal = document.createElement('div');  
     modal.id = 'kaliToolsModal';  
-    modal.style.cssText = `  
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;  
-      background: rgba(0, 0, 0, 0.85); z-index: 9999;  
-      display: flex; align-items: center; justify-content: center;  
-      font-family: monospace;  
-    `;  
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace;`;  
     modal.innerHTML = `  
-      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 90%; max-width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 0 25px rgba(0,255,204,0.3); color: #00ffcc;">  
+      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 90%; max-width: 450px; padding: 20px; border-radius: 8px; color: #00ffcc;">  
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">  
-          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-shield-halved"></i> KALI LINUX - KERNEL TOOLS</h3>  
+          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-shield-halved"></i> KALI LINUX TOOLS</h3>  
           <button onclick="document.getElementById('kaliToolsModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>  
         </div>  
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o módulo de pentest desejado para acionar o protocolo do J.A.R.V.I.S.:</p>  
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">  
-          <button onclick="runKaliTool('Nmap')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔍 Nmap (Port Scan)</button>  
-          <button onclick="runKaliTool('Metasploit')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">⚡ Metasploit (Exploit)</button>  
-          <button onclick="runKaliTool('SQLmap')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">💉 SQLmap (Injeção)</button>  
-          <button onclick="runKaliTool('Hydra')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔑 Hydra (Brute Force)</button>  
-          <button onclick="runKaliTool('Wireshark / Sniffing')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">📡 Wireshark (Sniffing)</button>  
-          <button onclick="runKaliTool('John the Ripper')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔓 John (Hash Cracker)</button>  
-        </div>  
+        <button onclick="runKaliTool('Nmap')" style="width: 100%; background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; margin-bottom: 8px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔍 Nmap (Port Scan)</button>  
       </div>  
     `;  
     document.body.appendChild(modal);  
@@ -683,32 +839,24 @@ function openKaliToolsModal() {
 function runKaliTool(toolName) {  
   const modal = document.getElementById('kaliToolsModal');  
   if (modal) modal.style.display = 'none';  
-  
   if (chatInput) {  
-    chatInput.value = `Ative o protocolo de segurança avançado para a ferramenta ${toolName}. Explique sua função técnica, engenharia de pacotes, parâmetros de uso e gere uma simulação profissional de terminal e um exercício prático em ${currentLang}.`;  
+    chatInput.value = `Ative o protocolo para a ferramenta ${toolName} em ${currentLang}.`;  
     sendMsg();  
   }  
 }  
   
-// --- GLOBO INTERATIVO DE CIBERAMEAÇAS (KASPERSKY MAP) ---  
 function openCyberMapModal() {  
   let modal = document.getElementById('cyberMapModal');  
   if (!modal) {  
     modal = document.createElement('div');  
     modal.id = 'cyberMapModal';  
-    modal.style.cssText = `  
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;  
-      background: rgba(0, 0, 0, 0.9); z-index: 9999;  
-      display: flex; flex-direction: column; align-items: center; justify-content: center;  
-      font-family: monospace;  
-    `;  
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: monospace;`;  
     modal.innerHTML = `  
-      <div style="background: #0d1117; border: 1px solid #00ffff; width: 95%; max-width: 900px; height: 85vh; padding: 15px; border-radius: 8px; box-shadow: 0 0 35px rgba(0,255,255,0.4); display: flex; flex-direction: column;">  
+      <div style="background: #0d1117; border: 1px solid #00ffff; width: 95%; max-width: 900px; height: 85vh; padding: 15px; border-radius: 8px; display: flex; flex-direction: column;">  
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 10px;">  
-          <h3 style="margin: 0; font-size: 1rem; color: #00ffff;"><i class="fa-solid fa-globe"></i> J.A.R.V.I.S. - GLOBO DE CIBERAMEAÇAS EM TEMPO REAL</h3>  
-          <button onclick="document.getElementById('cyberMapModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer; font-weight:bold;">[FECHAR X]</button>  
+          <h3 style="margin: 0; font-size: 1rem; color: #00ffff;"><i class="fa-solid fa-globe"></i> GLOBO DE CIBERAMEAÇAS</h3>  
+          <button onclick="document.getElementById('cyberMapModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer; font-weight:bold;">[X]</button>  
         </div>  
-        <p style="font-size: 0.75rem; color: #8b949e; margin: 0 0 10px 0;">Monitoramento global de ataques cibernéticos ativos integrados via Kaspersky Cyberthreat Real-Time Map.</p>  
         <div style="flex: 1; width: 100%; border: 1px solid #0044ff; border-radius: 4px; overflow: hidden; background: #000;">  
           <iframe src="https://cybermap.kaspersky.com/widget/en" style="width: 100%; height: 100%; border: none;"></iframe>  
         </div>  
@@ -718,10 +866,7 @@ function openCyberMapModal() {
   } else {  
     modal.style.display = 'flex';  
   }  
-  
-  if (typeof speakJARVIS === 'function') {  
-    speakJARVIS("Abrindo o globo de monitoramento global de ciberameaças. Redes de defesa ativas.");  
-  }  
+  speakJARVIS("Abrindo globo de ciberameaças.");  
 }  
   
 function escapeHTML(str) {  
