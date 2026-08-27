@@ -20,9 +20,15 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Modelo Ajustado para o padrão universal da Groq
+// Endpoint do Worker na Cloudflare e Lista de Modelos para Teste Automático (Fallback)
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
-const ULTRA_FAST_MODEL = 'llama3-8b-8192';  
+const MODEL_FALLBACK_LIST = [
+  'llama-3.1-8b-instant',
+  'llama-3.3-70b-versatile',
+  'llama-3.1-70b-versatile',
+  'llama3-8b-8192'
+];
+let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -574,49 +580,61 @@ async function sendMsg() {
   appendCustomHtml(userDisplayMsg, 'user', true);  
   setOrbState(true);  
   
-  try {  
-    const response = await fetch(WORKER_URL, {  
-      method: "POST",  
-      headers: {  
-        "Content-Type": "application/json"  
-      },  
-      body: JSON.stringify({  
-        model: ULTRA_FAST_MODEL,  
-        messages: [  
-          {   
-            role: "system",   
-            content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada atuando como assistente especialista em Ciências da Saúde, Enfermagem, Medicina e Linguística Aplicada. Você atende profissionais e estudantes de saúde com base nas diretrizes e normas do país selecionado pelo usuário (${selectedHealthCountry}), utilizando os idiomas correspondentes (${currentLang}). Você auxilia na transcrição de prontuários em siglas padrão, fornece termos de dicionários médicos/enfermagem com sinônimos e apoia na pesquisa clínica e acadêmica para Médicos, Enfermeiros, Técnicos e Auxiliares de Enfermagem.`   
-          },  
-          { role: "user", content: text || "Analise o anexo fornecido." }  
-        ]  
-      })  
-    });  
-  
-    attachedImageBase64 = null; 
-    const data = await response.json();  
-    setOrbState(false);  
+  // SISTEMA DE TENTATIVA AUTOMÁTICA EM CADEIA (FALLBACK DE MODELOS)
+  let data = null;
+  let success = false;
 
-    if (data.error) {
-      appendMessage("Erro na API: " + (data.error.message || JSON.stringify(data.error)), 'system', true);
-      return;
+  for (let i = 0; i < MODEL_FALLBACK_LIST.length; i++) {
+    const currentModelToTest = MODEL_FALLBACK_LIST[i];
+    try {
+      const response = await fetch(WORKER_URL, {  
+        method: "POST",  
+        headers: { "Content-Type": "application/json" },  
+        body: JSON.stringify({  
+          model: currentModelToTest,  
+          messages: [  
+            {   
+              role: "system",   
+              content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada atuando como assistente especialista em Ciências da Saúde, Enfermagem, Medicina e Linguística Aplicada. Você atende profissionais e estudantes de saúde com base nas diretrizes e normas do país selecionado pelo usuário (${selectedHealthCountry}), utilizando os idiomas correspondentes (${currentLang}). Você auxilia na transcrição de prontuários em siglas padrão, fornece termos de dicionários médicos/enfermagem com sinônimos e apoia na pesquisa clínica e acadêmica para Médicos, Enfermeiros, Técnicos e Auxiliares de Enfermagem.`   
+            },  
+            { role: "user", content: text || "Analise o anexo fornecido." }  
+          ]  
+        })  
+      });  
+  
+      data = await response.json();
+
+      if (!data.error) {
+        success = true;
+        break; // Modelo funcionou perfeitamente, sai do loop!
+      } else {
+        console.warn(`Modelo ${currentModelToTest} falhou. Tentando próximo da lista...`);
+      }
+    } catch (err) {
+      console.warn(`Erro de rede com o modelo ${currentModelToTest}:`, err);
     }
-  
-    let botResponse = "";  
-    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {  
-      botResponse = data.choices[0].message.content;  
-    } else if (data.response) {
-      botResponse = data.response;
-    } else {  
-      botResponse = "Retorno inesperado da API: " + JSON.stringify(data);  
-    }  
-  
-    appendMessage(botResponse, 'bot', true);  
-    speakJARVIS(botResponse);  
-  
-  } catch (err) {  
-    setOrbState(false);  
-    appendMessage(`Erro crítico de rede: ${err.message}`, 'system', true);  
+  }
+
+  attachedImageBase64 = null; 
+  setOrbState(false);  
+
+  if (!success || !data || data.error) {
+    const errorMsg = data && data.error ? (data.error.message || JSON.stringify(data.error)) : "Todos os modelos da lista falharam.";
+    appendMessage("Erro na API (Fallback esgotado): " + errorMsg, 'system', true);
+    return;
+  }
+
+  let botResponse = "";  
+  if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {  
+    botResponse = data.choices[0].message.content;  
+  } else if (data.response) {
+    botResponse = data.response;
+  } else {  
+    botResponse = "Retorno inesperado da API: " + JSON.stringify(data);  
   }  
+
+  appendMessage(botResponse, 'bot', true);  
+  speakJARVIS(botResponse);  
 }  
   
 function appendMessage(text, type, save = true) {  
@@ -803,7 +821,7 @@ function createCameraPreviewModal(stream) {
     attachedImageBase64 = canvas.toDataURL('image/png');
     appendMessage("📸 Foto capturada com sucesso!", "system", false);
     
-    stream.getTracks().execute ? stream.getTracks().forEach(t => t.stop()) : stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().forEach(track => track.stop());
     modal.remove();
   };
 
