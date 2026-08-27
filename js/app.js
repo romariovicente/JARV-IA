@@ -638,11 +638,50 @@ function formatMarkdown(text) {
 }
 
 function setupFileUploads() {
-  hiddenFileInput = document.getElementById('hiddenFileInput');
-  hiddenImageInput = document.getElementById('hiddenImageInput');
+  hiddenFileInput = document.getElementById('fileInput') || document.getElementById('hiddenFileInput');
+  hiddenImageInput = document.getElementById('imageInput') || document.getElementById('hiddenImageInput');
+
+  if (hiddenImageInput) {
+    hiddenImageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          attachedImageBase64 = event.target.result;
+          appendMessage(`Imagem carregada com sucesso: ${file.name}`, 'system', false);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  if (hiddenFileInput) {
+    hiddenFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        appendMessage(`Arquivo anexado: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'system', false);
+      }
+    });
+  }
 }
 
 function setupToolbarButtons() {
+  const btnCamera = document.getElementById('btnCamera');
+  const btnAttachment = document.getElementById('btnAttachment');
+  const btnMic = document.getElementById('btnMic');
+
+  if (btnCamera && hiddenImageInput) {
+    btnCamera.addEventListener('click', () => hiddenImageInput.click());
+  }
+
+  if (btnAttachment && hiddenFileInput) {
+    btnAttachment.addEventListener('click', () => hiddenFileInput.click());
+  }
+
+  if (btnMic) {
+    btnMic.addEventListener('click', toggleContinuousListening);
+  }
+
   if (chatInput) {
     chatInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
