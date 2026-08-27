@@ -16,8 +16,8 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// CORREÇÃO: Atualizado para o modelo ativo na Groq em 2026
-const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';  
+// CORREÇÃO: Modelo ativo e estável da Groq
+const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -640,7 +640,9 @@ function setupToolbarButtons() {
   });  
 }  
 
-// --- 1. PESQUISA ESPECIALIZADA EM SAÚDE ---
+// ==============================================================================
+// 1. MÓDULOS DE SAÚDE E ENFERMAGEM (MODAIS)
+// ==============================================================================
 function openHealthSearchModal() {
   let modal = document.getElementById('healthSearchModal');
   if (!modal) {
@@ -654,11 +656,11 @@ function openHealthSearchModal() {
           <button onclick="document.getElementById('healthSearchModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
         </div>
         <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o nível profissional para direcionar a pesquisa técnica baseada nas normas vigentes de <strong>${selectedHealthCountry}</strong>:</p>
-        <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
-          <button onclick="runHealthSearch('Médico', 'Protocolos clínicos, condutas médicas, patologias e farmacologia avançada.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">🩺 1. Médico (Condutas, Diagnósticos e Tratamentos)</button>
-          <button onclick="runHealthSearch('Enfermagem', 'SAE (Processo de Enfermagem), prescrição de cuidados, liderança e protocolos gerenciais.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📋 2. Enfermagem (Processo de Enfermagem e SAE)</button>
-          <button onclick="runHealthSearch('Técnico de Enfermagem', 'Procedimentos de alta complexidade, administração de medicamentos, curativos e monitorização.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">💉 3. Técnico de Enfermagem (Procedimentos e Assistência)</button>
-          <button onclick="runHealthSearch('Auxiliar de Enfermagem', 'Cuidados básicos de higiene, conforto, sinais vitais e suporte ao paciente.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">🤝 4. Auxiliar de Enfermagem (Cuidados Básicos e Suporte)</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+          <button onclick="triggerHealthSearch('Médico')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">🩺 Médico / Clínico</button>
+          <button onclick="triggerHealthSearch('Enfermeiro')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">💉 Enfermeiro (Nível Superior)</button>
+          <button onclick="triggerHealthSearch('Técnico em Enfermagem')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">🩹 Técnico em Enfermagem</button>
+          <button onclick="triggerHealthSearch('Auxiliar de Enfermagem')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">📋 Auxiliar de Enfermagem</button>
         </div>
       </div>
     `;
@@ -668,231 +670,84 @@ function openHealthSearchModal() {
   }
 }
 
-function runHealthSearch(category, desc) {
-  const modal = document.getElementById('healthSearchModal');
-  if (modal) modal.style.display = 'none';
+function triggerHealthSearch(role) {
+  document.getElementById('healthSearchModal').style.display = 'none';
   if (chatInput) {
-    chatInput.value = `J.A.R.V.I.S., atue como especialista na categoria [${category}]. Foco: ${desc}. País de referência: ${selectedHealthCountry}. Por favor, forneça um guia detalhado e abra uma consulta interativa para esta categoria.`;
-    sendMsg();
+    chatInput.value = `[Pesquisa para ${role}] Forneça um guia de condutas e protocolos atualizados segundo as diretrizes do país (${selectedHealthCountry}): `;
+    chatInput.focus();
   }
 }
 
-// --- 2. PRONTUÁRIO DE ENFERMAGEM (TRADUÇÃO PARA SIGLAS) ---
 function openNursingRecordModal() {
-  let modal = document.getElementById('nursingRecordModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'nursingRecordModal';
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
-    modal.innerHTML = `
-      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 600px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-file-medical"></i> PRONTUÁRIO DE ENFERMAGEM - TRADUTOR DE SIGLAS</h3>
-          <button onclick="document.getElementById('nursingRecordModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
-        </div>
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 10px;">Insira a anotação ou evolução em texto livre. O J.A.R.V.I.S. vai transcrever e padronizar o texto utilizando as siglas e abreviações oficiais de <strong>${selectedHealthCountry}</strong>:</p>
-        <textarea id="rawNursingText" placeholder="Ex: Paciente relata dor forte no peito, pressão arterial 120 por 80, frequência cardíaca de 80 batimentos por minuto, respiração normal..." style="width: 100%; height: 120px; background: #161b22; color: #00ffcc; border: 1px solid #30363d; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; resize: none; margin-bottom: 12px;"></textarea>
-        <button onclick="processNursingRecordText()" style="width: 100%; background: #00ffcc; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; font-family: monospace; text-transform: uppercase;">⚡ Transcrever para Siglas Padrão</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.style.display = 'flex';
-  }
-}
-
-function processNursingRecordText() {
-  const txtArea = document.getElementById('rawNursingText');
-  const textVal = txtArea ? txtArea.value.trim() : '';
-  if (!textVal) { alert("Insira um texto para transcrever."); return; }
-  const modal = document.getElementById('nursingRecordModal');
-  if (modal) modal.style.display = 'none';
-
   if (chatInput) {
-    chatInput.value = `J.A.R.V.I.S., atue como especialista em Prontuário de Enfermagem. Converta o texto abaixo em uma anotação de enfermagem formal, limpa e profissional, utilizando estritamente as siglas padrão, abreviações técnicas e normas de registro válidas em [${selectedHealthCountry}]:\n\n"${textVal}"`;
-    sendMsg();
+    chatInput.value = `[Transcrição de Prontuário] Converta a seguinte anotação de enfermagem usando as siglas oficiais e o padrão do COFEN/normas do país (${selectedHealthCountry}): `;
+    chatInput.focus();
   }
 }
 
-// --- 3. ATLAS DE ANATOMIA (GERADOR DE IMAGENS) ---
 function openAnatomyAtlasModal() {
-  let modal = document.getElementById('anatomyModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'anatomyModal';
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
-    modal.innerHTML = `
-      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-brain"></i> ATLAS DE ANATOMIA HUMANA</h3>
-          <button onclick="document.getElementById('anatomyModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
-        </div>
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 12px;">Selecione uma estrutura ou digite um órgão para gerar uma ilustração anatômica holográfica educacional instantânea:</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-          <button onclick="generateAnatomyImage('Sistema Nervoso Central e Cérebro')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🧠 Cérebro & Nervoso</button>
-          <button onclick="generateAnatomyImage('Sistema Cardiovascular e Coração Humano')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">❤️ Coração & Vasos</button>
-          <button onclick="generateAnatomyImage('Sistema Respiratório e Pulmões')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🫁 Pulmões & Traqueia</button>
-          <button onclick="generateAnatomyImage('Sistema Esquelético e Coluna Vertebral')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.75rem;">🦴 Esqueleto & Ossos</button>
-        </div>
-        <input type="text" id="customAnatomyInput" placeholder="Ou digite outra estrutura anatômica..." style="width: 100%; background: #161b22; color: #00ffcc; border: 1px solid #30363d; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
-        <button onclick="generateCustomAnatomy()" style="width: 100%; background: #00ffcc; color: #000; border: none; padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; font-family: monospace;">🎨 Gerar Imagem Anatômica</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.style.display = 'flex';
-  }
-}
-
-function generateAnatomyImage(structure) {
-  const modal = document.getElementById('anatomyModal');
-  if (modal) modal.style.display = 'none';
-  const imgUrl = `https://image.pollinations.ai/prompt/detailed%20medical%20scientific%20human%20anatomy%20illustration%20${encodeURIComponent(structure)}?width=1024&height=1024&nologo=true`;
-  const botHtml = `<strong>[J.A.R.V.I.S. ATLAS - ${structure}]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00ffcc;"><br><a href="${imgUrl}" target="_blank" style="color:#00ffcc;">Abrir em Alta Resolução</a>`;
-  appendCustomHtml(botHtml, 'bot', true);
-  speakJARVIS(`Gerando atlas anatômico para ${structure}.`);
-}
-
-function generateCustomAnatomy() {
-  const input = document.getElementById('customAnatomyInput');
-  const val = input ? input.value.trim() : '';
-  if (!val) return;
-  generateAnatomyImage(val);
-}
-
-// --- 4. DICIONÁRIOS TÉCNICOS (MEDICINA, ENFERMAGEM, TÉCNICO) ---
-function openDictionariesModal() {
-  let modal = document.getElementById('dictionariesModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'dictionariesModal';
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
-    modal.innerHTML = `
-      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 550px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-book-medical"></i> DICIONÁRIOS TÉCNICOS DE SAÚDE</h3>
-          <button onclick="document.getElementById('dictionariesModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
-        </div>
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o glossário desejado, adaptado aos termos e sinônimos de <strong>${selectedHealthCountry}</strong>:</p>
-        <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
-          <button onclick="queryDictionary('Medicina', 'Terminologia médica avançada, etimologia, definições clínicas e sinônimos.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📖 1. Dicionário da Medicina (Termos Clínicos e Sinônimos)</button>
-          <button onclick="queryDictionary('Enfermagem', 'Glossário de termos de enfermagem, diagnósticos NANDA, intervenções NIC/NOC e sinônimos.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📘 2. Dicionário da Enfermagem (Cuidados, SAE e NANDA)</button>
-          <button onclick="queryDictionary('Técnico de Enfermagem', 'Termos práticos de plantão, siglas de equipamentos, materiais e manuseio assistencial.')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">📗 3. Dicionário do Técnico de Enfermagem (Prática e Materiais)</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.style.display = 'flex';
-  }
-}
-
-function queryDictionary(dictType, focus) {
-  const modal = document.getElementById('dictionariesModal');
-  if (modal) modal.style.display = 'none';
   if (chatInput) {
-    chatInput.value = `J.A.R.V.I.S., abra o [${dictType}]. Foco: ${focus}. Contexto regional: ${selectedHealthCountry}. Apresente os principais verbetes, definições exatas, sinônimos e abra um quiz interativo de vocabulário para mim.`;
+    chatInput.value = `Atlas anatomia do coração humano com sistema circulatório detalhado`;
     sendMsg();
   }
 }
 
-// --- ACADEMIA HACKER & FERRAMENTAS KALI ---  
-function openCyberAcademyModal() {  
-  let modal = document.getElementById('cyberAcademyModal');  
-  if (!modal) {  
-    modal = document.createElement('div');  
-    modal.id = 'cyberAcademyModal';  
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; overflow-y: auto; padding: 20px;`;  
-    modal.innerHTML = `  
-      <div style="background: #0d1117; border: 1px solid #00d2ff; width: 100%; max-width: 650px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,210,255,0.4); color: #00d2ff; max-height: 90vh; overflow-y: auto;">  
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">  
-          <h3 style="margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-graduation-cap"></i> ACADEMIA J.A.R.V.I.S. - LINGUÍSTICA & COMPUTAÇÃO</h3>  
-          <button onclick="document.getElementById('cyberAcademyModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>  
-        </div>  
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione sua classe de ensino e estudo de idiomas:</p>  
-        <button onclick="selectAcademyPath('Linguística Aplicada', 'Estudo de idiomas, sintaxe, semântica e tradução técnica.')" style="width: 100%; background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; margin-bottom: 8px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">🗣️ Estudo de Idiomas & Plataforma Linguística</button>  
-        <button onclick="selectAcademyPath('Kid (Script Kiddie)', 'Noções básicas e lógica.')" style="width: 100%; background: #161b22; border: 1px solid #00d2ff; color: #00d2ff; padding: 10px; text-align: left; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">👶 Kid - Lógica e Noções Básicas</button>  
-      </div>  
-    `;  
-    document.body.appendChild(modal);  
-  } else {  
-    modal.style.display = 'flex';  
-  }  
-}  
-  
-function selectAcademyPath(rankTitle, focusDesc) {  
-  const modal = document.getElementById('cyberAcademyModal');  
-  if (modal) modal.style.display = 'none';  
-  if (chatInput) {  
-    chatInput.value = `J.A.R.V.I.S., assuma o comando da Academia de Ensino. Quero iniciar meu estudo em: [${rankTitle}]. Foco: ${focusDesc}. Explique os conceitos em ${currentLang}.`;  
-    sendMsg();  
-  }  
-}  
-  
-function openKaliToolsModal() {  
-  let modal = document.getElementById('kaliToolsModal');  
-  if (!modal) {  
-    modal = document.createElement('div');  
-    modal.id = 'kaliToolsModal';  
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace;`;  
-    modal.innerHTML = `  
-      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 90%; max-width: 450px; padding: 20px; border-radius: 8px; color: #00ffcc;">  
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">  
-          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-shield-halved"></i> KALI LINUX TOOLS</h3>  
-          <button onclick="document.getElementById('kaliToolsModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>  
-        </div>  
-        <button onclick="runKaliTool('Nmap')" style="width: 100%; background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; margin-bottom: 8px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔍 Nmap (Port Scan)</button>  
-      </div>  
-    `;  
-    document.body.appendChild(modal);  
-  } else {  
-    modal.style.display = 'flex';  
-  }  
-}  
-  
-function runKaliTool(toolName) {  
-  const modal = document.getElementById('kaliToolsModal');  
-  if (modal) modal.style.display = 'none';  
-  if (chatInput) {  
-    chatInput.value = `Ative o protocolo para a ferramenta ${toolName} em ${currentLang}.`;  
-    sendMsg();  
-  }  
-}  
-  
-function openCyberMapModal() {  
-  let modal = document.getElementById('cyberMapModal');  
-  if (!modal) {  
-    modal = document.createElement('div');  
-    modal.id = 'cyberMapModal';  
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: monospace;`;  
-    modal.innerHTML = `  
-      <div style="background: #0d1117; border: 1px solid #00ffff; width: 95%; max-width: 900px; height: 85vh; padding: 15px; border-radius: 8px; display: flex; flex-direction: column;">  
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 10px;">  
-          <h3 style="margin: 0; font-size: 1rem; color: #00ffff;"><i class="fa-solid fa-globe"></i> GLOBO DE CIBERAMEAÇAS</h3>  
-          <button onclick="document.getElementById('cyberMapModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer; font-weight:bold;">[X]</button>  
-        </div>  
-        <div style="flex: 1; width: 100%; border: 1px solid #0044ff; border-radius: 4px; overflow: hidden; background: #000;">  
-          <iframe src="https://cybermap.kaspersky.com/widget/en" style="width: 100%; height: 100%; border: none;"></iframe>  
-        </div>  
-      </div>  
-    `;  
-    document.body.appendChild(modal);  
-  } else {  
-    modal.style.display = 'flex';  
-  }  
-  speakJARVIS("Abrindo globo de ciberameaças.");  
-}  
-  
-function escapeHTML(str) {  
-  if (typeof str !== 'string') return '';  
-  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));  
-}  
-  
-function formatMarkdown(text) {  
-  if (typeof text !== 'string') return '';  
-  let formatted = escapeHTML(text);  
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');  
-  formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');  
-  formatted = formatted.replace(/\n/g, '<br>');  
-  return formatted;  
+function openDictionariesModal() {
+  if (chatInput) {
+    chatInput.value = `[Dicionário Médico/Enfermagem] Liste os termos técnicos mais utilizados na UTI com seus respetivos significados e sinônimos segundo a norma de (${selectedHealthCountry}).`;
+    chatInput.focus();
+  }
+}
+
+// ==============================================================================
+// 2. MÓDULOS CIBERNÉTICOS & SEGURANÇA (MODAIS)
+// ==============================================================================
+function openCyberAcademyModal() {
+  alert("J.A.R.V.I.S. Academia Hacker - Módulo de treinamento e laboratórios ativos.");
+}
+
+function openKaliToolsModal() {
+  alert("J.A.R.V.I.S. Kali Tools - Utilitários de análise de rede e pentest carregados.");
+}
+
+function openCyberMapModal() {
+  let modal = document.getElementById('cyberMapModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'cyberMapModal';
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; font-family: monospace; padding: 10px;`;
+    modal.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #0d1117; border-bottom: 1px solid #00ffcc; color: #00ffcc;">
+        <span style="font-weight: bold;"><i class="fa-solid fa-globe"></i> KASPERSKY CYBERTHREAD REAL-TIME MAP</span>
+        <button onclick="document.getElementById('cyberMapModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X FECHAR]</button>
+      </div>
+      <iframe src="https://cybermap.kaspersky.com/en/widget/dynamic/dark" style="width: 100%; height: 100%; border: none;"></iframe>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+}
+
+// ==============================================================================
+// 3. UTILITÁRIOS E FORMATAÇÃO DE TEXTO
+// ==============================================================================
+function escapeHTML(str) {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatMarkdown(text) {
+  if (!text) return "";
+  let formatted = escapeHTML(text);
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #161b22; color: #00ffcc; padding: 2px 4px; border-radius: 4px;">$1</code>');
+  formatted = formatted.replace(/\n/g, '<br>');
+  return formatted;
 }
