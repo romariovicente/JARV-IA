@@ -1,3 +1,7 @@
+// ==========================================
+// J.A.R.V.I.S. - Core Application Script
+// ==========================================
+
 // Configuração Firebase  
 const firebaseConfig = {  
   apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",  
@@ -16,9 +20,9 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Modelo Ajustado
+// Endpoint do Worker na Cloudflare e Modelo Ajustado para uma versão ativa
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
-const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';  
+const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -45,11 +49,11 @@ const translations = {
     nursingRecord: 'Prontuário Enfermagem',
     anatomyAtlas: 'Atlas de Anatomia',
     medDictionaries: 'Dicionários Técnicos',
-    placeholder: 'Digite um comando para o J.A.R.V.I.S. ou selecione um módulo médico...',
+    placeholder: 'Digite um comando, "higgsfield: [prompt]" ou selecione um módulo...',
     status: 'Modo Operacional - Saúde & J.A.R.V.I.S. Ativo',
     voiceBtn: '🎙️ Escuta Contínua',
     activeVoice: '🔴 Escuta Ativa',
-    welcome: 'J.A.R.V.I.S. Módulo de Saúde e Linguística Ativo. Selecione uma ferramenta médica na barra lateral.'
+    welcome: 'J.A.R.V.I.S. Módulo de Saúde, Multimídia e IA Ativo. Selecione uma ferramenta na barra lateral.'
   },
   'en-US': {
     academy: 'Hacker Academy',
@@ -59,11 +63,11 @@ const translations = {
     nursingRecord: 'Nursing Records',
     anatomyAtlas: 'Anatomy Atlas',
     medDictionaries: 'Medical Dictionaries',
-    placeholder: 'Enter a command for J.A.R.V.I.S. or select a medical module...',
+    placeholder: 'Enter a command, "higgsfield: [prompt]" or select a module...',
     status: 'Operational Mode - Health & J.A.R.V.I.S. Active',
     voiceBtn: '🎙️ Continuous Listening',
     activeVoice: '🔴 Active Listening',
-    welcome: 'J.A.R.V.I.S. Health & Linguistics System Active. Select a medical tool.'
+    welcome: 'J.A.R.V.I.S. Health & Multimedia System Active. Select a tool.'
   },
   'es-ES': {
     academy: 'Academia Hacker',
@@ -73,11 +77,11 @@ const translations = {
     nursingRecord: 'Prontuario Enfermería',
     anatomyAtlas: 'Atlas de Anatomía',
     medDictionaries: 'Diccionarios Médicos',
-    placeholder: 'Escribe un comando para J.A.R.V.I.S. o selecciona un módulo médico...',
+    placeholder: 'Escribe un comando, "higgsfield: [prompt]" o selecciona un módulo...',
     status: 'Modo Operacional - Salud y J.A.R.V.I.S. Activo',
     voiceBtn: '🎙️ Escucha Continua',
     activeVoice: '🔴 Escucha Activa',
-    welcome: 'J.A.R.V.I.S. Sistema de Salud y Lingüística Activo. Selecciona una herramienta.'
+    welcome: 'J.A.R.V.I.S. Sistema de Salud y Multimedia Activo. Selecciona una herramienta.'
   }
 };
   
@@ -517,6 +521,45 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
   
+  // Tratamento para requisições direcionadas à Higgsfield AI via Chat
+  if (lowerText.startsWith("higgsfield:") || lowerText.startsWith("gerar vídeo")) {
+    const cleanPrompt = text.replace(/^(higgsfield:|gerar vídeo\s*)/i, "").trim();
+    appendCustomMessage(escapeHTML(text), 'user', true);
+    setOrbState(true);
+
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target: "higgsfield",
+          payload: { prompt: cleanPrompt || "Cinematic shot in high resolution" }
+        })
+      });
+
+      const data = await response.json();
+      setOrbState(false);
+
+      if (data.error) {
+        appendMessage("Erro na Higgsfield AI: " + (data.error.message || JSON.stringify(data.error)), 'system', true);
+        speakJARVIS("Falha ao processar na plataforma Higgsfield.");
+        return;
+      }
+
+      const requestId = data.request_id || "processado";
+      const replyMsg = `<strong>[Higgsfield AI]</strong> Solicitação de vídeo/mídia enviada com sucesso!<br>ID: ${requestId}`;
+      appendCustomHtml(replyMsg, 'bot', true);
+      speakJARVIS("Comando enviado com sucesso para a Higgsfield.");
+      return;
+
+    } catch (err) {
+      setOrbState(false);
+      appendMessage(`Erro de rede na Higgsfield: ${err.message}`, 'system', true);
+      return;
+    }
+  }
+
+  // Geração de imagens via Pollinations (Atlas)
   if (lowerText.startsWith("gere uma imagem") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem") || lowerText.startsWith("atlas") || lowerText.startsWith("anatomia")) {  
     const promptImg = text.replace(/^(gere|gerar|criar|atlas|anatomia)\s+(uma\s+)?(image\s+of\s+|imagem\s+(de\s+)?)?/i, '').trim();  
     appendCustomMessage(escapeHTML(text), 'user', true);  
