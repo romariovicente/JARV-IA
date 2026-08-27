@@ -16,9 +16,9 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Modelo da Groq
+// Endpoint do Worker na Cloudflare e Modelo Groq Atualizado
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
-const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';  
+const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -527,11 +527,16 @@ async function sendMsg() {
     return;  
   }  
   
-  appendCustomMessage(escapeHTML(text), 'user', true);  
+  let userDisplayMsg = escapeHTML(text);
+  if (attachedImageBase64) {
+    userDisplayMsg += `<br><img src="${attachedImageBase64}" style="max-width:200px; border-radius:6px; margin-top:5px; border:1px solid #00ffcc;">`;
+  }
+  
+  appendCustomHtml(userDisplayMsg, 'user', true);  
   setOrbState(true);  
   
   try {  
-    // Requisição direcionada ao proxy seguro no Cloudflare Worker
+    // Requisição para o Worker na Cloudflare com o modelo Groq atualizado
     const response = await fetch(WORKER_URL, {  
       method: "POST",  
       headers: {  
@@ -544,11 +549,12 @@ async function sendMsg() {
             role: "system",   
             content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada atuando como assistente especialista em Ciências da Saúde, Enfermagem, Medicina e Linguística Aplicada. Você atende profissionais e estudantes de saúde com base nas diretrizes e normas do país selecionado pelo usuário (${selectedHealthCountry}), utilizando os idiomas correspondentes (${currentLang}). Você auxilia na transcrição de prontuários em siglas padrão, fornece termos de dicionários médicos/enfermagem com sinônimos e apoia na pesquisa clínica e acadêmica para Médicos, Enfermeiros, Técnicos e Auxiliares de Enfermagem.`   
           },  
-          { role: "user", content: text }  
+          { role: "user", content: text || "Analise o anexo fornecido." }  
         ]  
       })  
     });  
   
+    attachedImageBase64 = null; // Limpa imagem anexada após envio
     const data = await response.json();  
     setOrbState(false);  
 
@@ -637,41 +643,56 @@ function formatMarkdown(text) {
   return formatted;
 }
 
+// Configuração e Injeção dos Inputs de Arquivo e Imagem
 function setupFileUploads() {
-  hiddenFileInput = document.getElementById('fileInput') || document.getElementById('hiddenFileInput');
-  hiddenImageInput = document.getElementById('imageInput') || document.getElementById('hiddenImageInput');
-
-  if (hiddenImageInput) {
-    hiddenImageInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          attachedImageBase64 = event.target.result;
-          appendMessage(`Imagem carregada com sucesso: ${file.name}`, 'system', false);
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+  if (!document.getElementById('hiddenImageInput')) {
+    const imgInput = document.createElement('input');
+    imgInput.type = 'file';
+    imgInput.id = 'hiddenImageInput';
+    imgInput.accept = 'image/*';
+    imgInput.style.display = 'none';
+    document.body.appendChild(imgInput);
   }
 
-  if (hiddenFileInput) {
-    hiddenFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        appendMessage(`Arquivo anexado: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'system', false);
-      }
-    });
+  if (!document.getElementById('hiddenFileInput')) {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'hiddenFileInput';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
   }
+
+  hiddenImageInput = document.getElementById('hiddenImageInput');
+  hiddenFileInput = document.getElementById('hiddenFileInput');
+
+  hiddenImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        attachedImageBase64 = event.target.result;
+        appendMessage(`📷 Imagem anexada da galeria: ${file.name}`, 'system', false);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  hiddenFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      appendMessage(`📎 Arquivo anexado: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'system', false);
+    }
+  });
 }
 
+// Configuração das Ações dos Botões da Barra Inferior
 function setupToolbarButtons() {
   const btnCamera = document.getElementById('btnCamera');
   const btnAttachment = document.getElementById('btnAttachment');
   const btnMic = document.getElementById('btnMic');
 
-  if (btnCamera && hiddenImageInput) {
-    btnCamera.addEventListener('click', () => hiddenImageInput.click());
+  if (btnCamera) {
+    btnCamera.addEventListener('click', openCameraOrGalleryModal);
   }
 
   if (btnAttachment && hiddenFileInput) {
@@ -690,6 +711,79 @@ function setupToolbarButtons() {
       }
     });
   }
+}
+
+// Modal de Escolha: Câmera em Tempo Real ou Galeria
+function openCameraOrGalleryModal() {
+  const choice = confirm("Deseja ativar a CÂMERA em tempo real?\n\n- [OK]: Abrir Câmera do dispositivo (solicita permissão)\n- [Cancelar]: Escolher foto da Galeria do dispositivo");
+  if (choice) {
+    startCameraCapture();
+  } else {
+    if (hiddenImageInput) hiddenImageInput.click();
+  }
+}
+
+// Solicitação de Acesso à Câmera e Streaming
+function startCameraCapture() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert("Seu navegador não suporta acesso direto à câmera. Abrindo galeria de mídia...");
+    if (hiddenImageInput) hiddenImageInput.click();
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then((stream) => {
+      createCameraPreviewModal(stream);
+    })
+    .catch((err) => {
+      alert("Acesso à câmera não concedido ou indisponível: " + err.message + "\nAbrindo galeria de mídia.");
+      if (hiddenImageInput) hiddenImageInput.click();
+    });
+}
+
+// Modal de Captura e Preview da Câmera
+function createCameraPreviewModal(stream) {
+  let modal = document.getElementById('jarvisCamModal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'jarvisCamModal';
+  modal.style.cssText = `position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;`;
+  
+  modal.innerHTML = `
+    <div style="background:#0d1117; border:1px solid #00ffcc; padding:15px; border-radius:8px; text-align:center; max-width:90%; width:400px; box-shadow: 0 0 20px rgba(0,255,204,0.3);">
+      <h3 style="color:#00ffcc; font-family:monospace; margin-top:0;">📷 CAPTURA DE IMAGEM AO VIVO</h3>
+      <video id="jarvisCamVideo" autoplay playsinline style="width:100%; max-height:300px; border-radius:6px; background:#000; border:1px solid #30363d;"></video>
+      <canvas id="jarvisCamCanvas" style="display:none;"></canvas>
+      <div style="margin-top:15px; display:flex; gap:10px; justify-content:center;">
+        <button id="btnTakePhoto" style="background:#00ffcc; color:#000; font-weight:bold; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-family:monospace;">Tirar Foto</button>
+        <button id="btnCloseCam" style="background:#ff0055; color:#fff; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-family:monospace;">Cancelar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const video = document.getElementById('jarvisCamVideo');
+  video.srcObject = stream;
+
+  document.getElementById('btnTakePhoto').onclick = () => {
+    const canvas = document.getElementById('jarvisCamCanvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    attachedImageBase64 = canvas.toDataURL('image/png');
+    appendMessage("📸 Foto capturada com sucesso!", "system", false);
+    
+    stream.getTracks().forEach(track => track.stop());
+    modal.remove();
+  };
+
+  document.getElementById('btnCloseCam').onclick = () => {
+    stream.getTracks().forEach(track => track.stop());
+    modal.remove();
+  };
 }
 
 // Funções de Ação dos Módulos da Sidebar
