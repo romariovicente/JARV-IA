@@ -16,7 +16,8 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-const ULTRA_FAST_MODEL = 'llama-3.1-70b-versatile';  
+// CORREÇÃO: Atualizado para o modelo ativo na Groq em 2026
+const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -95,6 +96,19 @@ document.addEventListener("DOMContentLoaded", () => {
   initAudioAnalyzer();  
   applyLanguageTranslations();
   
+  // CORREÇÃO: Vinculação do Botão de Excluir/Limpar Chat (Lixeira)
+  const clearChatBtn = document.querySelector('.btn-clear-chat');
+  if (clearChatBtn) {
+    clearChatBtn.onclick = () => {
+      if (confirm("Deseja limpar todo o histórico de sessões e reiniciar?")) {
+        chatsStore = {};
+        localStorage.removeItem('jarv_chats_v3');
+        createNewChat(true);
+        speakJARVIS("Histórico de sessões limpo com sucesso.");
+      }
+    };
+  }
+
   // Injeção dos Módulos Médicos e de Saúde na Sidebar  
   setTimeout(() => {  
     const sidebar = document.querySelector('.jarv-sidebar') || document.body;
