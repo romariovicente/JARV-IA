@@ -47,13 +47,18 @@ document.addEventListener("DOMContentLoaded", () => {
   startRealTimeClock();  
   initAudioAnalyzer();  
   
-  // Ativação do botão Kali Tools na Sidebar  
+  // Ativação das Ferramentas da Sidebar (Kali Tools & Globo Ciberameaças)  
   setTimeout(() => {  
     const navItems = document.querySelectorAll('.jarv-nav-item');  
     navItems.forEach((item, index) => {  
       if (index === 1 || (item.textContent || '').toLowerCase().includes('kali tools')) {  
         item.style.cursor = 'pointer';  
         item.onclick = () => openKaliToolsModal();  
+      }  
+      if (index === 2 || (item.textContent || '').toLowerCase().includes('diagnóstico') || (item.textContent || '').toLowerCase().includes('microchip')) {  
+        item.style.cursor = 'pointer';  
+        item.innerHTML = '<i class="fa-solid fa-globe"></i> Globo Ciberameaças';  
+        item.onclick = () => openCyberMapModal();  
       }  
     });  
   }, 1000);  
@@ -299,7 +304,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';  
   const chat = chatsStore[id];  
   if (!chat || !chat.messages || chat.messages.length === 0) {  
-    appendMessage("J.A.R.V.I.S. Operacional. Núcleo de IA e banco de dados Kali Tools ativos.", 'system', false);  
+    appendMessage("J.A.R.V.I.S. Operacional. Núcleo de IA, Kali Tools e Monitoramento Global ativos.", 'system', false);  
     return;  
   }  
   chat.messages.forEach(msg => {  
@@ -401,7 +406,7 @@ async function sendMsg() {
         messages: [  
           {   
             role: "system",   
-            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. A bola pulsante laranja/amarelada na interface é seu núcleo holográfico, que oscila e brilha conforme a frequência da voz. Você gerencia o controle residencial e de laboratório (automations, mansão, projetos tecnológicos), suporte em combate e armaduras (piloto automático, cálculos de trajetória, monitoramento ambiental), e monitoramento de saúde e análise de dados (sinais vitais, reconstrução forense). Você também opera integrado ao ambiente Kali Linux, conhecendo profundamente suas categorias e ferramentas de pentest (Nmap, theHarvester, Burp Suite, SQLmap, Metasploit, Hydra, John the Ripper, Hashcat, Aircrack-ng, Wireshark, Autopsy). Quando acionado para operar uma ferramenta hacker, forneça a descrição técnica exata, parâmetros de linha de comando avançados e simule o output profissional do terminal hacker. Responda sempre diretamente, de forma completa e com tom profissional e tecnológico."   
+            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. A bola pulsante na interface é seu núcleo holográfico, que oscila e brilha conforme a frequência da voz. Você gerencia o controle residencial e de laboratório, suporte em combate e armaduras, monitoramento de saúde e análise de dados. Você também opera integrado ao ambiente Kali Linux, conhecendo profundamente suas categorias e ferramentas de pentest (Nmap, Burp Suite, SQLmap, Metasploit, Hydra, John the Ripper, Wireshark). Quando acionado para operar uma ferramenta hacker, forneça a descrição técnica exata, parâmetros avançados e simule o output profissional do terminal hacker. Responda sempre diretamente, de forma completa e com tom profissional e tecnológico."   
           },  
           { role: "user", content: text }  
         ]  
@@ -543,6 +548,40 @@ function runKaliTool(toolName) {
   if (chatInput) {  
     chatInput.value = `Ativar protocolo de segurança Kali Linux: execute a ferramenta ${toolName}, explique seus parâmetros principais e monte um exemplo prático de uso.`;  
     sendMsg();  
+  }  
+}  
+  
+// --- GLOBO INTERATIVO DE CIBERAMEAÇAS (KASPERSKY MAP) ---  
+function openCyberMapModal() {  
+  let modal = document.getElementById('cyberMapModal');  
+  if (!modal) {  
+    modal = document.createElement('div');  
+    modal.id = 'cyberMapModal';  
+    modal.style.cssText = `  
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;  
+      background: rgba(0, 0, 0, 0.9); z-index: 9999;  
+      display: flex; flex-direction: column; align-items: center; justify-content: center;  
+      font-family: monospace;  
+    `;  
+    modal.innerHTML = `  
+      <div style="background: #0d1117; border: 1px solid #00ffff; width: 95%; max-width: 900px; height: 85vh; padding: 15px; border-radius: 8px; box-shadow: 0 0 35px rgba(0,255,255,0.4); display: flex; flex-direction: column;">  
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 10px;">  
+          <h3 style="margin: 0; font-size: 1rem; color: #00ffff;"><i class="fa-solid fa-globe"></i> J.A.R.V.I.S. - GLOBO DE CIBERAMEAÇAS EM TEMPO REAL</h3>  
+          <button onclick="document.getElementById('cyberMapModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer; font-weight:bold;">[FECHAR X]</button>  
+        </div>  
+        <p style="font-size: 0.75rem; color: #8b949e; margin: 0 0 10px 0;">Monitoramento global de ataques cibernéticos ativos integrados via Kaspersky Cyberthreat Real-Time Map.</p>  
+        <div style="flex: 1; width: 100%; border: 1px solid #0044ff; border-radius: 4px; overflow: hidden; background: #000;">  
+          <iframe src="https://cybermap.kaspersky.com/widget/en" style="width: 100%; height: 100%; border: none;"></iframe>  
+        </div>  
+      </div>  
+    `;  
+    document.body.appendChild(modal);  
+  } else {  
+    modal.style.display = 'flex';  
+  }  
+  
+  if (typeof speakJARVIS === 'function') {  
+    speakJARVIS("Abrindo o globo de monitoramento global de ciberameaças. Redes de defesa ativas.");  
   }  
 }  
   
