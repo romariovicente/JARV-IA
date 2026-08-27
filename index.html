@@ -38,6 +38,9 @@
                         <div class="quantum-sphere"></div>
                         <span class="core-label">J.A.R.V.I.S. CORE</span>
                     </div>
+
+                    <!-- Botão Escuta Ativa que estava faltando -->
+                    <button id="escuta-btn" class="escuta-ativa-btn">🔴 ESCUTA ATIVA</button>
                     
                     <div id="session-badge" class="session-active">Sessão 1</div>
                 </div>
@@ -54,9 +57,16 @@
             <!-- Content Area -->
             <main class="content-area">
                 <div class="terminal-output" id="terminal-output">
-                    <div class="log-system">[SYSTEM] J.A.R.V.I.S. Operacional. Camada de Conhecimento Ativa.</div>
-                    <div class="log-user">[USER] pesquisa sobre matemática</div>
-                    <div class="log-api">[J.A.R.V.I.S.] Núcleo quântico e ponte de dados prontos.</div>
+                    <!-- Mensagens estilizadas em formato de card original -->
+                    <div class="chat-card log-system">
+                        [SYSTEM] J.A.R.V.I.S. Operacional. Camada de Conhecimento Ativa.
+                    </div>
+                    <div class="chat-card log-user">
+                        [USER] pesquisa sobre matemática
+                    </div>
+                    <div class="chat-card log-api">
+                        [J.A.R.V.I.S.] Retorno bruto da API: {"error": {"message": "The model 'llama-3.1-70b-versatile' has been decommissioned and is no longer supported..."}}
+                    </div>
                     <div class="terminal-prompt-line" id="terminal-status">
                         romario@jarv-quantum:~# status: Autenticado (Romário M1k Ziika) - J.A.R.V.I.S. Ativo
                     </div>
