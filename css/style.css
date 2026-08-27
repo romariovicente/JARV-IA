@@ -4,7 +4,7 @@
     padding: 0;
 }
 
-/* Correção de altura para celulares (Mobile Viewport) */
+/* Base de Altura e Cores (Responsivo para Mobile e Desktop) */
 html, body {
     height: 100%;
     height: 100dvh;
@@ -31,6 +31,7 @@ html, body {
     padding: 8px 15px;
     border-bottom: 1px solid #1a2639;
     font-size: 0.85rem;
+    flex-shrink: 0;
 }
 
 .top-left, .top-right {
@@ -61,7 +62,7 @@ html, body {
     position: relative;
 }
 
-/* Sidebar Esquerda */
+/* Sidebar Esquerda (Padrão Desktop) */
 .sidebar-left {
     width: 240px;
     background: #080d17;
@@ -70,6 +71,7 @@ html, body {
     flex-direction: column;
     padding: 10px;
     overflow-y: auto;
+    flex-shrink: 0;
 }
 
 .sidebar-top-actions {
@@ -189,7 +191,6 @@ html, body {
     overflow: hidden;
     position: relative;
     background-color: #05080f;
-    /* Fundo estilizado com KALI */
     background-image: radial-gradient(circle at center, rgba(13, 27, 42, 0.6) 0%, rgba(5, 8, 15, 0.95) 100%), 
                       url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" opacity="0.05"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2300ffcc" font-weight="bold" font-size="90" font-family="monospace">KALI</text></svg>');
     background-position: center;
@@ -227,9 +228,9 @@ html, body {
     51%, 100% { opacity: 0; }
 }
 
-/* Barra de Input Inferior FIXA */
+/* Barra de Input Inferior Fixa */
 .terminal-input-bar {
-    flex-shrink: 0; /* Garante que ela nunca seja empurrada pra fora da tela */
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     background: #0b111e;
@@ -283,4 +284,45 @@ html, body {
 
 .send-btn:hover {
     background: #0052cc;
+}
+
+/* ==========================================
+   ADAPTAÇÕES ESPECÍFICAS PARA CELULAR (MOBILE)
+   ================================---------- */
+@media (max-width: 768px) {
+    .sidebar-left {
+        width: 190px; /* Reduz levemente a largura da barra lateral em telas menores */
+        padding: 6px;
+    }
+
+    .quantum-sphere {
+        width: 65px;
+        height: 65px; /* Ajusta a esfera para não ocupar espaço excessivo no mobile */
+    }
+
+    .top-bar {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+
+    /* Compacta os ícones de ação rápida do input no celular */
+    .action-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+
+    .terminal-input-bar {
+        padding: 6px;
+    }
+
+    #command-input {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+
+    .send-btn {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
 }
