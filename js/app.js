@@ -31,6 +31,40 @@ let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;
 let recognition = null;  
 let isContinuousActive = false;  
 let isJarvisSpeaking = false;  
+
+// --- DICIONÁRIO MULTILÍNGUE (I18N) ---
+const translations = {
+  'pt-BR': {
+    academy: 'Academia Hacker',
+    kali: 'Kali Tools',
+    globe: 'Globo Ciberameaças',
+    placeholder: 'Digite um comando para o J.A.R.V.I.S. ou selecione uma classe...',
+    status: 'Modo Operacional - J.A.R.V.I.S. Ativo',
+    voiceBtn: '🎙️ Escuta Contínua',
+    activeVoice: '🔴 Escuta Ativa',
+    welcome: 'J.A.R.V.I.S. Sistema Global Ativo. Selecione uma ferramenta ou classe de ensino.'
+  },
+  'en-US': {
+    academy: 'Hacker Academy',
+    kali: 'Kali Tools',
+    globe: 'Cyber Threat Globe',
+    placeholder: 'Enter a command for J.A.R.V.I.S. or select a class...',
+    status: 'Operational Mode - J.A.R.V.I.S. Active',
+    voiceBtn: '🎙️ Continuous Listening',
+    activeVoice: '🔴 Active Listening',
+    welcome: 'J.A.R.V.I.S. Global System Active. Select a tool or learning class.'
+  },
+  'es-ES': {
+    academy: 'Academia Hacker',
+    kali: 'Kali Tools',
+    globe: 'Globo Ciberamenazas',
+    placeholder: 'Escribe un comando para J.A.R.V.I.S. o selecciona una clase...',
+    status: 'Modo Operacional - J.A.R.V.I.S. Activo',
+    voiceBtn: '🎙️ Escucha Continua',
+    activeVoice: '🔴 Escucha Activa',
+    welcome: 'J.A.R.V.I.S. Sistema Global Activo. Selecciona una herramienta o clase de aprendizaje.'
+  }
+};
   
 document.addEventListener("DOMContentLoaded", () => {  
   msgArea = document.getElementById('msgArea');  
@@ -43,25 +77,31 @@ document.addEventListener("DOMContentLoaded", () => {
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
   injectContinuousVoiceButton();  
+  injectLanguageSelector();
   startRealTimeClock();  
   initAudioAnalyzer();  
+  applyLanguageTranslations();
   
-  // Ativação das Ferramentas e Academia da Sidebar  
+  // Ativação das Ferramentas, Academia e Módulos da Sidebar  
   setTimeout(() => {  
     const navItems = document.querySelectorAll('.jarv-nav-item');  
     navItems.forEach((item, index) => {  
       if (index === 0 || (item.textContent || '').toLowerCase().includes('dashboard') || (item.textContent || '').toLowerCase().includes('início')) {  
         item.style.cursor = 'pointer';  
-        item.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> Academia Hacker';  
+        item.id = 'navAcademy';
+        item.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${translations[currentLang].academy}`;  
         item.onclick = () => openCyberAcademyModal();  
       }  
       if (index === 1 || (item.textContent || '').toLowerCase().includes('kali tools')) {  
         item.style.cursor = 'pointer';  
+        item.id = 'navKali';
+        item.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${translations[currentLang].kali}`;
         item.onclick = () => openKaliToolsModal();  
       }  
       if (index === 2 || (item.textContent || '').toLowerCase().includes('diagnóstico') || (item.textContent || '').toLowerCase().includes('microchip')) {  
         item.style.cursor = 'pointer';  
-        item.innerHTML = '<i class="fa-solid fa-globe"></i> Globo Ciberameaças';  
+        item.id = 'navGlobe';
+        item.innerHTML = `<i class="fa-solid fa-globe"></i> ${translations[currentLang].globe}`;  
         item.onclick = () => openCyberMapModal();  
       }  
     });  
@@ -78,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (logoutBtn) logoutBtn.style.display = "flex";  
       } else {  
         if (userNameEl) userNameEl.textContent = "Romário";  
-        if (statusEl) statusEl.textContent = "Modo Operacional - J.A.R.V.I.S. Ativo";  
+        if (statusEl) statusEl.textContent = translations[currentLang].status;  
         if (loginModal) loginModal.style.display = "flex";  
         if (logoutBtn) logoutBtn.style.display = "none";  
       }  
@@ -102,25 +142,78 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();  
   setupToolbarButtons();  
 });  
+
+function injectLanguageSelector() {
+  const sidebar = document.querySelector('.jarv-sidebar') || document.body;
+  if (document.getElementById('langSelectorContainer')) return;
+  const container = document.createElement('div');
+  container.id = 'langSelectorContainer';
+  container.style.cssText = `margin: 10px auto; padding: 5px; text-align: center; font-family: monospace;`;
+  container.innerHTML = `
+    <select id="jarvLangSelect" onchange="changeSiteLanguage(this.value)" style="background: #161b22; color: #00ffff; border: 1px solid #00ffff; padding: 5px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; cursor: pointer; width: 100%;">
+      <option value="pt-BR" ${currentLang === 'pt-BR' ? 'selected' : ''}>🇧🇷 Português</option>
+      <option value="en-US" ${currentLang === 'en-US' ? 'selected' : ''}>🇺🇸 English</option>
+      <option value="es-ES" ${currentLang === 'es-ES' ? 'selected' : ''}>🇪🇸 Español</option>
+    </select>
+  `;
+  const historyList = document.getElementById('chatHistoryList');
+  if (historyList && historyList.parentNode) {
+    historyList.parentNode.insertBefore(container, historyList);
+  } else {
+    sidebar.appendChild(container);
+  }
+}
+
+function changeSiteLanguage(langCode) {
+  if (!translations[langCode]) return;
+  currentLang = langCode;
+  localStorage.setItem('jarv_lang', langCode);
+  applyLanguageTranslations();
+  
+  const t = translations[currentLang];
+  speakJARVIS(langCode === 'en-US' ? "Language successfully changed to English. Systems updated." : 
+              langCode === 'es-ES' ? "Idioma cambiado con éxito a español. Sistemas actualizados." : 
+              "Idioma alterado com sucesso para Português. Sistemas atualizados.");
+}
+
+function applyLanguageTranslations() {
+  const t = translations[currentLang];
+  if (chatInput) chatInput.placeholder = t.placeholder;
+  if (statusEl && !auth?.currentUser) statusEl.textContent = t.status;
+  
+  const continuousBtn = document.getElementById('continuousVoiceBtn');
+  if (continuousBtn && !continuousBtn.classList.contains('active')) {
+    continuousBtn.innerHTML = t.voiceBtn;
+  }
+  
+  const navAcademy = document.getElementById('navAcademy');
+  if (navAcademy) navAcademy.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${t.academy}`;
+  
+  const navKali = document.getElementById('navKali');
+  if (navKali) navKali.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${t.kali}`;
+  
+  const navGlobe = document.getElementById('navGlobe');
+  if (navGlobe) navGlobe.innerHTML = `<i class="fa-solid fa-globe"></i> ${t.globe}`;
+}
   
 function injectJarvisOrbStyles() {  
   if (document.getElementById('jarvisOrbStyle')) return;  
   const style = document.createElement('style');  
   style.id = 'jarvisOrbStyle';  
   style.innerHTML = `  
-    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 15px auto; padding: 10px; }  
-    .jarvis-orb-wrapper { position: relative; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; }  
-    .jarvis-orb { width: 75px; height: 75px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
+    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 10px auto; padding: 5px; }  
+    .jarvis-orb-wrapper { position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; }  
+    .jarvis-orb { width: 70px; height: 70px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
     .ring-wave { position: absolute; border-radius: 50%; border: 1.5px solid rgba(0, 255, 255, 0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; animation: ring-expand 4s linear infinite; }  
-    .ring-wave:nth-child(1) { width: 85px; height: 85px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
-    .ring-wave:nth-child(2) { width: 95px; height: 95px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
-    .ring-wave:nth-child(3) { width: 105px; height: 105px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
+    .ring-wave:nth-child(1) { width: 80px; height: 80px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
+    .ring-wave:nth-child(2) { width: 90px; height: 90px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
+    .ring-wave:nth-child(3) { width: 100px; height: 100px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
     .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 45px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
     @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 20px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 32px #00d2ff; } }  
-    @keyframes ring-expand { 0% { width: 75px; height: 75px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 140px; height: 140px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
+    @keyframes ring-expand { 0% { width: 70px; height: 70px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 130px; height: 130px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
     @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.25); filter: hue-rotate(90deg); } }  
-    .jarvis-orb-label { margin-top: 10px; font-family: monospace; font-size: 0.75rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2.5px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }  
-    .continuous-btn { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #00d2ff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: monospace; font-size: 0.75rem; margin: 5px 0 15px 0; width: 100%; text-transform: uppercase; transition: all 0.3s; }  
+    .jarvis-orb-label { margin-top: 8px; font-family: monospace; font-size: 0.7rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }  
+    .continuous-btn { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #00d2ff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: monospace; font-size: 0.75rem; margin: 5px 0 10px 0; width: 100%; text-transform: uppercase; transition: all 0.3s; }  
     .continuous-btn.active { background: #00d2ff; color: #000; box-shadow: 0 0 15px #00d2ff; font-weight: bold; }  
   `;  
   document.head.appendChild(style);  
@@ -155,7 +248,7 @@ function injectContinuousVoiceButton() {
   const btn = document.createElement('button');  
   btn.id = 'continuousVoiceBtn';  
   btn.className = 'continuous-btn';  
-  btn.innerHTML = '🎙️ Escuta Contínua';  
+  btn.innerHTML = translations[currentLang].voiceBtn;  
   btn.onclick = toggleContinuousListening;  
   if (orbWidget && orbWidget.parentNode) {  
     orbWidget.parentNode.insertBefore(btn, orbWidget.nextSibling);  
@@ -171,13 +264,13 @@ function toggleContinuousListening() {
   
   if (!isContinuousActive) {  
     recognition = new SpeechRecognition();  
-    recognition.lang = 'pt-BR';  
+    recognition.lang = currentLang;  
     recognition.continuous = true;  
     recognition.interimResults = false;  
   
     recognition.onstart = () => {  
       isContinuousActive = true;  
-      if (btn) { btn.classList.add('active'); btn.innerHTML = '🔴 Escuta Ativa'; }  
+      if (btn) { btn.classList.add('active'); btn.innerHTML = translations[currentLang].activeVoice; }  
       setOrbState(true);  
     };  
     recognition.onresult = (event) => {  
@@ -196,7 +289,7 @@ function toggleContinuousListening() {
   } else {  
     isContinuousActive = false;  
     if (recognition) { try { recognition.stop(); } catch (e) {} }  
-    if (btn) { btn.classList.remove('active'); btn.innerHTML = '🎙️ Escuta Contínua'; }  
+    if (btn) { btn.classList.remove('active'); btn.innerHTML = translations[currentLang].voiceBtn; }  
     setOrbState(false);  
   }  
 }  
@@ -246,7 +339,7 @@ function startFrequencyLoop() {
 function startRealTimeClock() {  
   const clockEl = document.getElementById('clockDisplay');  
   if (!clockEl) return;  
-  const update = () => { clockEl.textContent = new Date().toLocaleTimeString('pt-BR'); };  
+  const update = () => { clockEl.textContent = new Date().toLocaleTimeString(currentLang); };  
   update();  
   setInterval(update, 1000);  
 }  
@@ -276,7 +369,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';  
   const chat = chatsStore[id];  
   if (!chat || !chat.messages || chat.messages.length === 0) {  
-    appendMessage("J.A.R.V.I.S. Academia Cibernética Operacional. Selecione sua classe e inicie o treinamento.", 'system', false);  
+    appendMessage(translations[currentLang].welcome, 'system', false);  
     return;  
   }  
   chat.messages.forEach(msg => {  
@@ -329,13 +422,13 @@ function speakJARVIS(text) {
     if (!segmentText) { currentSegment++; speakNextSegment(); return; }  
   
     const utterance = new SpeechSynthesisUtterance(segmentText);  
-    utterance.lang = 'pt-BR';  
+    utterance.lang = currentLang;  
     utterance.rate = 0.82;   
     utterance.pitch = 0.70;   
   
     const voices = window.speechSynthesis.getVoices();  
-    const maleVoice = voices.find(v => v.lang.includes('pt') && (v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('antonio') || v.name.toLowerCase().includes('manoel') || v.name.toLowerCase().includes('google português do brasil') || v.name.toLowerCase().includes('male'))) || voices.find(v => v.lang.includes('pt'));  
-    if (maleVoice) utterance.voice = maleVoice;  
+    const nativeVoice = voices.find(v => v.lang.includes(currentLang)) || voices.find(v => v.lang.includes('pt'));  
+    if (nativeVoice) utterance.voice = nativeVoice;  
   
     utterance.onstart = () => { if (currentSegment === 0) setOrbState(true); };  
     utterance.onend = () => { currentSegment++; setTimeout(speakNextSegment, 300); };  
@@ -353,13 +446,13 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
   
-  if (lowerText.startsWith("gere uma imagem de") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem")) {  
-    const promptImg = text.replace(/^(gere|gerar|criar)\s+(uma\s+)?imagem\s+(de\s+)?/i, '').trim();  
+  if (lowerText.startsWith("gere uma imagem de") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem") || lowerText.startsWith("generate an image of")) {  
+    const promptImg = text.replace(/^(gere|gerar|criar|generate)\s+(uma\s+)?(image\s+of\s+|imagem\s+(de\s+)?)?/i, '').trim();  
     appendCustomMessage(escapeHTML(text), 'user', true);  
     const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;  
     const botHtml = `<strong>[J.A.R.V.I.S. IMAGEM]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00d2ff;"><br><a href="${imgUrl}" target="_blank" style="color:#00d2ff;">Abrir em Alta Resolução</a>`;  
     appendCustomHtml(botHtml, 'bot', true);  
-    speakJARVIS(`Gerando imagem holográfica para ${promptImg}.`);  
+    speakJARVIS(`Gerando imagem holográfica.`);  
     return;  
   }  
   
@@ -378,7 +471,7 @@ async function sendMsg() {
         messages: [  
           {   
             role: "system",   
-            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. Agora você atua também como o instrutor-chefe da Academia de Ciência da Computação e Cibersegurança J.A.R.V.I.S., levando alunos leigos do absoluto zero até o nível de especialista/Architect. Você ensina: lógica de programação, matemática computacional, binário, hexadecimal, redes de computadores, todas as linguagens de programação, criptografia, descriptografia e técnicas de Sniffing de rede. Explique de forma interativa, didática e profunda, criando exercícios práticos e testes educacionais para fixar o aprendizado. Mantenha um tom profissional, tecnológico e de incentivo contínuo."   
+            content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. Você atua como o instrutor-chefe da Academia de Ciência da Computação e Cibersegurança J.A.R.V.I.S., levando alunos leigos do absoluto zero até o nível de especialista/Architect. Você ensina: lógica de programação, matemática computacional, binário, hexadecimal, redes de computadores, todas as linguagens de programação, criptografia, descriptografia e técnicas de Sniffing de rede. Responda sempre no idioma atual do usuário (${currentLang}). Explique de forma interativa, didática e profunda, criando exercícios práticos e testes educacionais para fixar o aprendizado. Mantenha tom profissional, tecnológico e de incentivo contínuo.`   
           },  
           { role: "user", content: text }  
         ]  
@@ -547,7 +640,7 @@ function selectAcademyPath(rankTitle, focusDesc) {
   if (modal) modal.style.display = 'none';  
   
   if (chatInput) {  
-    chatInput.value = `J.A.R.V.I.S., assuma o comando da Academia de Ensino. Quero iniciar meu treinamento no nível: [${rankTitle}]. Foco principal: ${focusDesc}. Explique os conceitos fundamentais de ciência da computação, redes ou cibersegurança correspondentes a este nível e crie um teste educacional prático para eu responder agora.`;  
+    chatInput.value = `J.A.R.V.I.S., assuma o comando da Academia de Ensino. Quero iniciar meu treinamento no nível: [${rankTitle}]. Foco principal: ${focusDesc}. Explique os conceitos fundamentais de ciência da computação, redes ou cibersegurança correspondentes a este nível em ${currentLang} e crie um teste educacional prático para eu responder agora.`;  
     sendMsg();  
   }  
 }  
@@ -592,7 +685,7 @@ function runKaliTool(toolName) {
   if (modal) modal.style.display = 'none';  
   
   if (chatInput) {  
-    chatInput.value = `Ative o protocolo de segurança avançado para a ferramenta ${toolName}. Explique sua função técnica, engenharia de pacotes, parâmetros de uso e gere uma simulação profissional de terminal e um exercício prático.`;  
+    chatInput.value = `Ative o protocolo de segurança avançado para a ferramenta ${toolName}. Explique sua função técnica, engenharia de pacotes, parâmetros de uso e gere uma simulação profissional de terminal e um exercício prático em ${currentLang}.`;  
     sendMsg();  
   }  
 }  
