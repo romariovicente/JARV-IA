@@ -16,12 +16,12 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// CORREÇÃO: Modelo ativo e estável da Groq
+// Modelo ativo e estável da Groq
 const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
-let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';
+let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';  
 let ttsEnabled = true;  
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initAudioAnalyzer();  
   applyLanguageTranslations();
   
-  // CORREÇÃO: Vinculação do Botão de Excluir/Limpar Chat (Lixeira)
+  // Limpeza de histórico
   const clearChatBtn = document.querySelector('.btn-clear-chat');
   if (clearChatBtn) {
     clearChatBtn.onclick = () => {
@@ -533,7 +533,7 @@ async function sendMsg() {
       method: "POST",  
       headers: {  
         "Content-Type": "application/json",  
-        "Authorization": "Bearer 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"  
+        "Authorization": "Bearer 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"  
       },  
       body: JSON.stringify({  
         model: ULTRA_FAST_MODEL,  
