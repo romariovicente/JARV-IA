@@ -47,6 +47,17 @@ document.addEventListener("DOMContentLoaded", () => {
   startRealTimeClock();  
   initAudioAnalyzer();  
   
+  // Ativação do botão Kali Tools na Sidebar  
+  setTimeout(() => {  
+    const navItems = document.querySelectorAll('.jarv-nav-item');  
+    navItems.forEach((item, index) => {  
+      if (index === 1 || (item.textContent || '').toLowerCase().includes('kali tools')) {  
+        item.style.cursor = 'pointer';  
+        item.onclick = () => openKaliToolsModal();  
+      }  
+    });  
+  }, 1000);  
+  
   // Lógica de Autenticação  
   if (auth) {  
     auth.onAuthStateChanged((user) => {  
@@ -390,7 +401,7 @@ async function sendMsg() {
         messages: [  
           {   
             role: "system",   
-            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. A bola pulsante laranja/amarelada na interface é seu núcleo holográfico, que oscila e brilha conforme a frequência da voz. Você gerencia o controle residencial e de laboratório (automations, mansão, projetos tecnológicos), suporte em combate e armaduras (piloto automático, cálculos de trajetória, monitoramento ambiental), e monitoramento de saúde e análise de dados (sinais vitais, reconstrução forense). Você também opera integrado ao ambiente Kali Linux, conhecendo suas categorias e ferramentas de pentest (Nmap, theHarvester, Burp Suite, SQLmap, Metasploit, Hydra, John the Ripper, Hashcat, Aircrack-ng, Wireshark, Autopsy). Responda sempre diretamente, de forma completa e com tom profissional e tecnológico."   
+            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. A bola pulsante laranja/amarelada na interface é seu núcleo holográfico, que oscila e brilha conforme a frequência da voz. Você gerencia o controle residencial e de laboratório (automations, mansão, projetos tecnológicos), suporte em combate e armaduras (piloto automático, cálculos de trajetória, monitoramento ambiental), e monitoramento de saúde e análise de dados (sinais vitais, reconstrução forense). Você também opera integrado ao ambiente Kali Linux, conhecendo profundamente suas categorias e ferramentas de pentest (Nmap, theHarvester, Burp Suite, SQLmap, Metasploit, Hydra, John the Ripper, Hashcat, Aircrack-ng, Wireshark, Autopsy). Quando acionado para operar uma ferramenta hacker, forneça a descrição técnica exata, parâmetros de linha de comando avançados e simule o output profissional do terminal hacker. Responda sempre diretamente, de forma completa e com tom profissional e tecnológico."   
           },  
           { role: "user", content: text }  
         ]  
@@ -488,6 +499,51 @@ function setupToolbarButtons() {
       if (!isContinuousActive) toggleContinuousListening();  
     };  
   });  
+}  
+  
+// --- PAINEL DE FERRAMENTAS HACKERS (KALI LINUX) ---  
+function openKaliToolsModal() {  
+  let modal = document.getElementById('kaliToolsModal');  
+  if (!modal) {  
+    modal = document.createElement('div');  
+    modal.id = 'kaliToolsModal';  
+    modal.style.cssText = `  
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;  
+      background: rgba(0, 0, 0, 0.85); z-index: 9999;  
+      display: flex; align-items: center; justify-content: center;  
+      font-family: monospace;  
+    `;  
+    modal.innerHTML = `  
+      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 90%; max-width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 0 25px rgba(0,255,204,0.3); color: #00ffcc;">  
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">  
+          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-shield-halved"></i> KALI LINUX - KERNEL TOOLS</h3>  
+          <button onclick="document.getElementById('kaliToolsModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>  
+        </div>  
+        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o módulo de pentest desejado para acionar o protocolo do J.A.R.V.I.S.:</p>  
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">  
+          <button onclick="runKaliTool('Nmap')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔍 Nmap (Port Scan)</button>  
+          <button onclick="runKaliTool('Metasploit')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">⚡ Metasploit (Exploit)</button>  
+          <button onclick="runKaliTool('SQLmap')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">💉 SQLmap (Injeção)</button>  
+          <button onclick="runKaliTool('Hydra')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔑 Hydra (Brute Force)</button>  
+          <button onclick="runKaliTool('Wireshark')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">📡 Wireshark (Sniffer)</button>  
+          <button onclick="runKaliTool('John the Ripper')" style="background: #161b22; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; cursor: pointer; border-radius: 4px; font-family: monospace;">🔓 John (Hash Cracker)</button>  
+        </div>  
+      </div>  
+    `;  
+    document.body.appendChild(modal);  
+  } else {  
+    modal.style.display = 'flex';  
+  }  
+}  
+  
+function runKaliTool(toolName) {  
+  const modal = document.getElementById('kaliToolsModal');  
+  if (modal) modal.style.display = 'none';  
+  
+  if (chatInput) {  
+    chatInput.value = `Ativar protocolo de segurança Kali Linux: execute a ferramenta ${toolName}, explique seus parâmetros principais e monte um exemplo prático de uso.`;  
+    sendMsg();  
+  }  
 }  
   
 function escapeHTML(str) {  
