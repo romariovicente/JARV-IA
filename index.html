@@ -1,165 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARV.IA v3.0 Quantum & Wiki</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARV-IA v3.0 Quantum & Wiki</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="kali-theme">
+<body>
+    <div class="app-container">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-left">
+                <span class="icon">⚛️</span>
+                <span class="version">v3.0 Quantum</span>
+                <span class="controls-icons">🎛️ 🔊 📶</span>
+                <span class="clock" id="clock-display">19:41:17</span>
+            </div>
+            <div class="top-right">
+                <span class="user-profile">Romário M1k Ziika</span>
+                <button id="logout-btn" class="logout-btn">Sair</button>
+            </div>
+        </header>
 
-  <!-- BARRA SUPERIOR (HEADER) -->
-  <header class="jarv-header">
-    <div class="header-left">
-      <i class="fa-solid fa-microchip logo-icon"></i>
-      <div class="brand-title">
-        <span>JARV.IA v3.0 Quantum & Wiki</span>
-        <small id="clockDisplay">00:00:00</small>
-      </div>
+        <div class="main-layout">
+            <!-- Sidebar Left -->
+            <aside class="sidebar-left">
+                <div class="sidebar-top-actions">
+                    <button id="new-chat-btn" class="cyber-btn">+ Nova Conversa</button>
+                    <button id="clear-history-btn" class="icon-btn">🗑️</button>
+                </div>
+                
+                <div class="historic-section">
+                    <h3>HISTÓRICO</h3>
+                    
+                    <!-- Core Quântico com Esfera Brilhante -->
+                    <div class="core-container">
+                        <div class="quantum-sphere"></div>
+                        <span class="core-label">J.A.R.V.I.S. CORE</span>
+                    </div>
+                    
+                    <div id="session-badge" class="session-active">Sessão 1</div>
+                </div>
+
+                <nav class="nav-menu">
+                    <button class="nav-item active"><span>>_</span> Terminal / Chat</button>
+                    <button class="nav-item"><span>⚛️</span> Quântico (Qubit)</button>
+                    <button class="nav-item"><span>📰</span> Wikipédia Real-Time</button>
+                    <button class="nav-item"><span>📊</span> Dashboard</button>
+                    <button class="nav-item restart-btn"><span>⏻</span> Reiniciar</button>
+                </nav>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <div class="terminal-output" id="terminal-output">
+                    <div class="log-system">[SYSTEM] J.A.R.V.I.S. Operacional. Camada de Conhecimento Ativa.</div>
+                    <div class="log-user">[USER] pesquisa sobre matemática</div>
+                    <div class="log-api">[J.A.R.V.I.S.] Núcleo quântico e ponte de dados prontos.</div>
+                    <div class="terminal-prompt-line" id="terminal-status">
+                        romario@jarv-quantum:~# status: Autenticado (Romário M1k Ziika) - J.A.R.V.I.S. Ativo
+                    </div>
+                    <div class="terminal-active-prompt">
+                        romario@jarv-quantum:~# _
+                    </div>
+                </div>
+
+                <!-- Input Bar -->
+                <div class="terminal-input-bar">
+                    <div class="input-actions-left">
+                        <button class="action-icon">📷</button>
+                        <button class="action-icon">🖼️</button>
+                        <button class="action-icon">📎</button>
+                        <button class="action-icon">🎤</button>
+                        <button class="action-icon">🔍</button>
+                        <button class="action-icon">⚙️</button>
+                    </div>
+                    <input type="text" id="command-input" placeholder="Digite um comando (ou !wiki termo)...">
+                    <button id="send-btn" class="send-btn">ENVIAR</button>
+                </div>
+            </main>
+        </div>
     </div>
-    <div class="header-right">
-      <div class="system-controls">
-        <i class="fa-solid fa-volume-high text-cyan" title="Áudio Ativo"></i>
-        <i class="fa-solid fa-wifi text-cyan" title="Conexão Quântica Estável"></i>
-      </div>
-      <div class="user-profile">
-        <span id="userName" class="user-name">Romário</span>
-        <button id="logoutBtn" class="btn-logout">Sair</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- LAYOUT PRINCIPAL -->
-  <div class="jarv-container">
-
-    <!-- MENU LATERAL (SIDEBAR) -->
-    <aside class="jarv-sidebar">
-      <div class="sidebar-top-actions">
-        <button class="btn-new-chat" onclick="createNewChat(true)" title="Nova Conversa">
-          <i class="fa-solid fa-plus"></i>
-          <span data-i18n="new_chat">Nova Conversa</span>
-        </button>
-        <button class="btn-clear-chat" onclick="clearCurrentChat()" title="Apagar conversa atual">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      </div>
-
-      <!-- LISTA DE HISTÓRICO DE CONVERSAS -->
-      <div class="chat-history-container">
-        <span class="history-label" data-i18n="history">HISTÓRICO</span>
-        <div id="chatHistoryList" class="chat-history-list">
-          <!-- Renderizado dinamicamente pelo JS -->
-        </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <button class="jarv-nav-item active" data-view="chat" onclick="switchView('chat')">
-          <i class="fa-solid fa-terminal"></i>
-          <span data-i18n="nav_terminal">Terminal / Chat</span>
-        </button>
-        <button class="jarv-nav-item" data-view="quantum" onclick="switchView('quantum')">
-          <i class="fa-solid fa-atom"></i> Quântico (Qubit)
-        </button>
-        <button class="jarv-nav-item" data-view="wiki" onclick="switchView('wiki')">
-          <i class="fa-solid fa-book-atlas"></i> Wikipédia Real-Time
-        </button>
-        <button class="jarv-nav-item" data-view="dashboard" onclick="switchView('dashboard')">
-          <i class="fa-solid fa-chart-line"></i> Dashboard
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button class="btn-reset" onclick="resetSystem()">
-          <i class="fa-solid fa-power-off"></i>
-          <span data-i18n="reset">Reiniciar</span>
-        </button>
-      </div>
-    </aside>
-
-    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
-    <main class="jarv-main" id="chatView">
-      <div class="watermark-bg"></div>
-
-      <!-- ÁREA DE MENSAGENS -->
-      <div id="msgArea" class="msg-container">
-        <div class="jarv-msg jarv-msg-system">
-          <span class="jarv-code">[JARV]</span> Núcleo v3.0 operacional. Conexão quântica simulada e ponte Wikipédia prontas.
-        </div>
-      </div>
-
-      <!-- PAINEL TERMINAL INFERIOR -->
-      <div class="terminal-cli-panel">
-        <div class="cli-line"><span class="user-host">romario@jarv-quantum:~#</span> status: <span id="jarvStatus">Awaiting Authentication</span></div>
-        <div class="cli-line"><span class="user-host">romario@jarv-quantum:~#</span> <span class="blinking-cursor">_</span></div>
-      </div>
-
-      <!-- BARRA DE FERRAMENTAS E INPUT -->
-      <div class="input-section">
-        <div class="action-toolbar">
-          <button class="tool-btn" title="Câmera"><i class="fa-solid fa-camera"></i></button>
-          <button class="tool-btn" title="Imagem"><i class="fa-solid fa-image"></i></button>
-          <button class="tool-btn" title="Anexo"><i class="fa-solid fa-paperclip"></i></button>
-          <button class="tool-btn" title="Voz (Falar)"><i class="fa-solid fa-microphone"></i></button>
-          <button class="tool-btn" title="Buscar Web"><i class="fa-solid fa-magnifying-glass"></i></button>
-          <button class="tool-btn" title="Configurações" onclick="openSettingsModal()"><i class="fa-solid fa-gear"></i></button>
-        </div>
-        <div class="input-wrapper">
-          <input type="text" id="chatInput" placeholder="Digite um comando (ou !wiki termo)..." onkeydown="if(event.key==='Enter') sendMsg()">
-          <button class="btn-send" onclick="sendMsg()" data-i18n="btn_send">ENVIAR</button>
-        </div>
-      </div>
-    </main>
-
-  </div>
-
-  <!-- MODAL DE CONFIGURAÇÕES -->
-  <div id="settingsModal" class="modal-overlay" style="display: none;">
-    <div class="modal-card modal-settings">
-      <div class="modal-header">
-        <h3>Painel de Configurações</h3>
-        <button class="btn-close-modal" onclick="closeSettingsModal()">&times;</button>
-      </div>
-      <div class="setting-group">
-        <label for="languageSelect"><i class="fa-solid fa-language"></i> Idioma do Sistema:</label>
-        <select id="languageSelect" onchange="changeLanguage(this.value)">
-          <option value="pt-BR">Português (Brasil)</option>
-          <option value="en-US">English (US)</option>
-          <option value="es-ES">Español</option>
-        </select>
-      </div>
-      <div class="setting-group">
-        <label for="modelSelect"><i class="fa-solid fa-brain"></i> Modelo de Inteligência Artificial:</label>
-        <select id="modelSelect">
-          <option value="openai/gpt-oss-120b">GPT-OSS 120B — Principal / Raciocínio[span_2](start_span)[span_2](end_span)</option>
-          <option value="openai/gpt-oss-20b">GPT-OSS 20B — Rápido / Econômico[span_3](start_span)[span_3](end_span)</option>
-        </select>
-      </div>
-      <div class="setting-group">
-        <label><i class="fa-solid fa-volume-high"></i> Resposta Falada (J.A.R.V.I.S. Voice):</label>
-        <div class="toggle-wrapper">
-          <input type="checkbox" id="voiceToggle" checked onchange="toggleTTS(this.checked)">
-          <span>Ativar síntese de voz automática</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL DE LOGIN -->
-  <div id="loginModal" class="modal-overlay" style="display: none;">
-    <div class="modal-card" style="text-align: center;">
-      <div class="modal-logo"><i class="fa-solid fa-microchip"></i></div>
-      <h2>JARV.IA</h2>
-      <p class="subtitle">v3.0 Quantum & Wiki Edition</p>
-      <button id="loginBtn" class="btn-google-login" onclick="signInWithGoogle()">
-        <i class="fa-brands fa-google"></i> Sign in with Google
-      </button>
-    </div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="js/app.js"></script>
+    <script src="js/jarv-core.js"></script>
 </body>
 </html>
