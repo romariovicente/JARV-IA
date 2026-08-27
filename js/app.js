@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Injeção dos Módulos Médicos e de Saúde na Sidebar  
+  // Injeção dos Módulos Médicos e Botão de API Key na Sidebar  
   setTimeout(() => {  
     const sidebar = document.querySelector('.jarv-sidebar') || document.body;
     const existingMenu = document.getElementById('healthModulesContainer');
@@ -122,7 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <button onclick="openHealthSearchModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> <span id="lblHealthSearch">Pesquisa Especializada</span></button>
         <button onclick="openNursingRecordModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-file-medical"></i> <span id="lblNursingRecord">Prontuário Enfermagem</span></button>
         <button onclick="openAnatomyAtlasModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-brain"></i> <span id="lblAnatomy">Atlas de Anatomia</span></button>
-        <button onclick="openDictionariesModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:2px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> <span id="lblDictionaries">Dicionários Técnicos</span></button>
+        <button onclick="openDictionariesModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> <span id="lblDictionaries">Dicionários Técnicos</span></button>
+        <button onclick="openApiKeyModal()" style="width:100%; background:#21262d; border:1px solid #ffcc00; color:#ffcc00; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;"><i class="fa-solid fa-key"></i> 🔑 Configurar Chave API</button>
       `;
       const historyList = document.getElementById('chatHistoryList');
       if (historyList && historyList.parentNode) {
@@ -188,6 +189,48 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();  
   setupToolbarButtons();  
 });  
+
+// --- MODAL DE CONFIGURAÇÃO DE CHAVE DE API ---
+function openApiKeyModal(errorMessage = "") {
+  let modal = document.getElementById('apiKeyConfigModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'apiKeyConfigModal';
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
+    document.body.appendChild(modal);
+  }
+  
+  const currentKey = localStorage.getItem('jarv_groq_key') || '';
+  modal.innerHTML = `
+    <div style="background: #0d1117; border: 1px solid #ffcc00; width: 100%; max-width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(255,204,0,0.3); color: #fff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 1rem; color: #ffcc00;"><i class="fa-solid fa-key"></i> CONFIGURAÇÃO DE CHAVE GROQ</h3>
+        <button onclick="document.getElementById('apiKeyConfigModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
+      </div>
+      ${errorMessage ? `<div style="background:rgba(255,0,0,0.2); border:1px solid #ff4444; color:#ff6666; padding:8px; border-radius:4px; font-size:0.75rem; margin-bottom:12px;">${errorMessage}</div>` : ''}
+      <p style="font-size: 0.8rem; color: #c9d1d9; margin-bottom: 10px;">Cole abaixo a sua Chave de API da Groq (começa com <code>gsk_</code>):</p>
+      <input type="password" id="groqKeyInput" value="${currentKey}" placeholder="gsk_..." style="width:100%; background:#161b22; border:1px solid #30363d; color:#00ffcc; padding:10px; border-radius:4px; font-family:monospace; margin-bottom:15px; font-size:0.85rem;" />
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <a href="https://console.groq.com/keys" target="_blank" style="color:#00ffcc; font-size:0.75rem;">Obter chave gratuita na Groq ↗</a>
+        <button onclick="saveApiKeyFromModal()" style="background:#ffcc00; color:#000; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer; font-family:monospace;">SALVAR CHAVE</button>
+      </div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+}
+
+function saveApiKeyFromModal() {
+  const input = document.getElementById('groqKeyInput');
+  if (input && input.value.trim()) {
+    const newKey = input.value.trim();
+    localStorage.setItem('jarv_groq_key', newKey);
+    document.getElementById('apiKeyConfigModal').style.display = 'none';
+    speakJARVIS("Nova chave de API salva com sucesso.");
+    appendMessage("Chave de API atualizada com sucesso no navegador.", "system", false);
+  } else {
+    alert("Por favor, insira uma chave válida da Groq.");
+  }
+}
 
 function injectLanguageAndCountrySelectors() {
   const sidebar = document.querySelector('.jarv-sidebar') || document.body;
@@ -512,6 +555,13 @@ function speakJARVIS(text) {
 async function sendMsg() {  
   const text = chatInput.value.trim();  
   if (!text && !attachedImageBase64) return;  
+  
+  let currentApiKey = localStorage.getItem('jarv_groq_key');  
+  if (!currentApiKey) {  
+    openApiKeyModal("Nenhuma Chave API encontrada. Insira uma chave para continuar.");  
+    return;  
+  }  
+
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
   
@@ -533,7 +583,7 @@ async function sendMsg() {
       method: "POST",  
       headers: {  
         "Content-Type": "application/json",  
-        "Authorization": "Bearer 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"  
+        "Authorization": `Bearer ${currentApiKey}`  
       },  
       body: JSON.stringify({  
         model: ULTRA_FAST_MODEL,  
@@ -549,12 +599,22 @@ async function sendMsg() {
   
     const data = await response.json();  
     setOrbState(false);  
+
+    // TRATAMENTO DE CHAVE REVOGADA OU INVÁLIDA (ERRO 401 OU MODEL NOT FOUND)
+    if (data.error) {
+      if (data.error.code === 'model_not_found' || data.error.type === 'invalid_request_error' || response.status === 401) {
+        openApiKeyModal("⚠️ A Chave API configurada expirou ou foi revogada pela Groq. Insira uma nova chave.");
+        return;
+      }
+      appendMessage("Erro da API: " + data.error.message, 'system', true);
+      return;
+    }
   
     let botResponse = "";  
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {  
       botResponse = data.choices[0].message.content;  
     } else {  
-      botResponse = "Retorno bruto da API: " + JSON.stringify(data);  
+      botResponse = "Retorno inesperado da API: " + JSON.stringify(data);  
     }  
   
     appendMessage(botResponse, 'bot', true);  
@@ -641,7 +701,7 @@ function setupToolbarButtons() {
 }  
 
 // ==============================================================================
-// 1. MÓDULOS DE SAÚDE E ENFERMAGEM (MODAIS)
+// MÓDULOS DE SAÚDE, ENFERMAGEM E SEGURANÇA
 // ==============================================================================
 function openHealthSearchModal() {
   let modal = document.getElementById('healthSearchModal');
@@ -699,9 +759,6 @@ function openDictionariesModal() {
   }
 }
 
-// ==============================================================================
-// 2. MÓDULOS CIBERNÉTICOS & SEGURANÇA (MODAIS)
-// ==============================================================================
 function openCyberAcademyModal() {
   alert("J.A.R.V.I.S. Academia Hacker - Módulo de treinamento e laboratórios ativos.");
 }
@@ -729,9 +786,6 @@ function openCyberMapModal() {
   }
 }
 
-// ==============================================================================
-// 3. UTILITÁRIOS E FORMATAÇÃO DE TEXTO
-// ==============================================================================
 function escapeHTML(str) {
   if (!str) return "";
   return str
