@@ -20,13 +20,13 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Lista de Modelos para Teste Automático (Fallback)
+// Endpoint do Worker na Cloudflare e Lista Atualizada de Modelos para Teste Automático (Fallback)
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
 const MODEL_FALLBACK_LIST = [
-  'llama-3.1-8b-instant',
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-120b',
   'llama-3.3-70b-versatile',
-  'llama-3.1-70b-versatile',
-  'llama3-8b-8192'
+  'llama-3.1-8b-instant'
 ];
 let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
