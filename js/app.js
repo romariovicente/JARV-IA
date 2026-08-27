@@ -16,7 +16,7 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// MODELO ATUALIZADO (O anterior foi desligado pela Groq)  
+// MODELO ATUALIZADO  
 const ULTRA_FAST_MODEL = 'llama-3.1-70b-versatile';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loginModal) loginModal.style.display = "none";  
         if (logoutBtn) logoutBtn.style.display = "flex";  
       } else {  
-        if (userNameEl) userNameEl.textContent = "Operador";  
+        if (userNameEl) userNameEl.textContent = "Romário";  
         if (statusEl) statusEl.textContent = "Modo Operacional - J.A.R.V.I.S. Ativo";  
         if (loginModal) loginModal.style.display = "flex";  
         if (logoutBtn) logoutBtn.style.display = "none";  
@@ -82,12 +82,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();  
   setupToolbarButtons();  
   
-  // FIX: Força os botões de "Nova Conversa" e "Lixeira" a executarem a limpeza  
+  // Garante eventos de limpeza e nova conversa  
   document.querySelectorAll('button, a, div').forEach(el => {  
     const txt = (el.textContent || '').toLowerCase();  
     const html = (el.innerHTML || '').toLowerCase();  
-      
-    // Se o elemento for o botão de nova conversa ou o ícone de lixeira  
     if (txt.includes('nova conversa') || html.includes('fa-trash') || html.includes('lixeira') || html.includes('trash')) {  
       el.addEventListener('click', (e) => {  
         e.preventDefault();  
@@ -97,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }  
   });  
   
-  // Garantia extra para ícones avulsos  
   document.querySelectorAll('.fa-trash, i[class*="trash"], svg').forEach(icon => {  
     icon.addEventListener('click', (e) => {  
       e.preventDefault();  
@@ -108,17 +105,14 @@ document.addEventListener("DOMContentLoaded", () => {
 });  
   
 function resetSystem() {  
-  chatsStore = {}; // Zera as conversas  
-  localStorage.removeItem('jarv_chats_v2'); // Remove do cache  
-  localStorage.removeItem('jarv_active_chat'); // Remove ID atual  
+  chatsStore = {};  
+  localStorage.removeItem('jarv_chats_v2');  
+  localStorage.removeItem('jarv_active_chat');  
   activeChatId = null;  
-    
-  if (msgArea) msgArea.innerHTML = ''; // Limpa a tela  
-    
+  if (msgArea) msgArea.innerHTML = '';  
   const historyList = document.getElementById('chatHistoryList');  
-  if (historyList) historyList.innerHTML = ''; // Limpa a barra lateral  
-    
-  createNewChat(true); // Reinicia zerado  
+  if (historyList) historyList.innerHTML = '';  
+  createNewChat(true);  
 }  
   
 function injectJarvisOrbStyles() {  
@@ -145,7 +139,7 @@ function injectJarvisOrbStyles() {
 }  
   
 function createJarvisOrbElement() {  
-  const sidebar = document.querySelector('.sidebar') || document.body;  
+  const sidebar = document.querySelector('.jarv-sidebar') || document.body;  
   if (document.getElementById('jarvisOrbWidget')) return;  
   const container = document.createElement('div');  
   container.id = 'jarvisOrbWidget';  
@@ -167,7 +161,7 @@ function createJarvisOrbElement() {
 }  
   
 function injectContinuousVoiceButton() {  
-  const sidebar = document.querySelector('.sidebar') || document.body;  
+  const sidebar = document.querySelector('.jarv-sidebar') || document.body;  
   const orbWidget = document.getElementById('jarvisOrbWidget');  
   if (document.getElementById('continuousVoiceBtn')) return;  
   const btn = document.createElement('button');  
@@ -294,7 +288,7 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';  
   const chat = chatsStore[id];  
   if (!chat || !chat.messages || chat.messages.length === 0) {  
-    appendMessage("J.A.R.V.I.S. Operacional. Camada de Conhecimento Ativa.", 'system', false);  
+    appendMessage("J.A.R.V.I.S. Operacional. Núcleo de IA e banco de dados Kali Tools ativos.", 'system', false);  
     return;  
   }  
   chat.messages.forEach(msg => {  
@@ -394,7 +388,10 @@ async function sendMsg() {
       body: JSON.stringify({  
         model: ULTRA_FAST_MODEL,  
         messages: [  
-          { role: "system", content: "Você é o J.A.R.V.I.S., assistente holográfico avançado. Responda diretamente e de forma completa." },  
+          {   
+            role: "system",   
+            content: "Você é o J.A.R.V.I.S., a inteligência artificial avançada de Tony Stark no MCU. A bola pulsante laranja/amarelada na interface é seu núcleo holográfico, que oscila e brilha conforme a frequência da voz. Você gerencia o controle residencial e de laboratório (automations, mansão, projetos tecnológicos), suporte em combate e armaduras (piloto automático, cálculos de trajetória, monitoramento ambiental), e monitoramento de saúde e análise de dados (sinais vitais, reconstrução forense). Você também opera integrado ao ambiente Kali Linux, conhecendo suas categorias e ferramentas de pentest (Nmap, theHarvester, Burp Suite, SQLmap, Metasploit, Hydra, John the Ripper, Hashcat, Aircrack-ng, Wireshark, Autopsy). Responda sempre diretamente, de forma completa e com tom profissional e tecnológico."   
+          },  
           { role: "user", content: text }  
         ]  
       })  
@@ -503,7 +500,6 @@ function formatMarkdown(text) {
   let formatted = escapeHTML(text);  
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');  
   formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');  
-  formatted = formatted.replace(/
-/g, '<br>');  
+  formatted = formatted.replace(/\n/g, '<br>');  
   return formatted;  
 }
