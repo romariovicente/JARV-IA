@@ -20,9 +20,9 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Modelo Ajustado para uma versão ativa
+// Endpoint do Worker na Cloudflare e Modelo Ajustado para o padrão universal da Groq
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
-const ULTRA_FAST_MODEL = 'llama-3.3-70b-versatile';  
+const ULTRA_FAST_MODEL = 'llama3-8b-8192';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
@@ -101,7 +101,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initAudioAnalyzer();  
   applyLanguageTranslations();
   
-  // Limpeza de histórico
   const clearChatBtn = document.querySelector('.btn-clear-chat');
   if (clearChatBtn) {
     clearChatBtn.onclick = () => {
@@ -114,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Injeção dos Módulos Médicos na Sidebar  
   setTimeout(() => {  
     const sidebar = document.querySelector('.jarv-sidebar') || document.body;
     const existingMenu = document.getElementById('healthModulesContainer');
@@ -521,7 +519,6 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
   
-  // Tratamento para requisições direcionadas à Higgsfield AI via Chat
   if (lowerText.startsWith("higgsfield:") || lowerText.startsWith("gerar vídeo")) {
     const cleanPrompt = text.replace(/^(higgsfield:|gerar vídeo\s*)/i, "").trim();
     appendCustomMessage(escapeHTML(text), 'user', true);
@@ -559,7 +556,6 @@ async function sendMsg() {
     }
   }
 
-  // Geração de imagens via Pollinations (Atlas)
   if (lowerText.startsWith("gere uma imagem") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem") || lowerText.startsWith("atlas") || lowerText.startsWith("anatomia")) {  
     const promptImg = text.replace(/^(gere|gerar|criar|atlas|anatomia)\s+(uma\s+)?(image\s+of\s+|imagem\s+(de\s+)?)?/i, '').trim();  
     appendCustomMessage(escapeHTML(text), 'user', true);  
@@ -687,7 +683,6 @@ function formatMarkdown(text) {
   return formatted;
 }
 
-// Configuração e Injeção dos Inputs de Arquivo e Imagem
 function setupFileUploads() {
   if (!document.getElementById('hiddenImageInput')) {
     const imgInput = document.createElement('input');
@@ -729,7 +724,6 @@ function setupFileUploads() {
   });
 }
 
-// Configuração das Ações dos Botões da Barra Inferior
 function setupToolbarButtons() {
   const btnCamera = document.getElementById('btnCamera');
   const btnAttachment = document.getElementById('btnAttachment');
@@ -757,7 +751,6 @@ function setupToolbarButtons() {
   }
 }
 
-// Solicitação de Acesso à Câmera e Streaming
 function startCameraCapture() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     alert("Seu navegador não suporta acesso direto à câmera. Abrindo galeria de mídia...");
@@ -775,7 +768,6 @@ function startCameraCapture() {
     });
 }
 
-// Modal de Captura com Opção de Galeria Integrada
 function createCameraPreviewModal(stream) {
   let modal = document.getElementById('jarvisCamModal');
   if (modal) modal.remove();
@@ -811,7 +803,7 @@ function createCameraPreviewModal(stream) {
     attachedImageBase64 = canvas.toDataURL('image/png');
     appendMessage("📸 Foto capturada com sucesso!", "system", false);
     
-    stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().execute ? stream.getTracks().forEach(t => t.stop()) : stream.getTracks().forEach(track => track.stop());
     modal.remove();
   };
 
@@ -827,7 +819,6 @@ function createCameraPreviewModal(stream) {
   };
 }
 
-// Funções de Ação dos Módulos da Sidebar
 function openHealthSearchModal() { appendMessage("Módulo de Pesquisa Especializada em Saúde acionado.", "system", false); }
 function openNursingRecordModal() { appendMessage("Módulo de Prontuário de Enfermagem acionado.", "system", false); }
 function openAnatomyAtlasModal() { appendMessage("Módulo de Atlas de Anatomia acionado.", "system", false); }
