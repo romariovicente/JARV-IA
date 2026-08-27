@@ -482,7 +482,14 @@ function speakJARVIS(text) {
   isJarvisSpeaking = true;  
   if (recognition && isContinuousActive) { try { recognition.stop(); } catch(e) {} }  
   
-  const cleanText = text.replace(/[*_#`\[\]]/g, '');  
+  // Limpeza avançada: remove traços decorativos (---), pipes de tabelas (|) e marcações visuais
+  let cleanText = text
+    .replace(/[-]{3,}/g, ' ')
+    .replace(/[|]/g, ' ')
+    .replace(/[*_#`\[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];  
   let currentSegment = 0;  
     
@@ -580,7 +587,6 @@ async function sendMsg() {
   appendCustomHtml(userDisplayMsg, 'user', true);  
   setOrbState(true);  
   
-  // SISTEMA DE TENTATIVA AUTOMÁTICA EM CADEIA (FALLBACK DE MODELOS)
   let data = null;
   let success = false;
 
@@ -606,7 +612,7 @@ async function sendMsg() {
 
       if (!data.error) {
         success = true;
-        break; // Modelo funcionou perfeitamente, sai do loop!
+        break;
       } else {
         console.warn(`Modelo ${currentModelToTest} falhou. Tentando próximo da lista...`);
       }
