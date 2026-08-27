@@ -542,7 +542,6 @@ async function sendMsg() {
         "Content-Type": "application/json"  
       },  
       body: JSON.stringify({  
-        prompt: text || "Analise o anexo fornecido.",
         model: ULTRA_FAST_MODEL,  
         messages: [  
           {   
