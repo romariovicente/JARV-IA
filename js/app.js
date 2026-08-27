@@ -16,7 +16,8 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Modelo ativo e estável da Groq
+// Endpoint do Worker na Cloudflare e Modelo da Groq
+const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
 const ULTRA_FAST_MODEL = 'llama-3.1-8b-instant';  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
@@ -109,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Injeção dos Módulos Médicos e Botão de API Key na Sidebar  
+  // Injeção dos Módulos Médicos na Sidebar  
   setTimeout(() => {  
     const sidebar = document.querySelector('.jarv-sidebar') || document.body;
     const existingMenu = document.getElementById('healthModulesContainer');
@@ -123,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <button onclick="openNursingRecordModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-file-medical"></i> <span id="lblNursingRecord">Prontuário Enfermagem</span></button>
         <button onclick="openAnatomyAtlasModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-brain"></i> <span id="lblAnatomy">Atlas de Anatomia</span></button>
         <button onclick="openDictionariesModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> <span id="lblDictionaries">Dicionários Técnicos</span></button>
-        <button onclick="openApiKeyModal()" style="width:100%; background:#21262d; border:1px solid #ffcc00; color:#ffcc00; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;"><i class="fa-solid fa-key"></i> 🔑 Configurar Chave API</button>
       `;
       const historyList = document.getElementById('chatHistoryList');
       if (historyList && historyList.parentNode) {
@@ -189,48 +189,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploads();  
   setupToolbarButtons();  
 });  
-
-// --- MODAL DE CONFIGURAÇÃO DE CHAVE DE API ---
-function openApiKeyModal(errorMessage = "") {
-  let modal = document.getElementById('apiKeyConfigModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'apiKeyConfigModal';
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
-    document.body.appendChild(modal);
-  }
-  
-  const currentKey = localStorage.getItem('jarv_groq_key') || '';
-  modal.innerHTML = `
-    <div style="background: #0d1117; border: 1px solid #ffcc00; width: 100%; max-width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(255,204,0,0.3); color: #fff;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
-        <h3 style="margin: 0; font-size: 1rem; color: #ffcc00;"><i class="fa-solid fa-key"></i> CONFIGURAÇÃO DE CHAVE GROQ</h3>
-        <button onclick="document.getElementById('apiKeyConfigModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
-      </div>
-      ${errorMessage ? `<div style="background:rgba(255,0,0,0.2); border:1px solid #ff4444; color:#ff6666; padding:8px; border-radius:4px; font-size:0.75rem; margin-bottom:12px;">${errorMessage}</div>` : ''}
-      <p style="font-size: 0.8rem; color: #c9d1d9; margin-bottom: 10px;">Cole abaixo a sua Chave de API da Groq (começa com <code>gsk_</code>):</p>
-      <input type="password" id="groqKeyInput" value="${currentKey}" placeholder="gsk_..." style="width:100%; background:#161b22; border:1px solid #30363d; color:#00ffcc; padding:10px; border-radius:4px; font-family:monospace; margin-bottom:15px; font-size:0.85rem;" />
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <a href="https://console.groq.com/keys" target="_blank" style="color:#00ffcc; font-size:0.75rem;">Obter chave gratuita na Groq ↗</a>
-        <button onclick="saveApiKeyFromModal()" style="background:#ffcc00; color:#000; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer; font-family:monospace;">SALVAR CHAVE</button>
-      </div>
-    </div>
-  `;
-  modal.style.display = 'flex';
-}
-
-function saveApiKeyFromModal() {
-  const input = document.getElementById('groqKeyInput');
-  if (input && input.value.trim()) {
-    const newKey = input.value.trim();
-    localStorage.setItem('jarv_groq_key', newKey);
-    document.getElementById('apiKeyConfigModal').style.display = 'none';
-    speakJARVIS("Nova chave de API salva com sucesso.");
-    appendMessage("Chave de API atualizada com sucesso no navegador.", "system", false);
-  } else {
-    alert("Por favor, insira uma chave válida da Groq.");
-  }
-}
 
 function injectLanguageAndCountrySelectors() {
   const sidebar = document.querySelector('.jarv-sidebar') || document.body;
@@ -555,12 +513,6 @@ function speakJARVIS(text) {
 async function sendMsg() {  
   const text = chatInput.value.trim();  
   if (!text && !attachedImageBase64) return;  
-  
-  let currentApiKey = localStorage.getItem('jarv_groq_key');  
-  if (!currentApiKey) {  
-    openApiKeyModal("Nenhuma Chave API encontrada. Insira uma chave para continuar.");  
-    return;  
-  }  
 
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
@@ -579,11 +531,11 @@ async function sendMsg() {
   setOrbState(true);  
   
   try {  
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {  
+    // Requisição direcionada ao proxy seguro no Cloudflare Worker
+    const response = await fetch(WORKER_URL, {  
       method: "POST",  
       headers: {  
-        "Content-Type": "application/json",  
-        "Authorization": `Bearer ${currentApiKey}`  
+        "Content-Type": "application/json"  
       },  
       body: JSON.stringify({  
         model: ULTRA_FAST_MODEL,  
@@ -600,13 +552,8 @@ async function sendMsg() {
     const data = await response.json();  
     setOrbState(false);  
 
-    // TRATAMENTO DE CHAVE REVOGADA OU INVÁLIDA (ERRO 401 OU MODEL NOT FOUND)
     if (data.error) {
-      if (data.error.code === 'model_not_found' || data.error.type === 'invalid_request_error' || response.status === 401) {
-        openApiKeyModal("⚠️ A Chave API configurada expirou ou foi revogada pela Groq. Insira uma nova chave.");
-        return;
-      }
-      appendMessage("Erro da API: " + data.error.message, 'system', true);
+      appendMessage("Erro na API: " + (data.error.message || JSON.stringify(data.error)), 'system', true);
       return;
     }
   
@@ -650,158 +597,67 @@ function appendMessage(text, type, save = true) {
   
 function appendCustomHtml(htmlContent, type, save = true) {  
   const msgDiv = document.createElement('div');  
-  msgDiv.className = 'jarv-msg jarv-msg-bot';  
-  msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${htmlContent}`;  
+  if (type === 'user') {  
+    msgDiv.className = 'jarv-msg jarv-msg-user';  
+    msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${htmlContent}`;  
+  } else if (type === 'bot') {  
+    msgDiv.className = 'jarv-msg jarv-msg-bot';  
+    msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${htmlContent}`;  
+  } else {  
+    msgDiv.className = 'jarv-msg jarv-msg-system';  
+    msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${htmlContent}`;  
+  }  
   msgArea.appendChild(msgDiv);  
   msgArea.scrollTop = msgArea.scrollHeight;  
+  
   if (save && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ type: 'bot', content: htmlContent });  
+    chatsStore[activeChatId].messages.push({ type, content: htmlContent });  
     saveStore();  
   }  
-}  
-  
-function appendCustomMessage(htmlContent, type, save = true) {  
-  const msgDiv = document.createElement('div');  
-  msgDiv.className = 'jarv-msg jarv-msg-user';  
-  msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${htmlContent}`;  
-  msgArea.appendChild(msgDiv);  
-  msgArea.scrollTop = msgArea.scrollHeight;  
-  if (save && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ type: 'user', content: htmlContent });  
-    saveStore();  
-  }  
-}  
-  
-function setupFileUploads() {  
-  hiddenImageInput = document.createElement('input');  
-  hiddenImageInput.type = 'file'; hiddenImageInput.accept = 'image/*'; hiddenImageInput.style.display = 'none';  
-  document.body.appendChild(hiddenImageInput);  
-  hiddenImageInput.addEventListener('change', (e) => {  
-    const file = e.target.files[0];  
-    if (file) {  
-      const reader = new FileReader();  
-      reader.onload = (ev) => { attachedImageBase64 = ev.target.result; appendMessage(`Imagem carregada: ${file.name}`, 'system', false); };  
-      reader.readAsDataURL(file);  
-    }  
-  });  
-  hiddenFileInput = document.createElement('input');  
-  hiddenFileInput.type = 'file'; hiddenFileInput.style.display = 'none';  
-  document.body.appendChild(hiddenFileInput);  
-}  
-  
-function setupToolbarButtons() {  
-  document.querySelectorAll('.action-toolbar button').forEach(btn => {  
-    const title = btn.getAttribute('title') || '';  
-    if (title.includes('Câmera') || title.includes('Imagem')) btn.onclick = () => hiddenImageInput.click();  
-    else if (title.includes('Anexo')) btn.onclick = () => hiddenFileInput.click();  
-    else if (title.includes('Voz')) btn.onclick = () => {  
-      if (!isContinuousActive) toggleContinuousListening();  
-    };  
-  });  
-}  
-
-// ==============================================================================
-// MÓDULOS DE SAÚDE, ENFERMAGEM E SEGURANÇA
-// ==============================================================================
-function openHealthSearchModal() {
-  let modal = document.getElementById('healthSearchModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'healthSearchModal';
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 20px;`;
-    modal.innerHTML = `
-      <div style="background: #0d1117; border: 1px solid #00ffcc; width: 100%; max-width: 550px; padding: 20px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,255,204,0.4); color: #00ffcc;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-stethoscope"></i> PESQUISA ESPECIALIZADA EM SAÚDE</h3>
-          <button onclick="document.getElementById('healthSearchModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X]</button>
-        </div>
-        <p style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">Selecione o nível profissional para direcionar a pesquisa técnica baseada nas normas vigentes de <strong>${selectedHealthCountry}</strong>:</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
-          <button onclick="triggerHealthSearch('Médico')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">🩺 Médico / Clínico</button>
-          <button onclick="triggerHealthSearch('Enfermeiro')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">💉 Enfermeiro (Nível Superior)</button>
-          <button onclick="triggerHealthSearch('Técnico em Enfermagem')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">🩹 Técnico em Enfermagem</button>
-          <button onclick="triggerHealthSearch('Auxiliar de Enfermagem')" style="background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:8px; border-radius:4px; font-family:monospace; cursor:pointer;">📋 Auxiliar de Enfermagem</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.style.display = 'flex';
-  }
 }
 
-function triggerHealthSearch(role) {
-  document.getElementById('healthSearchModal').style.display = 'none';
-  if (chatInput) {
-    chatInput.value = `[Pesquisa para ${role}] Forneça um guia de condutas e protocolos atualizados segundo as diretrizes do país (${selectedHealthCountry}): `;
-    chatInput.focus();
-  }
-}
-
-function openNursingRecordModal() {
-  if (chatInput) {
-    chatInput.value = `[Transcrição de Prontuário] Converta a seguinte anotação de enfermagem usando as siglas oficiais e o padrão do COFEN/normas do país (${selectedHealthCountry}): `;
-    chatInput.focus();
-  }
-}
-
-function openAnatomyAtlasModal() {
-  if (chatInput) {
-    chatInput.value = `Atlas anatomia do coração humano com sistema circulatório detalhado`;
-    sendMsg();
-  }
-}
-
-function openDictionariesModal() {
-  if (chatInput) {
-    chatInput.value = `[Dicionário Médico/Enfermagem] Liste os termos técnicos mais utilizados na UTI com seus respetivos significados e sinônimos segundo a norma de (${selectedHealthCountry}).`;
-    chatInput.focus();
-  }
-}
-
-function openCyberAcademyModal() {
-  alert("J.A.R.V.I.S. Academia Hacker - Módulo de treinamento e laboratórios ativos.");
-}
-
-function openKaliToolsModal() {
-  alert("J.A.R.V.I.S. Kali Tools - Utilitários de análise de rede e pentest carregados.");
-}
-
-function openCyberMapModal() {
-  let modal = document.getElementById('cyberMapModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'cyberMapModal';
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; font-family: monospace; padding: 10px;`;
-    modal.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #0d1117; border-bottom: 1px solid #00ffcc; color: #00ffcc;">
-        <span style="font-weight: bold;"><i class="fa-solid fa-globe"></i> KASPERSKY CYBERTHREAD REAL-TIME MAP</span>
-        <button onclick="document.getElementById('cyberMapModal').style.display='none'" style="background:none; border:none; color:#ff5555; font-size: 1.2rem; cursor:pointer;">[X FECHAR]</button>
-      </div>
-      <iframe src="https://cybermap.kaspersky.com/en/widget/dynamic/dark" style="width: 100%; height: 100%; border: none;"></iframe>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.style.display = 'flex';
-  }
+function appendCustomMessage(text, type, save = true) {
+  appendMessage(text, type, save);
 }
 
 function escapeHTML(str) {
-  if (!str) return "";
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
 }
 
 function formatMarkdown(text) {
-  if (!text) return "";
+  if (!text) return '';
   let formatted = escapeHTML(text);
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #161b22; color: #00ffcc; padding: 2px 4px; border-radius: 4px;">$1</code>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code style="background:#161b22; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>');
   formatted = formatted.replace(/\n/g, '<br>');
   return formatted;
 }
+
+function setupFileUploads() {
+  hiddenFileInput = document.getElementById('hiddenFileInput');
+  hiddenImageInput = document.getElementById('hiddenImageInput');
+}
+
+function setupToolbarButtons() {
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMsg();
+      }
+    });
+  }
+}
+
+// Funções de Ação dos Módulos da Sidebar
+function openHealthSearchModal() { appendMessage("Módulo de Pesquisa Especializada em Saúde acionado.", "system", false); }
+function openNursingRecordModal() { appendMessage("Módulo de Prontuário de Enfermagem acionado.", "system", false); }
+function openAnatomyAtlasModal() { appendMessage("Módulo de Atlas de Anatomia acionado.", "system", false); }
+function openDictionariesModal() { appendMessage("Módulo de Dicionários Técnicos acionado.", "system", false); }
+function openCyberAcademyModal() { appendMessage("Módulo Academia Hacker acionado.", "system", false); }
+function openKaliToolsModal() { appendMessage("Módulo Kali Tools acionado.", "system", false); }
+function openCyberMapModal() { appendMessage("Módulo Globo de Ciberameaças acionado.", "system", false); }
