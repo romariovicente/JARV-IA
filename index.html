@@ -44,12 +44,12 @@
     <aside class="jarv-sidebar">
       <div class="history-label">SUBSISTEMAS N2</div>
       <nav class="sidebar-nav">
-        <button class="jarv-nav-item active" onclick="switchModule('master')"><i class="fa-solid fa-brain"></i> Master Agent</button>
-        <button class="jarv-nav-item" onclick="switchModule('brain')"><i class="fa-solid fa-network-wired"></i> Segundo Cérebro</button>
-        <button class="jarv-nav-item" onclick="switchModule('gmail')"><i class="fa-solid fa-envelope"></i> Gmail Agent</button>
-        <button class="jarv-nav-item" onclick="switchModule('calendar')"><i class="fa-solid fa-calendar-days"></i> Calendar Agent</button>
-        <button class="jarv-nav-item" onclick="switchModule('airtable')"><i class="fa-solid fa-database"></i> Airtable CRM</button>
-        <button class="jarv-nav-item" onclick="switchModule('tavily')"><i class="fa-solid fa-globe"></i> Tavily Search</button>
+        <button class="jarv-nav-item active" onclick="switchModule('master', event)"><i class="fa-solid fa-brain"></i> Master Agent</button>
+        <button class="jarv-nav-item" onclick="switchModule('brain', event)"><i class="fa-solid fa-network-wired"></i> Segundo Cérebro</button>
+        <button class="jarv-nav-item" onclick="switchModule('gmail', event)"><i class="fa-solid fa-envelope"></i> Gmail Agent</button>
+        <button class="jarv-nav-item" onclick="switchModule('calendar', event)"><i class="fa-solid fa-calendar-days"></i> Calendar Agent</button>
+        <button class="jarv-nav-item" onclick="switchModule('airtable', event)"><i class="fa-solid fa-database"></i> Airtable CRM</button>
+        <button class="jarv-nav-item" onclick="switchModule('tavily', event)"><i class="fa-solid fa-globe"></i> Tavily Search</button>
       </nav>
     </aside>
 
@@ -61,7 +61,7 @@
       <div class="msg-container" id="msgArea"></div>
 
       <!-- PAINEL SECUNDÁRIO DO SEGUNDO CÉREBRO -->
-      <div id="brainModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto;">
+      <div id="brainModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
           <h3 style="color: var(--accent-cyan); margin-bottom: 10px;"><i class="fa-solid fa-book-bookmark"></i> Base de Conhecimento - Segundo Cérebro</h3>
           <input type="text" id="brainSearchInput" placeholder="Pesquisar notas, marcações ou documentações..." style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; outline: none;" oninput="filterBrainNotes()">
@@ -123,6 +123,14 @@
   <!-- SCRIPT DE CONTROLE, VOZ E COMPORTAMENTO -->
   <script>
     let userData = { name: "Romário", gender: "M" };
+    let activeModule = "master";
+
+    let brainNotes = [
+      { id: 1, title: "Diretrizes N2 - Stone e TON", category: "Suporte", desc: "Procedimentos de escalação interna, Help Fin, Salesforce, Oráculo e portais de atendimento." },
+      { id: 2, title: "Manutenção de Dispositivos Xiaomi", category: "Técnico", desc: "Comandos MTP, Unlock Tools e restrições de software para MIUI 15." },
+      { id: 3, title: "Mecânica de Exercícios e Física", category: "Estudo", desc: "Decomposição de forças em planos inclinados no Leg Press (150 kg, 45°, fórmula Px = P * sin(45°))." },
+      { id: 4, title: "Logística e Processos - Mercado Livre", category: "Carreira", desc: "Diretrizes de alinhamento para processos seletivos e operações logísticas." }
+    ];
 
     // Relógio em tempo real
     setInterval(() => {
@@ -169,7 +177,7 @@
       const saudacaoHorario = getGreetingTime();
       const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
       
-      const mensagemBoasVindas = `${saudacaoHorario}, ${tratamento} ${userData.name}. Todos os agentes especialistas estão sincronizados e operacionais. Como posso auxiliar em suas diretrizes hoje?`;
+      const mensagemBoasVindas = `${saudacaoHorario}, ${tratamento} ${userData.name}. Todos os agentes especialistas e o Segundo Cérebro estão sincronizados. Como posso auxiliar em suas diretrizes hoje?`;
       
       appendMessage("J.A.R.V.I.S.", mensagemBoasVindas);
       speakText(mensagemBoasVindas);
@@ -193,13 +201,17 @@
       }
     }
 
-    function switchModule(moduleName) {
+    function switchModule(moduleName, event) {
       document.querySelectorAll('.jarv-nav-item').forEach(btn => btn.classList.remove('active'));
-      event.currentTarget.classList.add('active');
+      if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+      }
 
+      activeModule = moduleName;
       const msgArea = document.getElementById('msgArea');
       const brainPanel = document.getElementById('brainModulePanel');
       const inputSection = document.getElementById('chatInputSection');
+      const inputField = document.getElementById('chatInput');
 
       if (moduleName === 'brain') {
         msgArea.style.display = 'none';
@@ -210,18 +222,32 @@
         brainPanel.style.display = 'none';
         msgArea.style.display = 'flex';
         inputSection.style.display = 'flex';
+
+        const placeholders = {
+          master: "Insira suas diretrizes para o Master Agent...",
+          gmail: "Digite o comando para o Gmail Agent (ex: enviar rascunho, buscar e-mails)...",
+          calendar: "Digite o evento ou consulta para o Calendar Agent...",
+          airtable: "Consulte registros ou atualize o Airtable CRM...",
+          tavily: "Insira o termo de pesquisa avançada para o Tavily Search..."
+        };
+        inputField.placeholder = placeholders[moduleName] || "Insira sua diretriz...";
       }
     }
 
-    function loadBrainNotes() {
+    function loadBrainNotes(filterQuery = "") {
       const notesList = document.getElementById('brainNotesList');
-      const sampleNotes = [
-        { title: "Diretrizes N2 - Stone e TON", category: "Suporte", desc: "Procedimentos de escalação interna, Help Fin e manuais de atendimento." },
-        { title: "Manutenção de Dispositivos Xiaomi", category: "Técnico", desc: "Comandos MTP, Unlock Tools e restrições de software para MIUI." },
-        { title: "Mecânica de Exercícios e Física", category: "Estudo", desc: "Decomposição de forças em planos inclinados (Leg Press, 150kg, 45°)." }
-      ];
+      const filtered = brainNotes.filter(n => 
+        n.title.toLowerCase().includes(filterQuery) || 
+        n.desc.toLowerCase().includes(filterQuery) || 
+        n.category.toLowerCase().includes(filterQuery)
+      );
 
-      notesList.innerHTML = sampleNotes.map(note => `
+      if (filtered.length === 0) {
+        notesList.innerHTML = `<div style="color: var(--text-muted); padding: 10px;">Nenhum registro encontrado na base de conhecimento.</div>`;
+        return;
+      }
+
+      notesList.innerHTML = filtered.map(note => `
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;">
           <strong style="color: var(--accent-cyan);">${note.title}</strong> <span style="font-size: 0.8rem; color: var(--text-muted);">[${note.category}]</span>
           <p style="color: var(--text-main); font-size: 0.9rem; margin-top: 5px;">${note.desc}</p>
@@ -231,20 +257,37 @@
 
     function filterBrainNotes() {
       const query = document.getElementById('brainSearchInput').value.toLowerCase();
+      loadBrainNotes(query);
     }
 
-    function fnGenerateJarvisResponse(text) {
-      const lower = text.toLowerCase();
+    function saveToSecondBrain(title, category, desc) {
+      const newNote = { id: Date.now(), title, category, desc };
+      brainNotes.unshift(newNote);
+    }
+
+    function fnGenerateAgentResponse(module, text) {
       const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
 
-      if (lower.includes('ajuda') || lower.includes('status')) {
-        return `Os fluxos de automação estão perfeitamente estáveis, ${tratamento}. A menos que haja alguma falha crítica de execução, prosseguiremos sem intercorrências.`;
-      } else if (lower.includes('email') || lower.includes('gmail')) {
-        return `Encaminhando solicitação para o subagente do Gmail, ${tratamento}. Os rascunhos em HTML estão sendo formatados.`;
-      } else if (lower.includes('calendário') || lower.includes('agenda')) {
-        return `Sincronizando os ajustes de fuso horário com o agente de calendário, ${tratamento}.`;
-      } else {
-        return `Diretriz "${text}" registrada com sucesso, ${tratamento}. Os nós especialistas foram acionados para processamento em segundo plano.`;
+      switch(module) {
+        case 'gmail':
+          saveToSecondBrain(`Email - ${text.substring(0, 25)}...`, "Gmail", `Comando executado: ${text}`);
+          return `Subagente do Gmail acionado com sucesso, ${tratamento}. O rascunho de e-mail foi formatado em HTML e o histórico foi arquivado no Segundo Cérebro.`;
+        
+        case 'calendar':
+          saveToSecondBrain(`Agenda - ${text.substring(0, 25)}...`, "Calendar", `Agendamento: ${text}`);
+          return `Sincronização de fuso horário concluída pelo Calendar Agent, ${tratamento}. O evento foi registrado na base de dados.`;
+        
+        case 'airtable':
+          saveToSecondBrain(`CRM - ${text.substring(0, 25)}...`, "Airtable", `Consulta/Registro CRM: ${text}`);
+          return `Airtable CRM consultado com êxito, ${tratamento}. Os parâmetros foram atualizados no repositório de conhecimento.`;
+        
+        case 'tavily':
+          saveToSecondBrain(`Pesquisa - ${text.substring(0, 25)}...`, "Tavily", `Busca web: ${text}`);
+          return `Tavily Search executou varredura profunda na web para "${text}", ${tratamento}. Os resultados relevantes já estão salvos no Segundo Cérebro.`;
+        
+        default:
+          saveToSecondBrain(`Diretriz Master - ${text.substring(0, 25)}...`, "Master", `Diretriz: ${text}`);
+          return `Diretriz "${text}" processada pelo Master Agent, ${tratamento}. Os nós especialistas foram sincronizados e o registro foi gravado no Segundo Cérebro.`;
       }
     }
 
@@ -256,7 +299,7 @@
       appendMessage(userData.name, text);
       input.value = "";
 
-      const respostaIA = fnGenerateJarvisResponse(text);
+      const respostaIA = fnGenerateAgentResponse(activeModule, text);
       appendMessage("J.A.R.V.I.S.", respostaIA);
 
       const desejaOuvir = document.getElementById('readAloudToggle')?.checked;
