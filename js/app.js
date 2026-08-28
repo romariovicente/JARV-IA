@@ -1,5 +1,5 @@
 // ==========================================
-// J.A.R.V.I.S. - Core Application Script
+// J.A.R.V.I.S. - Core Application Script v4.0
 // ==========================================
 
 // Configuração Firebase  
@@ -20,7 +20,6 @@ if (typeof firebase !== 'undefined') {
   provider = new firebase.auth.GoogleAuthProvider();  
 }  
   
-// Endpoint do Worker na Cloudflare e Lista Atualizada de Modelos para Teste Automático (Fallback)
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
 const MODEL_FALLBACK_LIST = [
   'openai/gpt-oss-20b',
@@ -33,19 +32,23 @@ localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
 let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';  
-let ttsEnabled = true;  
+
+// Voz desativada por padrão conforme solicitação (usuário escolhe quando ouvir)
+let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : false;  
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
-  
-let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, hiddenImageInput, jarvisOrb;  
-let attachedImageBase64 = null;  
+
+// Gerenciamento de Módulos Ativos (Apenas 1 por vez)
+let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'nursingRecord', 'anatomy', 'dictionary', null
+
+let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, jarvisOrb;  
+let attachedFileContent = null;  
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;  
   
 let recognition = null;  
 let isContinuousActive = false;  
 let isJarvisSpeaking = false;  
 
-// --- DICIONÁRIO MULTILÍNGUE (I18N) ---
 const translations = {
   'pt-BR': {
     academy: 'Academia Hacker',
@@ -55,11 +58,11 @@ const translations = {
     nursingRecord: 'Prontuário Enfermagem',
     anatomyAtlas: 'Atlas de Anatomia',
     medDictionaries: 'Dicionários Técnicos',
-    placeholder: 'Digite um comando, "higgsfield: [prompt]" ou selecione um módulo...',
-    status: 'Modo Operacional - Saúde & J.A.R.V.I.S. Ativo',
+    placeholder: 'Digite um comando, "ativar [módulo]" ou faça sua pesquisa...',
+    status: 'Modo Operacional - J.A.R.V.I.S. Pronto',
     voiceBtn: '🎙️ Escuta Contínua',
     activeVoice: '🔴 Escuta Ativa',
-    welcome: 'J.A.R.V.I.S. Módulo de Saúde, Multimídia e IA Ativo. Selecione uma ferramenta na barra lateral.'
+    welcome: 'J.A.R.V.I.S. inicializado. Nenhum módulo ativo. Qual módulo você deseja ativar para iniciar?'
   },
   'en-US': {
     academy: 'Hacker Academy',
@@ -69,11 +72,11 @@ const translations = {
     nursingRecord: 'Nursing Records',
     anatomyAtlas: 'Anatomy Atlas',
     medDictionaries: 'Medical Dictionaries',
-    placeholder: 'Enter a command, "higgsfield: [prompt]" or select a module...',
-    status: 'Operational Mode - Health & J.A.R.V.I.S. Active',
+    placeholder: 'Enter a command, "activate [module]" or search...',
+    status: 'Operational Mode - J.A.R.V.I.S. Ready',
     voiceBtn: '🎙️ Continuous Listening',
     activeVoice: '🔴 Active Listening',
-    welcome: 'J.A.R.V.I.S. Health & Multimedia System Active. Select a tool.'
+    welcome: 'J.A.R.V.I.S. initialized. No active module. Which module would you like to activate?'
   },
   'es-ES': {
     academy: 'Academia Hacker',
@@ -83,11 +86,11 @@ const translations = {
     nursingRecord: 'Prontuario Enfermería',
     anatomyAtlas: 'Atlas de Anatomía',
     medDictionaries: 'Diccionarios Médicos',
-    placeholder: 'Escribe un comando, "higgsfield: [prompt]" o selecciona un módulo...',
-    status: 'Modo Operacional - Salud y J.A.R.V.I.S. Activo',
+    placeholder: 'Escribe un comando, "activar [módulo]" o busca...',
+    status: 'Modo Operacional - J.A.R.V.I.S. Listo',
     voiceBtn: '🎙️ Escucha Continua',
     activeVoice: '🔴 Escucha Activa',
-    welcome: 'J.A.R.V.I.S. Sistema de Salud y Multimedia Activo. Selecciona una herramienta.'
+    welcome: 'J.A.R.V.I.S. inicializado. Sin módulo activo. ¿Qué módulo deseas activar?'
   }
 };
   
@@ -101,126 +104,130 @@ document.addEventListener("DOMContentLoaded", () => {
   
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
-  injectContinuousVoiceButton();  
-  injectLanguageAndCountrySelectors();
+  injectControlPanel();
   startRealTimeClock();  
   initAudioAnalyzer();  
-  applyLanguageTranslations();
+  setupFileUploadListener();
   
   const clearChatBtn = document.querySelector('.btn-clear-chat');
   if (clearChatBtn) {
     clearChatBtn.onclick = () => {
-      if (confirm("Deseja limpar todo o histórico de sessões e reiniciar?")) {
+      if (confirm("Deseja limpar todo o histórico e reiniciar?")) {
         chatsStore = {};
         localStorage.removeItem('jarv_chats_v3');
+        activeModule = null;
         createNewChat(true);
-        speakJARVIS("Histórico de sessões limpo com sucesso.");
+        speakJARVIS("Histórico limpo. Nenhum módulo ativo.");
       }
     };
   }
 
   setTimeout(() => {  
-    const sidebar = document.querySelector('.jarv-sidebar') || document.body;
-    const existingMenu = document.getElementById('healthModulesContainer');
-    if (!existingMenu) {
-      const menuContainer = document.createElement('div');
-      menuContainer.id = 'healthModulesContainer';
-      menuContainer.style.cssText = `margin: 10px 0; padding: 5px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d;`;
-      menuContainer.innerHTML = `
-        <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; text-align: center;">🏥 Setor de Saúde & Enfermagem</div>
-        <button onclick="openHealthSearchModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> <span id="lblHealthSearch">Pesquisa Especializada</span></button>
-        <button onclick="openNursingRecordModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-file-medical"></i> <span id="lblNursingRecord">Prontuário Enfermagem</span></button>
-        <button onclick="openAnatomyAtlasModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-brain"></i> <span id="lblAnatomy">Atlas de Anatomia</span></button>
-        <button onclick="openDictionariesModal()" class="health-nav-btn" style="width:100%; background:#161b22; border:1px solid #00ffcc; color:#00ffcc; padding:6px; margin-bottom:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> <span id="lblDictionaries">Dicionários Técnicos</span></button>
-      `;
-      const historyList = document.getElementById('chatHistoryList');
-      if (historyList && historyList.parentNode) {
-        historyList.parentNode.insertBefore(menuContainer, historyList);
-      } else {
-        sidebar.appendChild(menuContainer);
-      }
-    }
-
-    const navItems = document.querySelectorAll('.jarv-nav-item');  
-    navItems.forEach((item, index) => {  
-      if (index === 0) {  
-        item.style.cursor = 'pointer';  
-        item.id = 'navAcademy';
-        item.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${translations[currentLang].academy}`;  
-        item.onclick = () => openCyberAcademyModal();  
-      }  
-      if (index === 1) {  
-        item.style.cursor = 'pointer';  
-        item.id = 'navKali';
-        item.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${translations[currentLang].kali}`;
-        item.onclick = () => openKaliToolsModal();  
-      }  
-      if (index === 2) {  
-        item.style.cursor = 'pointer';  
-        item.id = 'navGlobe';
-        item.innerHTML = `<i class="fa-solid fa-globe"></i> ${translations[currentLang].globe}`;  
-        item.onclick = () => openCyberMapModal();  
-      }  
-    });  
-  }, 1000);  
-  
-  if (auth) {  
-    auth.onAuthStateChanged((user) => {  
-      if (user) {  
-        const name = user.displayName || user.email;  
-        if (userNameEl) userNameEl.textContent = name;  
-        if (statusEl) statusEl.textContent = `Autenticado (${name}) - J.A.R.V.I.S. Ativo`;  
-        if (loginModal) loginModal.style.display = "none";  
-        if (logoutBtn) logoutBtn.style.display = "flex";  
-      } else {  
-        if (userNameEl) userNameEl.textContent = "Romário";  
-        if (statusEl) statusEl.textContent = translations[currentLang].status;  
-        if (loginModal) loginModal.style.display = "flex";  
-        if (logoutBtn) logoutBtn.style.display = "none";  
-      }  
-    });  
-  
-    const btnLogin = document.getElementById('loginBtn') || document.querySelector('.login-btn');  
-    if (btnLogin) {  
-      btnLogin.addEventListener('click', () => {  
-        auth.signInWithPopup(provider).catch(err => alert("Erro na autenticação: " + err.message));  
-      });  
-    }  
-    if (logoutBtn) {  
-      logoutBtn.addEventListener('click', () => {  
-        auth.signOut().then(() => window.location.reload()).catch(err => console.error("Erro ao deslogar:", err));  
-      });  
-    }  
-  }  
+    injectModuleSidebar();
+  }, 500);  
   
   initChatStore();  
-  setupFileUploads();  
-  setupToolbarButtons();  
 });  
 
-function injectLanguageAndCountrySelectors() {
+function injectControlPanel() {
   const sidebar = document.querySelector('.jarv-sidebar') || document.body;
-  if (document.getElementById('selectorsContainer')) return;
-  const container = document.createElement('div');
-  container.id = 'selectorsContainer';
-  container.style.cssText = `margin: 10px auto; padding: 5px; text-align: center; font-family: monospace; display: grid; grid-template-columns: 1fr; gap: 5px;`;
-  container.innerHTML = `
-    <div>
-      <label style="font-size: 0.65rem; color: #8b949e; display: block; text-align: left;">Idioma do Sistema:</label>
-      <select id="jarvLangSelect" onchange="changeSiteLanguage(this.value)" style="background: #161b22; color: #00ffff; border: 1px solid #00ffff; padding: 4px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; cursor: pointer; width: 100%;">
-        <option value="pt-BR" ${currentLang === 'pt-BR' ? 'selected' : ''}>🇧🇷 Português</option>
-        <option value="en-US" ${currentLang === 'en-US' ? 'selected' : ''}>🇺🇸 English</option>
-        <option value="es-ES" ${currentLang === 'es-ES' ? 'selected' : ''}>🇪🇸 Español</option>
-      </select>
+  if (document.getElementById('jarvControlPanel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'jarvControlPanel';
+  panel.style.cssText = `margin: 8px auto; padding: 6px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; display: flex; flex-direction: column; gap: 6px;`;
+  
+  panel.innerHTML = `
+    <div style="font-size:0.65rem; color:#8b949e; display:flex; justify-content:space-between; align-items:center;">
+      <span>CONTROLE DE VOZ:</span>
+      <span id="voiceStatusBadge" style="color:${ttsEnabled ? '#00ffcc' : '#ff5555'}">${ttsEnabled ? 'LIGADA' : 'DESLIGADA'}</span>
     </div>
-    <div>
-      <label style="font-size: 0.65rem; color: #8b949e; display: block; text-align: left; margin-top: 4px;">País (Siglas / Normas Saúde):</label>
-      <select id="jarvCountrySelect" onchange="changeHealthCountry(this.value)" style="background: #161b22; color: #00ffcc; border: 1px solid #00ffcc; padding: 4px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; cursor: pointer; width: 100%;">
-        <option value="Brasil" ${selectedHealthCountry === 'Brasil' ? 'selected' : ''}>🇧🇷 Brasil (COFEN/MS)</option>
-        <option value="Portugal" ${selectedHealthCountry === 'Portugal' ? 'selected' : ''}>🇵🇹 Portugal (OE)</option>
-        <option value="Estados Unidos" ${selectedHealthCountry === 'Estados Unidos' ? 'selected' : ''}>🇺🇸 Estados Unidos (ANA)</option>
-        <option value="Espanha" ${selectedHealthCountry === 'Espanha' ? 'selected' : ''}>🇪🇸 España</option>
-      </select>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+      <button id="toggleTtsBtn" onclick="toggleTtsMaster()" style="background:${ttsEnabled ? '#00ffcc' : '#21262d'}; color:${ttsEnabled ? '#000' : '#c9d1d9'}; border:1px solid #00ffcc; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; font-weight:bold;">
+        ${ttsEnabled ? '🔊 Voz Ativa' : '🔇 Voz Mute'}
+      </button>
+      <button onclick="stopJarvisVoice()" style="background:#21262d; color:#ff7b72; border:1px solid #ff7b72; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer;">
+        ⏹️ Pausar Fala
+      </button>
+    </div>
+    <div style="margin-top:2px;">
+      <label style="font-size:0.65rem; color:#8b949e; display:block; margin-bottom:2px;">📁 Anexar Arquivo / Slide:</label>
+      <input type="file" id="jarvFileUpload" accept=".txt,.pdf,.docx,.md,.json,.csv" style="font-size:0.65rem; color:#c9d1d9; width:100%;">
+    </div>
+  `;
+  
+  const historyList = document.getElementById('chatHistoryList');
+  if (historyList && historyList.parentNode) {
+    historyList.parentNode.insertBefore(panel, historyList);
+  } else {
+    sidebar.appendChild(panel);
+  }
+}
+
+function toggleTtsMaster() {
+  ttsEnabled = !ttsEnabled;
+  localStorage.setItem('jarv_tts_enabled', ttsEnabled);
+  const badge = document.getElementById('voiceStatusBadge');
+  const btn = document.getElementById('toggleTtsBtn');
+  if (badge) {
+    badge.textContent = ttsEnabled ? 'LIGADA' : 'DESLIGADA';
+    badge.style.color = ttsEnabled ? '#00ffcc' : '#ff5555';
+  }
+  if (btn) {
+    btn.style.background = ttsEnabled ? '#00ffcc' : '#21262d';
+    btn.style.color = ttsEnabled ? '#000' : '#c9d1d9';
+    btn.textContent = ttsEnabled ? '🔊 Voz Ativa' : '🔇 Voz Mute';
+  }
+  if (!ttsEnabled) {
+    window.speechSynthesis.cancel();
+    isJarvisSpeaking = false;
+    setOrbState(false);
+  } else {
+    speakJARVIS("Voz ativada com sucesso.");
+  }
+}
+
+function stopJarvisVoice() {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  isJarvisSpeaking = false;
+  setOrbState(false);
+}
+
+function setupFileUploadListener() {
+  setTimeout(() => {
+    const fileInput = document.getElementById('jarvFileUpload');
+    if (fileInput) {
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          attachedFileContent = event.target.result;
+          appendMessage(`Arquivo "${file.name}" carregado com sucesso na memória do J.A.R.V.I.S. O que deseja que eu faça com ele?`, 'system', true);
+          speakJARVIS(`Arquivo ${file.name} carregado.`);
+        };
+        reader.readAsText(file);
+      };
+    }
+  }, 600);
+}
+
+function injectModuleSidebar() {
+  const sidebar = document.querySelector('.jarv-sidebar') || document.body;
+  if (document.getElementById('exclusiveModulesContainer')) return;
+  const container = document.createElement('div');
+  container.id = 'exclusiveModulesContainer';
+  container.style.cssText = `margin: 8px 0; padding: 6px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
+  
+  container.innerHTML = `
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos Exclusivos</div>
+    <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
+      <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-graduation-cap"></i> Academia Hacker</button>
+      <button onclick="setModule('kali')" class="mod-btn" id="btn_mod_kali" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-shield-halved"></i> Kali Tools</button>
+      <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-globe"></i> Globo Ciberameaças</button>
+      <button onclick="setModule('dictionary')" class="mod-btn" id="btn_mod_dictionary" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> Dicionários & Sinônimos</button>
+      <button onclick="setModule('healthSearch')" class="mod-btn" id="btn_mod_healthSearch" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> Pesquisa Clínica & Saúde</button>
     </div>
   `;
   const historyList = document.getElementById('chatHistoryList');
@@ -231,49 +238,39 @@ function injectLanguageAndCountrySelectors() {
   }
 }
 
-function changeSiteLanguage(langCode) {
-  if (!translations[langCode]) return;
-  currentLang = langCode;
-  localStorage.setItem('jarv_lang', langCode);
-  applyLanguageTranslations();
-  speakJARVIS(langCode === 'en-US' ? "Language successfully changed to English." : 
-              langCode === 'es-ES' ? "Idioma cambiado a español." : 
-              "Idioma alterado para Português.");
-}
-
-function changeHealthCountry(country) {
-  selectedHealthCountry = country;
-  localStorage.setItem('jarv_health_country', country);
-  speakJARVIS(`País de normas de saúde alterado para ${country}. Prontuários e dicionários ajustados.`);
-}
-
-function applyLanguageTranslations() {
-  const t = translations[currentLang];
-  if (chatInput) chatInput.placeholder = t.placeholder;
-  if (statusEl && !auth?.currentUser) statusEl.textContent = t.status;
+function setModule(modName) {
+  activeModule = modName;
+  updateModuleButtonStyles();
   
-  const continuousBtn = document.getElementById('continuousVoiceBtn');
-  if (continuousBtn && !continuousBtn.classList.contains('active')) {
-    continuousBtn.innerHTML = t.voiceBtn;
+  let moduleTitle = "";
+  if (modName === 'academy') moduleTitle = "Academia Hacker (Laboratório de Ensino Interativo)";
+  else if (modName === 'kali') moduleTitle = "Kali Tools (Painel de Ferramentas PenTest)";
+  else if (modName === 'globe') moduleTitle = "Globo de Ciberameaças em Tempo Real";
+  else if (modName === 'dictionary') moduleTitle = "Dicionário Técnico & Sinônimos";
+  else if (modName === 'healthSearch') moduleTitle = "Pesquisa Especializada de Saúde";
+  
+  appendMessage(`[MÓDULO ATIVADO]: ${moduleTitle}. Os demais módulos foram desativados. Digite ou pergunte sobre este tema.`, 'system', true);
+  speakJARVIS(`Módulo ${moduleTitle} ativado com sucesso.`);
+}
+
+function updateModuleButtonStyles() {
+  const buttons = document.querySelectorAll('.mod-btn');
+  buttons.forEach(btn => {
+    btn.style.background = '#161b22';
+    btn.style.color = '#c9d1d9';
+    btn.style.borderColor = '#30363d';
+    btn.style.boxShadow = 'none';
+  });
+
+  if (activeModule) {
+    const activeBtn = document.getElementById(`btn_mod_${activeModule}`);
+    if (activeBtn) {
+      activeBtn.style.background = '#0d1117';
+      activeBtn.style.color = '#00ffcc';
+      activeBtn.style.borderColor = '#00ffcc';
+      activeBtn.style.boxShadow = '0 0 10px rgba(0,255,204,0.3)';
+    }
   }
-  
-  const navAcademy = document.getElementById('navAcademy');
-  if (navAcademy) navAcademy.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${t.academy}`;
-  
-  const navKali = document.getElementById('navKali');
-  if (navKali) navKali.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${t.kali}`;
-  
-  const navGlobe = document.getElementById('navGlobe');
-  if (navGlobe) navGlobe.innerHTML = `<i class="fa-solid fa-globe"></i> ${t.globe}`;
-
-  const lblHS = document.getElementById('lblHealthSearch');
-  if (lblHS) lblHS.textContent = t.healthSearch;
-  const lblNR = document.getElementById('lblNursingRecord');
-  if (lblNR) lblNR.textContent = t.nursingRecord;
-  const lblAn = document.getElementById('lblAnatomy');
-  if (lblAn) lblAn.textContent = t.anatomyAtlas;
-  const lblDict = document.getElementById('lblDictionaries');
-  if (lblDict) lblDict.textContent = t.medDictionaries;
 }
   
 function injectJarvisOrbStyles() {  
@@ -310,7 +307,7 @@ function createJarvisOrbElement() {
       <div class="ring-wave"></div><div class="ring-wave"></div><div class="ring-wave"></div>  
       <div id="visualOrb" class="jarvis-orb"></div>  
     </div>  
-    <div class="jarvis-orb-label">J.A.R.V.I.S. HEALTH</div>  
+    <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>  
   `;  
   const historyList = document.getElementById('chatHistoryList');  
   if (historyList && historyList.parentNode) {  
@@ -319,59 +316,6 @@ function createJarvisOrbElement() {
     sidebar.appendChild(container);  
   }  
   jarvisOrb = document.getElementById('visualOrb');  
-}  
-  
-function injectContinuousVoiceButton() {  
-  const sidebar = document.querySelector('.jarv-sidebar') || document.body;  
-  const orbWidget = document.getElementById('jarvisOrbWidget');  
-  if (document.getElementById('continuousVoiceBtn')) return;  
-  const btn = document.createElement('button');  
-  btn.id = 'continuousVoiceBtn';  
-  btn.className = 'continuous-btn';  
-  btn.innerHTML = translations[currentLang].voiceBtn;  
-  btn.onclick = toggleContinuousListening;  
-  if (orbWidget && orbWidget.parentNode) {  
-    orbWidget.parentNode.insertBefore(btn, orbWidget.nextSibling);  
-  } else {  
-    sidebar.appendChild(btn);  
-  }  
-}  
-  
-function toggleContinuousListening() {  
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;  
-  if (!SpeechRecognition) { alert("Navegador sem suporte a voz."); return; }  
-  const btn = document.getElementById('continuousVoiceBtn');  
-  
-  if (!isContinuousActive) {  
-    recognition = new SpeechRecognition();  
-    recognition.lang = currentLang;  
-    recognition.continuous = true;  
-    recognition.interimResults = false;  
-  
-    recognition.onstart = () => {  
-      isContinuousActive = true;  
-      if (btn) { btn.classList.add('active'); btn.innerHTML = translations[currentLang].activeVoice; }  
-      setOrbState(true);  
-    };  
-    recognition.onresult = (event) => {  
-      if (isJarvisSpeaking) return;  
-      const transcript = event.results[event.results.length - 1][0].transcript.trim();  
-      if (transcript) { chatInput.value = transcript; sendMsg(); }  
-    };  
-    recognition.onend = () => {  
-      if (isContinuousActive && !isJarvisSpeaking) {  
-        try { recognition.start(); } catch (err) {}  
-      } else if (!isJarvisSpeaking) {  
-        setOrbState(false);  
-      }  
-    };  
-    try { recognition.start(); } catch (e) {}  
-  } else {  
-    isContinuousActive = false;  
-    if (recognition) { try { recognition.stop(); } catch (e) {} }  
-    if (btn) { btn.classList.remove('active'); btn.innerHTML = translations[currentLang].voiceBtn; }  
-    setOrbState(false);  
-  }  
 }  
   
 function initAudioAnalyzer() {  
@@ -437,6 +381,7 @@ function createNewChat(shouldRender = true) {
   const id = 'chat_' + Date.now();  
   chatsStore[id] = { title: `Sessão ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [] };  
   activeChatId = id;  
+  activeModule = null;
   saveStore();  
   if (shouldRender) { renderHistoryList(); loadChatMessages(activeChatId); }  
 }  
@@ -489,103 +434,106 @@ function speakJARVIS(text) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  const segments = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];  
-  let currentSegment = 0;  
-    
-  const speakNextSegment = () => {  
-    if (currentSegment >= segments.length) {  
-      isJarvisSpeaking = false;  
-      if (isContinuousActive && recognition) {  
-        try { recognition.start(); } catch(e) {}  
-      } else {  
-        setOrbState(false);  
-      }  
-      return;  
-    }  
-      
-    const segmentText = segments[currentSegment].trim();  
-    if (!segmentText) { currentSegment++; speakNextSegment(); return; }  
-  
-    const utterance = new SpeechSynthesisUtterance(segmentText);  
-    utterance.lang = currentLang;  
-    utterance.rate = 0.82;   
-    utterance.pitch = 0.70;   
-  
-    const voices = window.speechSynthesis.getVoices();  
-    const nativeVoice = voices.find(v => v.lang.includes(currentLang)) || voices.find(v => v.lang.includes('pt'));  
-    if (nativeVoice) utterance.voice = nativeVoice;  
-  
-    utterance.onstart = () => { if (currentSegment === 0) setOrbState(true); };  
-    utterance.onend = () => { currentSegment++; setTimeout(speakNextSegment, 300); };  
-    utterance.onerror = () => { isJarvisSpeaking = false; setOrbState(false); };  
-  
-    window.speechSynthesis.speak(utterance);  
+  const utterance = new SpeechSynthesisUtterance(cleanText);  
+  utterance.lang = currentLang;  
+  utterance.rate = 0.85;   
+  utterance.pitch = 0.72;   
+
+  const voices = window.speechSynthesis.getVoices();  
+  const nativeVoice = voices.find(v => v.lang.includes(currentLang)) || voices.find(v => v.lang.includes('pt'));  
+  if (nativeVoice) utterance.voice = nativeVoice;  
+
+  utterance.onstart = () => { setOrbState(true); };  
+  utterance.onend = () => {  
+    isJarvisSpeaking = false;  
+    setOrbState(false);  
   };  
-  speakNextSegment();  
+  utterance.onerror = () => { isJarvisSpeaking = false; setOrbState(false); };  
+
+  window.speechSynthesis.speak(utterance);  
 }  
+
+// Função para exibir pop-up visual de imagem gerada na pesquisa
+function showImagePopup(title, imageUrl) {
+  let modalId = 'jarvImagePopupModal';
+  let existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = modalId;
+  modal.style.cssText = `position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; font-family:monospace;`;
+  modal.innerHTML = `
+    <div style="background:#161b22; border:1px solid #00ffcc; border-radius:8px; padding:15px; max-width:600px; width:90%; text-align:center; box-shadow:0 0 25px rgba(0,255,204,0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="color:#00ffcc; font-weight:bold; font-size:0.9rem;">🖼️ ILUSTRAÇÃO HOLOGRÁFICA: ${escapeHTML(title)}</span>
+        <button onclick="document.getElementById('${modalId}').remove()" style="background:#21262d; border:1px solid #ff7b72; color:#ff7b72; padding:4px 8px; border-radius:4px; cursor:pointer;">✕</button>
+      </div>
+      <img src="${imageUrl}" style="max-width:100%; max-height:400px; border-radius:6px; border:1px solid #30363d; margin-bottom:10px;">
+      <div style="font-size:0.7rem; color:#8b949e;">Gerado dinamicamente para complementar sua pesquisa no J.A.R.V.I.S.</div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
   
 async function sendMsg() {  
   const text = chatInput.value.trim();  
-  if (!text && !attachedImageBase64) return;  
+  if (!text && !attachedFileContent) return;  
 
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
-  
-  if (lowerText.startsWith("higgsfield:") || lowerText.startsWith("gerar vídeo")) {
-    const cleanPrompt = text.replace(/^(higgsfield:|gerar vídeo\s*)/i, "").trim();
-    appendCustomMessage(escapeHTML(text), 'user', true);
-    setOrbState(true);
 
-    try {
-      const response = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          target: "higgsfield",
-          payload: { prompt: cleanPrompt || "Cinematic shot in high resolution" }
-        })
-      });
-
-      const data = await response.json();
-      setOrbState(false);
-
-      if (data.error) {
-        appendMessage("Erro na Higgsfield AI: " + (data.error.message || JSON.stringify(data.error)), 'system', true);
-        speakJARVIS("Falha ao processar na plataforma Higgsfield.");
-        return;
-      }
-
-      const requestId = data.request_id || "processado";
-      const replyMsg = `<strong>[Higgsfield AI]</strong> Solicitação de vídeo/mídia enviada com sucesso!<br>ID: ${requestId}`;
-      appendCustomHtml(replyMsg, 'bot', true);
-      speakJARVIS("Comando enviado com sucesso para a Higgsfield.");
+  // Reconhecimento de Autonomia de Voz / Chat para Ativar Módulos
+  if (lowerText.includes("ativar módulo") || lowerText.includes("ativar o módulo") || lowerText.startsWith("ativar ")) {
+    if (lowerText.includes("hacker") || lowerText.includes("academia")) {
+      setModule('academy');
       return;
-
-    } catch (err) {
-      setOrbState(false);
-      appendMessage(`Erro de rede na Higgsfield: ${err.message}`, 'system', true);
+    } else if (lowerText.includes("kali") || lowerText.includes("tools")) {
+      setModule('kali');
+      return;
+    } else if (lowerText.includes("globo") || lowerText.includes("ameaça")) {
+      setModule('globe');
+      return;
+    } else if (lowerText.includes("dicionário") || lowerText.includes("sinônimo")) {
+      setModule('dictionary');
+      return;
+    } else if (lowerText.includes("saúde") || lowerText.includes("clínica")) {
+      setModule('healthSearch');
       return;
     }
   }
 
-  if (lowerText.startsWith("gere uma imagem") || lowerText.startsWith("gerar imagem") || lowerText.startsWith("criar imagem") || lowerText.startsWith("atlas") || lowerText.startsWith("anatomia")) {  
-    const promptImg = text.replace(/^(gere|gerar|criar|atlas|anatomia)\s+(uma\s+)?(image\s+of\s+|imagem\s+(de\s+)?)?/i, '').trim();  
-    appendCustomMessage(escapeHTML(text), 'user', true);  
-    const imgUrl = `https://image.pollinations.ai/prompt/human%20anatomy%20medical%20scientific%20illustration%20${encodeURIComponent(promptImg)}?width=1024&height=1024&nologo=true`;  
-    const botHtml = `<strong>[J.A.R.V.I.S. ATLAS DE ANATOMIA]</strong><br><img src="${imgUrl}" style="max-width:100%; border-radius:8px; border:1px solid #00ffcc;"><br><a href="${imgUrl}" target="_blank" style="color:#00ffcc;">Abrir Imagem Anatômica em Alta Resolução</a>`;  
-    appendCustomHtml(botHtml, 'bot', true);  
-    speakJARVIS(`Gerando ilustração anatômica holográfica.`);  
-    return;  
-  }  
-  
-  let userDisplayMsg = escapeHTML(text);
-  if (attachedImageBase64) {
-    userDisplayMsg += `<br><img src="${attachedImageBase64}" style="max-width:200px; border-radius:6px; margin-top:5px; border:1px solid #00ffcc;">`;
-  }
-  
-  appendCustomHtml(userDisplayMsg, 'user', true);  
+  appendCustomMessage(escapeHTML(text), 'user', true);  
   setOrbState(true);  
-  
+
+  // Preparar contexto de prompt baseado estritamente no módulo ativo
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado.`;
+  let queryContext = text;
+
+  if (attachedFileContent) {
+    queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`;
+    attachedFileContent = null; // resetar após uso
+  }
+
+  if (activeModule === 'academy') {
+    systemPrompt = `Você é o instrutor da Academia Hacker do J.A.R.V.I.S. Atue como um professor interativo de cibersegurança, fornecendo explicações passo a passo didáticas, exemplos práticos de código, conceitos de hacking ético e simulações com ilustrações conceituais em texto.`;
+  } else if (activeModule === 'kali') {
+    systemPrompt = `Você é o especialista em ferramentas Kali Linux do J.A.R.V.I.S. Forneça comandos de terminal explicados, sintaxes corretas e orientações de auditoria de segurança defensiva.`;
+  } else if (activeModule === 'globe') {
+    systemPrompt = `Você é o analista do Globo de Ciberameaças do J.A.R.V.I.S. Relate tendências globais de vetores de ataques, inteligência de ameaças e mitigação de riscos.`;
+  } else if (activeModule === 'dictionary') {
+    systemPrompt = `Você atua estritamente como um DICIONÁRIO TÉCNICO E DE SINÔNIMOS. Responda à consulta do usuário fornecendo obrigatoriamente: 1. Definição técnica precisa, 2. Sinônimos exatos, 3. Exemplo de uso no contexto profissional. Seja direto e objetivo.`;
+  } else if (activeModule === 'healthSearch') {
+    systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. (${selectedHealthCountry}). Forneça embasamento técnico e protocolos padronizados.`;
+  } else {
+    // Se nenhum módulo estiver ativo, manter em modo geral mas sem mencionar módulos automaticamente
+    systemPrompt = `Você é o J.A.R.V.I.S. Responda de forma direta, interativa e inteligente. O usuário ainda não ativou nenhum módulo específico.`;
+  }
+
+  // Gerar imagem pop-up exemplar para a pesquisa
+  const encodedQuery = encodeURIComponent(text.slice(0, 50) || 'cybersecurity technology');
+  const popupImgUrl = `https://image.pollinations.ai/prompt/${encodedQuery}%20futuristic%20holographic%20cyber%20terminal%20illustration?width=800&height=500&nologo=true`;
+  showImagePopup(text || 'Pesquisa J.A.R.V.I.S.', popupImgUrl);
+
   let data = null;
   let success = false;
 
@@ -598,34 +546,24 @@ async function sendMsg() {
         body: JSON.stringify({  
           model: currentModelToTest,  
           messages: [  
-            {   
-              role: "system",   
-              content: `Você é o J.A.R.V.I.S., a inteligência artificial avançada atuando como assistente especialista em Ciências da Saúde, Enfermagem, Medicina e Linguística Aplicada. Você atende profissionais e estudantes de saúde com base nas diretrizes e normas do país selecionado pelo usuário (${selectedHealthCountry}), utilizando os idiomas correspondentes (${currentLang}). Você auxilia na transcrição de prontuários em siglas padrão, fornece termos de dicionários médicos/enfermagem com sinônimos e apoia na pesquisa clínica e acadêmica para Médicos, Enfermeiros, Técnicos e Auxiliares de Enfermagem.`   
-            },  
-            { role: "user", content: text || "Analise o anexo fornecido." }  
+            { role: "system", content: systemPrompt },  
+            { role: "user", content: queryContext }  
           ]  
         })  
       });  
-  
       data = await response.json();
-
       if (!data.error) {
         success = true;
         break;
-      } else {
-        console.warn(`Modelo ${currentModelToTest} falhou. Tentando próximo da lista...`);
       }
-    } catch (err) {
-      console.warn(`Erro de rede com o modelo ${currentModelToTest}:`, err);
-    }
+    } catch (err) {}
   }
 
-  attachedImageBase64 = null; 
   setOrbState(false);  
 
   if (!success || !data || data.error) {
-    const errorMsg = data && data.error ? (data.error.message || JSON.stringify(data.error)) : "Todos os modelos da lista falharam.";
-    appendMessage("Erro na API (Fallback esgotado): " + errorMsg, 'system', true);
+    const errorMsg = data && data.error ? (data.error.message || JSON.stringify(data.error)) : "Falha na conexão com os modelos.";
+    appendMessage("Erro na API: " + errorMsg, 'system', true);
     return;
   }
 
@@ -635,7 +573,7 @@ async function sendMsg() {
   } else if (data.response) {
     botResponse = data.response;
   } else {  
-    botResponse = "Retorno inesperado da API: " + JSON.stringify(data);  
+    botResponse = "Retorno inesperado da API.";  
   }  
 
   appendMessage(botResponse, 'bot', true);  
@@ -649,8 +587,7 @@ function appendMessage(text, type, save = true) {
     msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;  
   } else if (type === 'bot') {  
     msgDiv.className = 'jarv-msg jarv-msg-bot';  
-    let htmlContent = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;  
-    msgDiv.innerHTML = htmlContent;  
+    msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;  
   } else {  
     msgDiv.className = 'jarv-msg jarv-msg-system';  
     msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${escapeHTML(text)}`;  
@@ -663,27 +600,6 @@ function appendMessage(text, type, save = true) {
     saveStore();  
   }  
 }  
-  
-function appendCustomHtml(htmlContent, type, save = true) {  
-  const msgDiv = document.createElement('div');  
-  if (type === 'user') {  
-    msgDiv.className = 'jarv-msg jarv-msg-user';  
-    msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${htmlContent}`;  
-  } else if (type === 'bot') {  
-    msgDiv.className = 'jarv-msg jarv-msg-bot';  
-    msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${htmlContent}`;  
-  } else {  
-    msgDiv.className = 'jarv-msg jarv-msg-system';  
-    msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${htmlContent}`;  
-  }  
-  msgArea.appendChild(msgDiv);  
-  msgArea.scrollTop = msgArea.scrollHeight;  
-  
-  if (save && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ type, content: htmlContent });  
-    saveStore();  
-  }  
-}
 
 function appendCustomMessage(text, type, save = true) {
   appendMessage(text, type, save);
@@ -694,17 +610,6 @@ function escapeHTML(str) {
   return str.replace(/[&<>'"]/g, 
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
-
-// Funções Auxiliares de Módulos e Interface
-function setupFileUploads() {}
-function setupToolbarButtons() {}
-function openHealthSearchModal() { speakJARVIS("Abrindo painel de Pesquisa de Saúde."); }
-function openNursingRecordModal() { speakJARVIS("Abrindo gerenciador de Prontuários de Enfermagem."); }
-function openAnatomyAtlasModal() { speakJARVIS("Carregando Atlas de Anatomia."); }
-function openDictionariesModal() { speakJARVIS("Acessando dicionários técnicos."); }
-function openCyberAcademyModal() { speakJARVIS("Acessando Academia Hacker."); }
-function openKaliToolsModal() { speakJARVIS("Carregando Kali Tools."); }
-function openCyberMapModal() { speakJARVIS("Exibindo globo de ciberameaças."); }
 
 function formatMarkdown(text) {
   if (!text) return '';
