@@ -551,7 +551,7 @@ function appendMessage(text, type, save = true) {
   msgArea.scrollTop = msgArea.scrollHeight;  
   
   if (save && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ type, content: text });  
+    chatsStore[activeChatId].messages.messages ? chatsStore[activeChatId].messages.push({ type, content: text }) : chatsStore[activeChatId].messages.push({ type, content: text });  
     saveStore();  
   }  
 }  
