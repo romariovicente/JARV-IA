@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.1 Master Protocol
+// J.A.R.V.I.S. - Core Application Script v5.2 Master Protocol
 // ==========================================================
 
 // Configuração Firebase  
@@ -53,12 +53,12 @@ let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : fa
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
 
-// Módulos Exclusivos v5.1 (Incluindo Base .md e Integrações de APIs)
-let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'nursingRecord', 'dictionary', 'imageGen', 'knowledgeBase', 'integrations', null
+// Módulos Exclusivos v5.1 
+let activeModule = null; 
 
 let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
-let repositoryMarkdownCache = {}; // Cache para arquivos .md
+let repositoryMarkdownCache = {}; 
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;  
   
 let recognition = null;  
@@ -78,7 +78,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initAudioAnalyzer();  
   setupFileUploadListener();  
   initChatStore();  
+  startSystemClock(); // Inicia o relógio
   
+  // Atualiza o Status para Operacional assim que carregar
+  if (statusEl) {
+    statusEl.innerText = "ONLINE";
+    statusEl.style.color = "#00ffcc";
+  }
+
   // Tratamento de Erros no resultado de redirecionamento do Firebase Auth
   if (auth) {
     auth.getRedirectResult().catch((error) => {
@@ -87,6 +94,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });  
 
+// Função para o Relógio em Tempo Real
+function startSystemClock() {
+  const clockDisplay = document.getElementById('clockDisplay');
+  if (!clockDisplay) return;
+
+  function update() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    clockDisplay.innerText = `${hh}:${mm}:${ss}`;
+  }
+  
+  update(); // Executa imediatamente
+  setInterval(update, 1000); // Atualiza a cada segundo
+}
+
 // Função de Login com Persistência LOCAL e Redirect
 function loginWithGoogle() {
   if (!auth || !provider) {
@@ -94,7 +118,6 @@ function loginWithGoogle() {
     return;
   }
   
-  // Força a gravação do login no dispositivo para não deslogar ao fechar
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
     .then(() => {
       return auth.signInWithRedirect(provider);
@@ -576,7 +599,7 @@ async function sendMsg() {
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.1.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.2.`;
   let queryContext = text;
 
   if (attachedFileContent) {
