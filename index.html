@@ -23,7 +23,7 @@
     <div class="header-left">
       <i class="fa-solid fa-terminal logo-icon"></i>
       <div class="brand-title">
-        <span>J.A.R.V.I.S.</span> <small>v5.0 Master Protocol</small>
+        <span>J.A.R.V.I.S.</span> <small>v5.1 Master Protocol</small>
       </div>
     </div>
     <div class="header-right">
@@ -88,7 +88,7 @@
 
         <div class="input-wrapper">
           <input type="text" id="chatInput" placeholder="Insira suas diretrizes para o Master Agent..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
-          <button class="btn-send" onclick="sendMsg()">EXECUTAR</button>
+          <button class="btn-send" id="executeBtn" onclick="sendMsg()">EXECUTAR</button>
         </div>
       </div>
     </main>
@@ -120,7 +120,8 @@
     </div>
   </div>
 
-  <!-- SCRIPT EXTERNO MODULARIZADO -->
-  <script src="js/app.js"></script>
+  <!-- SCRIPT EXTERNO MODULARIZADO v5.1 -->
+  <script src="js/app.js" defer></script>
 </body>
 </html>
+
