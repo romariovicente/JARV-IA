@@ -32,7 +32,7 @@
         <span class="clock-display" id="clockDisplay">00:00:00</span>
       </div>
       <div class="user-profile">
-        <span class="user-name" id="userNameDisplay">Usuário</span>
+        <span class="user-name" id="userNameDisplay">Romário</span>
       </div>
     </div>
   </header>
@@ -62,14 +62,14 @@
       <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO -->
       <div class="input-section">
         <div class="action-toolbar" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-          <button class="tool-btn" id="btnMicGlobal" title="Ativar Atalho de Voz (Espaço)" style="background: #222; border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          <button class="tool-btn" id="btnMicGlobal" title="Ativar Atalho de Voz (Espaço)" style="background: #222; border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-microphone"></i> Pressione [ESPAÇO] para falar
           </button>
           
           <label style="color: #00ffff; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin-left: auto;">
             <input type="checkbox" id="readAloudToggle" checked style="accent-color: #00ffff;"> Ouvir voz do sistema?
           </label>
-          <button class="tool-btn" id="btnStopSpeech" title="Paralisar Voz" onclick="stopJarvisVoice()" style="background: #ff4444; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          <button class="tool-btn" id="btnStopSpeech" title="Paralisar Voz" onclick="stopJarvisVoice()" style="background: #ff4444; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
             <i class="fa-solid fa-stop"></i> Parar Voz
           </button>
         </div>
@@ -83,25 +83,28 @@
   </div>
 
   <!-- MODAL DE BOAS-VINDAS E CONFIGURAÇÃO INICIAL -->
-  <div class="modal-overlay" id="welcomeModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center;">
-    <div class="modal-card" style="background: #111; border: 1px solid #00ffff; padding: 30px; border-radius: 10px; text-align: center; max-width: 400px; width: 90%;">
-      <div class="modal-logo" style="color: #00ffff; font-size: 40px; margin-bottom: 15px;">
+  <div class="modal-overlay" id="welcomeModal" style="display: flex;">
+    <div class="modal-card">
+      <div class="modal-logo">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
       <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. CORE AUTH</h2>
-      <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Sincronização de credenciais de acesso exigida.</p>
+      <p class="subtitle">Sincronização de credenciais de acesso exigida.</p>
       
-      <input type="text" id="setupName" placeholder="Insira seu nome..." style="width: 100%; padding: 10px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;" value="Romário">
+      <div class="setting-group">
+        <label>Identificador do Operador:</label>
+        <input type="text" id="setupName" value="Romário" style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 6px; outline: none; width: 100%;">
+      </div>
       
-      <div style="margin-bottom: 20px; text-align: left; color: #ccc; font-size: 14px;">
-        <label style="display: block; margin-bottom: 8px;">Protocolo de Tratamento:</label>
-        <select id="setupGender" style="width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;">
+      <div class="setting-group">
+        <label>Protocolo de Tratamento:</label>
+        <select id="setupGender">
           <option value="M">Masculino (Sir)</option>
           <option value="F">Feminino (Ma'am)</option>
         </select>
       </div>
 
-      <button onclick="initJarvisSession()" style="width: 100%; padding: 12px; background: #00ffff; color: #000; border: none; font-weight: bold; border-radius: 5px; cursor: pointer;">AUTORIZAR ACESSO</button>
+      <button onclick="initJarvisSession()" class="btn-send" style="width: 100%; padding: 12px; margin-top: 10px; justify-content: center;">AUTORIZAR ACESSO</button>
     </div>
   </div>
 
@@ -152,7 +155,6 @@
 
     function triggerWelcomeGreeting() {
       const saudacaoHorario = getGreetingTime();
-      const termoBemVindo = userData.gender === 'F' ? 'Bem-vinda' : 'Bem-vindo';
       const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
       
       const mensagemBoasVindas = `${saudacaoHorario}, ${tratamento} ${userData.name}. Todos os agentes especialistas estão sincronizados e operacionais. Como posso auxiliar em suas diretrizes hoje?`;
@@ -167,8 +169,8 @@
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'pt-BR';
-      utterance.rate = 0.90; // Cadência medida e constante
-      utterance.pitch = 0.85; // Barítono médio-grave
+      utterance.rate = 0.90; 
+      utterance.pitch = 0.85; 
       
       window.speechSynthesis.speak(utterance);
     }
@@ -216,13 +218,12 @@
       if (!msgArea) return;
       
       const msgDiv = document.createElement('div');
-      msgDiv.style.margin = "10px 0";
-      msgDiv.style.padding = "10px";
-      msgDiv.style.borderRadius = "8px";
-      msgDiv.style.background = sender === "J.A.R.V.I.S." ? "#1a1a1a" : "#222";
-      msgDiv.style.borderLeft = sender === "J.A.R.V.I.S." ? "3px solid #00ffff" : "3px solid #888";
+      const isBot = sender === "J.A.R.V.I.S.";
       
-      msgDiv.innerHTML = `<strong style="color: ${sender === "J.A.R.V.I.S." ? "#00ffff" : "#fff"};">${sender}:</strong> <span style="color: #ccc;">${text}</span>`;
+      // Aplicando as classes e estilos oficiais do style.css
+      msgDiv.className = `jarv-msg ${isBot ? 'jarv-msg-bot' : 'jarv-msg-user'}`;
+      
+      msgDiv.innerHTML = `<strong style="color: ${isBot ? 'var(--accent-cyan)' : '#ffffff'};">${sender}:</strong> <span style="color: var(--text-main);">${text}</span>`;
       msgArea.appendChild(msgDiv);
       msgArea.scrollTop = msgArea.scrollHeight;
     }
