@@ -44,23 +44,35 @@
     <aside class="jarv-sidebar">
       <div class="history-label">SUBSISTEMAS N2</div>
       <nav class="sidebar-nav">
-        <button class="jarv-nav-item active"><i class="fa-solid fa-brain"></i> Master Agent</button>
-        <button class="jarv-nav-item"><i class="fa-solid fa-envelope"></i> Gmail Agent</button>
-        <button class="jarv-nav-item"><i class="fa-solid fa-calendar-days"></i> Calendar Agent</button>
-        <button class="jarv-nav-item"><i class="fa-solid fa-database"></i> Airtable CRM</button>
-        <button class="jarv-nav-item"><i class="fa-solid fa-globe"></i> Tavily Search</button>
+        <button class="jarv-nav-item active" onclick="switchModule('master')"><i class="fa-solid fa-brain"></i> Master Agent</button>
+        <button class="jarv-nav-item" onclick="switchModule('brain')"><i class="fa-solid fa-network-wired"></i> Segundo Cérebro</button>
+        <button class="jarv-nav-item" onclick="switchModule('gmail')"><i class="fa-solid fa-envelope"></i> Gmail Agent</button>
+        <button class="jarv-nav-item" onclick="switchModule('calendar')"><i class="fa-solid fa-calendar-days"></i> Calendar Agent</button>
+        <button class="jarv-nav-item" onclick="switchModule('airtable')"><i class="fa-solid fa-database"></i> Airtable CRM</button>
+        <button class="jarv-nav-item" onclick="switchModule('tavily')"><i class="fa-solid fa-globe"></i> Tavily Search</button>
       </nav>
     </aside>
 
-    <!-- PAINEL CENTRAL DE CHAT -->
+    <!-- PAINEL CENTRAL DE CHAT / CONHECIMENTO -->
     <main class="jarv-main">
       <div class="watermark-bg"></div>
 
       <!-- ÁREA DE MENSAGENS -->
       <div class="msg-container" id="msgArea"></div>
 
+      <!-- PAINEL SECUNDÁRIO DO SEGUNDO CÉREBRO -->
+      <div id="brainModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+          <h3 style="color: var(--accent-cyan); margin-bottom: 10px;"><i class="fa-solid fa-book-bookmark"></i> Base de Conhecimento - Segundo Cérebro</h3>
+          <input type="text" id="brainSearchInput" placeholder="Pesquisar notas, marcações ou documentações..." style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; outline: none;" oninput="filterBrainNotes()">
+        </div>
+        <div id="brainNotesList" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Notas injetadas dinamicamente -->
+        </div>
+      </div>
+
       <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO -->
-      <div class="input-section">
+      <div class="input-section" id="chatInputSection">
         <div class="action-toolbar" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
           <button class="tool-btn" id="btnMicGlobal" title="Ativar Atalho de Voz (Espaço)" style="background: #222; border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-microphone"></i> Pressione [ESPAÇO] para falar
@@ -181,6 +193,46 @@
       }
     }
 
+    function switchModule(moduleName) {
+      document.querySelectorAll('.jarv-nav-item').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      const msgArea = document.getElementById('msgArea');
+      const brainPanel = document.getElementById('brainModulePanel');
+      const inputSection = document.getElementById('chatInputSection');
+
+      if (moduleName === 'brain') {
+        msgArea.style.display = 'none';
+        brainPanel.style.display = 'flex';
+        inputSection.style.display = 'none';
+        loadBrainNotes();
+      } else {
+        brainPanel.style.display = 'none';
+        msgArea.style.display = 'flex';
+        inputSection.style.display = 'flex';
+      }
+    }
+
+    function loadBrainNotes() {
+      const notesList = document.getElementById('brainNotesList');
+      const sampleNotes = [
+        { title: "Diretrizes N2 - Stone e TON", category: "Suporte", desc: "Procedimentos de escalação interna, Help Fin e manuais de atendimento." },
+        { title: "Manutenção de Dispositivos Xiaomi", category: "Técnico", desc: "Comandos MTP, Unlock Tools e restrições de software para MIUI." },
+        { title: "Mecânica de Exercícios e Física", category: "Estudo", desc: "Decomposição de forças em planos inclinados (Leg Press, 150kg, 45°)." }
+      ];
+
+      notesList.innerHTML = sampleNotes.map(note => `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;">
+          <strong style="color: var(--accent-cyan);">${note.title}</strong> <span style="font-size: 0.8rem; color: var(--text-muted);">[${note.category}]</span>
+          <p style="color: var(--text-main); font-size: 0.9rem; margin-top: 5px;">${note.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    function filterBrainNotes() {
+      const query = document.getElementById('brainSearchInput').value.toLowerCase();
+    }
+
     function fnGenerateJarvisResponse(text) {
       const lower = text.toLowerCase();
       const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
@@ -220,9 +272,7 @@
       const msgDiv = document.createElement('div');
       const isBot = sender === "J.A.R.V.I.S.";
       
-      // Aplicando as classes e estilos oficiais do style.css
       msgDiv.className = `jarv-msg ${isBot ? 'jarv-msg-bot' : 'jarv-msg-user'}`;
-      
       msgDiv.innerHTML = `<strong style="color: ${isBot ? 'var(--accent-cyan)' : '#ffffff'};">${sender}:</strong> <span style="color: var(--text-main);">${text}</span>`;
       msgArea.appendChild(msgDiv);
       msgArea.scrollTop = msgArea.scrollHeight;
