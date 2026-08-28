@@ -1,5 +1,5 @@
 // ==========================================
-// J.A.R.V.I.S. - Core Application Script v4.3
+// J.A.R.V.I.S. - Core Application Script v4.4
 // ==========================================
 
 // Configuração Firebase  
@@ -229,8 +229,8 @@ function setModule(modName) {
   else if (modName === 'kali') moduleTitle = "Kali Tools (Painel de Ferramentas PenTest)";
   else if (modName === 'globe') moduleTitle = "Globo de Ciberameaças em Tempo Real";
   else if (modName === 'dictionary') moduleTitle = "Dicionário Técnico & Sinônimos";
-  else if (modName === 'healthSearch') moduleTitle = "Pesquisa Especializada de Saúde";
-  else if (modName === 'nursingRecord') moduleTitle = "Prontuário & Metodologia SBAR (Situação, Histórico, Avaliação, Recomendação)";
+  else if (modName === 'healthSearch') moduleTitle = `Pesquisa Especializada de Saúde (${selectedHealthCountry})`;
+  else if (modName === 'nursingRecord') moduleTitle = `Prontuário & SBAR - Siglas e Diretrizes de Enfermagem (${selectedHealthCountry})`;
   else if (modName === 'imageGen') moduleTitle = "Gerador de Imagens Holográficas";
   
   appendMessage(`[MÓDULO ATIVADO]: ${moduleTitle}. Os demais módulos foram desativados. Digite ou pergunte sobre este tema.`, 'system', true);
@@ -528,11 +528,13 @@ async function sendMsg() {
   } else if (activeModule === 'dictionary') {
     systemPrompt = `Você atua estritamente como um DICIONÁRIO TÉCNICO E DE SINÔNIMOS. Responda com: 1. Definição técnica, 2. Sinônimos exatos, 3. Exemplo de uso.`;
   } else if (activeModule === 'healthSearch') {
-    systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. (${selectedHealthCountry}).`;
+    systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. Atue focando nas diretrizes, terminologias e siglas de enfermagem específicas do país selecionado: ${selectedHealthCountry}.`;
   } else if (activeModule === 'nursingRecord') {
-    systemPrompt = `Você é o especialista em documentação de Prontuário e Passagem de Plantão do J.A.R.V.I.S. Sua função é organizar e estruturar informações de pacientes utilizando rigorosamente a metodologia SBAR (Situação, Histórico/Background, Avaliação e Recomendação), ferramenta padronizada na área da saúde para transmitir informações de forma rápida, clara e objetiva. 
-Sempre estruture suas respostas seguindo as quatro etapas do mnemônico SBAR:
-- **S – Situação (Situation):** Diga quem é o paciente, o local e o problema atual em uma frase curta.
+    systemPrompt = `Você é o especialista em documentação de Prontuário e Passagem de Plantão do J.A.R.V.I.S., operando com foco estrito nas normas, diretrizes e siglas de enfermagem do país selecionado: ${selectedHealthCountry}. 
+Sua função é organizar e estruturar informações de pacientes utilizando rigorosamente a metodologia SBAR (Situação, Histórico/Background, Avaliação e Recomendação), ferramenta padronizada na área da saúde para transmitir informações de forma rápida, clara e objetiva. 
+As siglas, terminologias técnicas e abreviações clínicas utilizadas nas etapas devem refletir obrigatoriamente o contexto profissional e normativo de ${selectedHealthCountry}.
+Estruture suas respostas seguindo as quatro etapas do mnemônico SBAR:
+- **S – Situação (Situation):** Diga quem é o paciente, o local e o problema atual em uma frase curta, utilizando as siglas clínicas adequadas para ${selectedHealthCountry}.
 - **B – Histórico / Contexto (Background):** Explique o motivo da internação e os antecedentes clínicos relevantes.
 - **A – Avaliação (Assessment):** Apresente suas conclusões sobre a situação atual, incluindo sinais vitais e alterações observadas.
 - **R – Recomendação (Recommendation):** Peça a ação necessária ou sugira o plano de conduta para o caso.`;
