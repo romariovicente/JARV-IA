@@ -94,34 +94,35 @@
     </main>
   </div>
 
-  <!-- MODAL DE BOAS-VINDAS E CONFIGURAÇÃO INICIAL -->
-  <div class="modal-overlay" id="welcomeModal" style="display: flex;">
-    <div class="modal-card">
-      <div class="modal-logo">
-        <i class="fa-solid fa-shield-halved"></i>
+  <!-- MODAL DE AUTENTICAÇÃO -->
+  <div class="modal-overlay auth-modal" id="loginModal" style="display: flex;">
+    <div class="modal-card" style="text-align: center;">
+      <div class="modal-logo" style="margin-bottom: 15px;">
+        <i class="fa-solid fa-shield-halved" style="font-size: 3rem; color: #4285F4; text-shadow: 0 0 15px rgba(66, 133, 244, 0.6);"></i>
       </div>
-      <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. CORE AUTH</h2>
-      <p class="subtitle">Sincronização de credenciais de acesso exigida.</p>
+      <h2 style="color: #fff; margin-bottom: 5px; letter-spacing: 2px;">J.A.R.V.I.S. SYSTEM</h2>
+      <p class="subtitle" style="color: #8b949e; font-size: 0.85rem; margin-bottom: 25px;">Autenticação de Segurança Necessária</p>
       
-      <div class="setting-group">
-        <label>Identificador do Operador:</label>
-        <input type="text" id="setupName" value="Romário" style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 6px; outline: none; width: 100%;">
-      </div>
-      
-      <div class="setting-group">
-        <label>Protocolo de Tratamento:</label>
-        <select id="setupGender">
-          <option value="M">Masculino (Sir)</option>
-          <option value="F">Feminino (Ma'am)</option>
-        </select>
-      </div>
+      <!-- BOTÃO DE LOGIN GOOGLE CONECTADO AO APP.JS -->
+      <button onclick="loginWithGoogle()" class="btn-send" style="width: 100%; padding: 14px; justify-content: center; background: #4285F4; border: none; color: #fff; font-weight: bold; border-radius: 6px; box-shadow: 0 0 15px rgba(66, 133, 244, 0.4); cursor: pointer; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-brands fa-google"></i> Entrar com Google
+      </button>
 
-      <button onclick="initJarvisSession()" class="btn-send" style="width: 100%; padding: 12px; margin-top: 10px; justify-content: center;">AUTORIZAR ACESSO</button>
+      <!-- BOTÃO DE FALLBACK / OFFLINE -->
+      <button onclick="initJarvisSession && initJarvisSession()" style="width: 100%; padding: 10px; margin-top: 15px; background: transparent; border: 1px solid #30363d; color: #8b949e; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">
+        Modo Offline Temporário
+      </button>
     </div>
   </div>
+
+  <!-- ========================================== -->
+  <!-- SCRIPTS DO FIREBASE (OBRIGATÓRIOS PARA O LOGIN) -->
+  <!-- ========================================== -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
   <!-- SCRIPT EXTERNO MODULARIZADO v5.1 -->
   <script src="js/app.js" defer></script>
 </body>
 </html>
-
