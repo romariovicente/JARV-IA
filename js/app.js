@@ -49,7 +49,6 @@ let isContinuousActive = false;
 let isJarvisSpeaking = false;  
 
 document.addEventListener("DOMContentLoaded", () => {  
-  // Identifica elementos da interface v5.0
   msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
   chatInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');  
   statusEl = document.getElementById('jarvStatus') || document.querySelector('.status-indicator');  
@@ -152,7 +151,7 @@ function injectModuleSidebar() {
   container.innerHTML = `
     <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Subsistemas & Módulos</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
-      <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker</button>
+      <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('kali')" class="mod-btn" id="btn_mod_kali" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🛡️ Kali Tools & PenTest</button>
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>
       <button onclick="setModule('dictionary')" class="mod-btn" id="btn_mod_dictionary" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">📖 Dicionário & Sinônimos</button>
@@ -168,9 +167,39 @@ function setModule(modName) {
   activeModule = modName;
   updateModuleButtonStyles();
   
+  if (modName === 'academy') {
+    const cc50DashboardHtml = `
+      <div style="margin: 8px 0; border: 1px solid #00ffcc; padding: 12px; border-radius: 6px; background: #0d1117; font-family: monospace; box-shadow: 0 0 15px rgba(0,255,204,0.15);">
+        <div style="color: #00ffcc; font-size: 0.8rem; font-weight: bold; margin-bottom: 6px; text-transform: uppercase;">🎓 ACADEMIA HACKER & CC50 (HARVARD EM PORTUGUÊS)</div>
+        <div style="font-size: 0.75rem; color: #c9d1d9; margin-bottom: 8px;">
+          Progresso Atual: <strong style="color: #00ffcc;">9%</strong> (8 de 90 aulas concluídas | 82 restantes).
+        </div>
+        <div style="background: #161b22; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 10px; border: 1px solid #30363d;">
+          <div style="width: 9%; background: #00ffcc; height: 100%;"></div>
+        </div>
+        <div style="font-size: 0.7rem; color: #8b949e; line-height: 1.4;">
+          <strong>Módulos Disponíveis no Sistema:</strong><br>
+          • Ambientação & Canais (7 aulas)<br>
+          • Módulo 0: Scratch (4 aulas)<br>
+          • Módulo 1: C (9 aulas)<br>
+          • Módulo 2: Arrays (8 aulas) | Módulo 3: Algoritmos (8 aulas)<br>
+          • Módulo 4: Memória (8 aulas) | Módulo 5: Estruturas de Dados (6 aulas)<br>
+          • Módulo 6: Python (12 aulas) | Módulo 6.5: IA (2 aulas)<br>
+          • Módulo 7: SQL (7 aulas) | Módulo 8: HTML/CSS/JS (6 aulas) | Módulo 9: Flask (6 aulas)<br>
+          • Módulo 10: Ética & Encerramento (7 aulas)
+        </div>
+        <div style="margin-top: 10px; font-size: 0.7rem; color: #00ffcc;">
+          💡 Digite sua dúvida sobre qualquer aula ou exercício do CC50 para começarmos a instrução!
+        </div>
+      </div>
+    `;
+    appendMessage(cc50DashboardHtml, 'bot-html', true);
+    speakJARVIS("Academia Hacker e cronograma do CC50 ativados, Sir Romário. Por qual módulo deseja começar?");
+    return;
+  }
+
   let moduleTitle = "";
-  if (modName === 'academy') moduleTitle = "Academia Hacker (Laboratório de Ensino Interativo)";
-  else if (modName === 'kali') moduleTitle = "Kali Tools (Painel de Ferramentas PenTest)";
+  if (modName === 'kali') moduleTitle = "Kali Tools (Painel de Ferramentas PenTest)";
   else if (modName === 'globe') moduleTitle = "Globo de Ciberameaças em Tempo Real";
   else if (modName === 'dictionary') moduleTitle = "Dicionário Técnico & Sinônimos";
   else if (modName === 'healthSearch') moduleTitle = `Pesquisa Especializada de Saúde (${selectedHealthCountry})`;
@@ -380,9 +409,8 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();  
   if (inputEl) inputEl.value = '';  
 
-  // Ativação rápida de módulos por texto ou comandos
   if (lowerText.includes("ativar módulo") || lowerText.includes("ativar o módulo") || lowerText.startsWith("ativar ")) {
-    if (lowerText.includes("hacker") || lowerText.includes("academia")) { setModule('academy'); return; }
+    if (lowerText.includes("hacker") || lowerText.includes("academia") || lowerText.includes("cc50")) { setModule('academy'); return; }
     else if (lowerText.includes("kali") || lowerText.includes("tools")) { setModule('kali'); return; }
     else if (lowerText.includes("globo") || lowerText.includes("ameaça")) { setModule('globe'); return; }
     else if (lowerText.includes("dicionário") || lowerText.includes("sinônimo")) { setModule('dictionary'); return; }
@@ -396,7 +424,6 @@ async function sendMsg() {
     return;
   }
 
-  // Tratamento para Gerador de Imagens
   if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.includes("desenhe imagem") || lowerText.startsWith("imagem ")) {
     let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
     
@@ -439,7 +466,7 @@ async function sendMsg() {
   }
 
   if (activeModule === 'academy') {
-    systemPrompt = `Você é o instrutor da Academia Hacker do J.A.R.V.I.S. Atue como professor interativo de cibersegurança e estudos hackers, fornecendo explicações técnicas passo a passo.`;
+    systemPrompt = `Você é o instrutor da Academia Hacker e do CC50 (Ciência da Computação de Harvard em português) do J.A.R.V.I.S. Atue como professor interativo de programação, lógica, ciência da computação e cibersegurança, fornecendo explicações passo a passo.`;
   } else if (activeModule === 'kali') {
     systemPrompt = `Você é o especialista em ferramentas Kali Linux e PenTest do J.A.R.V.I.S. Forneça comandos de terminal explicados, sintaxes corretas e orientações para testes de intrusão éticos.`;
   } else if (activeModule === 'globe') {
