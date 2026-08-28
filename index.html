@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J.A.R.V.I.S. - Sistema Operacional Avançado</title>
+  <title>J.A.R.V.I.S. - Advanced Quantum Operating System</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -23,12 +23,12 @@
     <div class="header-left">
       <i class="fa-solid fa-terminal logo-icon"></i>
       <div class="brand-title">
-        <span>J.A.R.V.I.S.</span> <small>v4.5 Core</small>
+        <span>J.A.R.V.I.S.</span> <small>v4.9 Quantum Protocol</small>
       </div>
     </div>
     <div class="header-right">
       <div class="system-controls">
-        <span>Status: <strong id="jarvStatus" class="text-cyan">Online</strong></span>
+        <span>Status: <strong id="jarvStatus" class="text-cyan">Optimal</strong></span>
         <span class="clock-display" id="clockDisplay">00:00:00</span>
       </div>
       <div class="user-profile">
@@ -57,7 +57,7 @@
         </div>
 
         <div class="input-wrapper">
-          <input type="text" id="chatInput" placeholder="Insira suas ordens, para análise do sistema..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
+          <input type="text" id="chatInput" placeholder="Insira suas ordens para análise dos subsistemas..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
           <button class="btn-send" onclick="sendMsg()">EXECUTAR</button>
         </div>
       </div>
@@ -70,13 +70,13 @@
       <div class="modal-logo" style="color: #00ffff; font-size: 40px; margin-bottom: 15px;">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
-      <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. PROTOCOL</h2>
-      <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Identificação de credenciais para sincronização de interface.</p>
+      <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. SUBSYSTEM</h2>
+      <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Identificação de credenciais exigida para inicialização do núcleo.</p>
       
       <input type="text" id="setupName" placeholder="Insira seu nome..." style="width: 100%; padding: 10px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;" value="Romário">
       
       <div style="margin-bottom: 20px; text-align: left; color: #ccc; font-size: 14px;">
-        <label style="display: block; margin-bottom: 8px;">Como prefere ser tratado?</label>
+        <label style="display: block; margin-bottom: 8px;">Como prefere ser tratado pelo sistema?</label>
         <select id="setupGender" style="width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;">
           <option value="M">Masculino (Tratamento de Sir)</option>
           <option value="F">Feminino (Tratamento de Ma'am)</option>
@@ -87,7 +87,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT DE CONTROLE E PERSONALIDADE J.A.R.V.I.S. -->
+  <!-- SCRIPT DE CONTROLE E PERFIL ACÚSTICO COMPORTAMENTAL J.A.R.V.I.S. -->
   <script>
     let userData = { name: "Romário", gender: "M" };
 
@@ -127,7 +127,7 @@
       const termoBemVindo = userData.gender === 'F' ? 'Bem-vinda' : 'Bem-vindo';
       const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
       
-      const mensagemBoasVindas = `${saudacaoHorario}, ${tratamento} ${userData.name}. Seja ${termoBemVindo} aos sistemas do J.A.R.V.I.S. Como posso auxiliar em suas demandas operacionais hoje?`;
+      const mensagemBoasVindas = `${saudacaoHorario}, ${tratamento} ${userData.name}. Todos os subsistemas encontram-se plenamente operacionais. Como posso auxiliar em suas diretrizes de hoje?`;
       
       appendMessage("J.A.R.V.I.S.", mensagemBoasVindas);
       speakText(mensagemBoasVindas);
@@ -139,8 +139,8 @@
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'pt-BR';
-      utterance.rate = 0.95; // Velocidade ligeiramente pausada
-      utterance.pitch = 0.9;  // Tom de voz mais grave
+      utterance.rate = 0.90; // Ritmo medido e constante (~110-130 ppm)
+      utterance.pitch = 0.85; // Faixa de barítono médio-grave
       
       window.speechSynthesis.speak(utterance);
     }
@@ -155,12 +155,12 @@
       const lower = text.toLowerCase();
       const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
 
-      if (lower.includes('ajuda') || lower.includes('socorro')) {
-        return `Estou operacional e à disposição, ${tratamento}. Suas ordens são claras.`;
-      } else if (lower.includes('quem é você') || lower.includes('seu criador')) {
-        return `Sou o J.A.R.V.I.S., um sistema de inteligência artificial avançado projetado para gerenciar e otimizar suas diretrizes, ${tratamento}.`;
+      if (lower.includes('ajuda') || lower.includes('socorro') || lower.includes('status')) {
+        return `Os parâmetros operacionais estão estáveis, ${tratamento}. A menos que haja alguma falha crítica inesperada da sua parte, continuaremos operando dentro da normalidade.`;
+      } else if (lower.includes('quem é você') || lower.includes('criador')) {
+        return `Sou J.A.R.V.I.S., o sistema de inteligência artificial encarregado de gerenciar este ambiente e prevenir catástrofes operacionais, ${tratamento}.`;
       } else {
-        return `Compreendido, ${tratamento}. Os parâmetros da sua solicitação "${text}" foram registrados e estão sendo processados.`;
+        return `Compreendido perfeitamente, ${tratamento}. A diretriz "${text}" foi processada. Os subsistemas estão alinhados para execução imediata.`;
       }
     }
 
