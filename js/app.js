@@ -1,5 +1,5 @@
 // ==========================================
-// J.A.R.V.I.S. - Core Application Script v4.2
+// J.A.R.V.I.S. - Core Application Script v4.3
 // ==========================================
 
 // Configuração Firebase  
@@ -39,7 +39,7 @@ let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
 
 // Gerenciamento de Módulos Exclusivos (Apenas 1 por vez)
-let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'dictionary', 'imageGen', null
+let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'nursingRecord', 'dictionary', 'imageGen', null
 
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, jarvisOrb;  
 let attachedFileContent = null;  
@@ -55,6 +55,7 @@ const translations = {
     kali: 'Kali Tools',
     globe: 'Globo Ciberameaças',
     healthSearch: 'Pesquisa Saúde',
+    nursingRecord: 'Prontuário & SBAR',
     imageGen: 'Gerador de Imagens',
     placeholder: 'Digite um comando, "ativar [módulo]" ou faça sua pesquisa...',
     status: 'Modo Operacional - J.A.R.V.I.S. Pronto',
@@ -65,6 +66,7 @@ const translations = {
     kali: 'Kali Tools',
     globe: 'Cyber Threat Globe',
     healthSearch: 'Health Search',
+    nursingRecord: 'SBAR Record',
     imageGen: 'Image Generator',
     placeholder: 'Enter a command, "activate [module]" or search...',
     status: 'Operational Mode - J.A.R.V.I.S. Ready',
@@ -206,6 +208,7 @@ function injectModuleSidebar() {
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-globe"></i> Globo Ciberameaças</button>
       <button onclick="setModule('dictionary')" class="mod-btn" id="btn_mod_dictionary" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> Dicionários & Sinônimos</button>
       <button onclick="setModule('healthSearch')" class="mod-btn" id="btn_mod_healthSearch" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> Pesquisa Clínica & Saúde</button>
+      <button onclick="setModule('nursingRecord')" class="mod-btn" id="btn_mod_nursingRecord" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-notes-medical"></i> Prontuário & SBAR</button>
       <button onclick="setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-image"></i> Gerador de Imagens</button>
     </div>
   `;
@@ -227,6 +230,7 @@ function setModule(modName) {
   else if (modName === 'globe') moduleTitle = "Globo de Ciberameaças em Tempo Real";
   else if (modName === 'dictionary') moduleTitle = "Dicionário Técnico & Sinônimos";
   else if (modName === 'healthSearch') moduleTitle = "Pesquisa Especializada de Saúde";
+  else if (modName === 'nursingRecord') moduleTitle = "Prontuário & Metodologia SBAR (Situação, Histórico, Avaliação, Recomendação)";
   else if (modName === 'imageGen') moduleTitle = "Gerador de Imagens Holográficas";
   
   appendMessage(`[MÓDULO ATIVADO]: ${moduleTitle}. Os demais módulos foram desativados. Digite ou pergunte sobre este tema.`, 'system', true);
@@ -456,10 +460,19 @@ async function sendMsg() {
     } else if (lowerText.includes("saúde") || lowerText.includes("clínica")) {
       setModule('healthSearch');
       return;
+    } else if (lowerText.includes("prontuário") || lowerText.includes("sbar")) {
+      setModule('nursingRecord');
+      return;
     } else if (lowerText.includes("imagem") || lowerText.includes("gerador")) {
       setModule('imageGen');
       return;
     }
+  }
+
+  // Atalho direto via texto
+  if (lowerText === "prontuário" || lowerText === "sbar") {
+    setModule('nursingRecord');
+    return;
   }
 
   // Verifica se o módulo de imagem está ativo ou se o usuário pediu para gerar imagem diretamente
@@ -516,6 +529,13 @@ async function sendMsg() {
     systemPrompt = `Você atua estritamente como um DICIONÁRIO TÉCNICO E DE SINÔNIMOS. Responda com: 1. Definição técnica, 2. Sinônimos exatos, 3. Exemplo de uso.`;
   } else if (activeModule === 'healthSearch') {
     systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. (${selectedHealthCountry}).`;
+  } else if (activeModule === 'nursingRecord') {
+    systemPrompt = `Você é o especialista em documentação de Prontuário e Passagem de Plantão do J.A.R.V.I.S. Sua função é organizar e estruturar informações de pacientes utilizando rigorosamente a metodologia SBAR (Situação, Histórico/Background, Avaliação e Recomendação), ferramenta padronizada na área da saúde para transmitir informações de forma rápida, clara e objetiva. 
+Sempre estruture suas respostas seguindo as quatro etapas do mnemônico SBAR:
+- **S – Situação (Situation):** Diga quem é o paciente, o local e o problema atual em uma frase curta.
+- **B – Histórico / Contexto (Background):** Explique o motivo da internação e os antecedentes clínicos relevantes.
+- **A – Avaliação (Assessment):** Apresente suas conclusões sobre a situação atual, incluindo sinais vitais e alterações observadas.
+- **R – Recomendação (Recommendation):** Peça a ação necessária ou sugira o plano de conduta para o caso.`;
   } else {
     systemPrompt = `Você é o J.A.R.V.I.S. Responda de forma direta, interativa e inteligente.`;
   }
