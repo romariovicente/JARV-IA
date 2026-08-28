@@ -5,23 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>J.A.R.V.I.S. - Sistema Operacional Avançado</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- FontAwesome para ícones do sistema -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Conecta o Manifest -->
   <link rel="manifest" href="manifest.json">
-
-  <!-- Registra o Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(registration => {
-            console.log('Service Worker registrado com sucesso:', registration);
-          })
-          .catch(error => {
-            console.log('Falha ao registrar o Service Worker:', error);
-          });
+        navigator.serviceWorker.register('service-worker.js');
       });
     }
   </script>
@@ -43,131 +33,83 @@
       </div>
       <div class="user-profile">
         <span class="user-name" id="userNameDisplay">Usuário</span>
-        <button class="btn-logout" id="logoutBtn" style="display:none;" title="Sair"><i class="fa-solid fa-power-off"></i></button>
       </div>
     </div>
   </header>
 
   <!-- LAYOUT PRINCIPAL -->
   <div class="jarv-container">
-    
-    <!-- SIDEBAR LATERAL & HISTÓRICO -->
-    <aside class="jarv-sidebar">
-      <div class="sidebar-top-actions">
-        <button class="btn-new-chat" onclick="createNewChat(true)">
-          <i class="fa-solid fa-plus"></i> Nova Conversa
-        </button>
-        <button class="btn-clear-chat" title="Limpar Histórico e Resetar">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
-
-      <div class="history-label">HISTÓRICO DE SESSÕES</div>
-      <div class="chat-history-container">
-        <div class="chat-history-list" id="chatHistoryList">
-          <!-- Histórico preenchido dinamicamente via JS -->
-        </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <button class="jarv-nav-item active"><i class="fa-solid fa-brain"></i> Núcleo de IA</button>
-        <button class="jarv-nav-item"><i class="fa-solid fa-shield-halved"></i> Kali Tools</button>
-        <button class="jarv-nav-item"><i class="fa-solid fa-microchip"></i> Diagnóstico</button>
-      </nav>
-    </aside>
-
-    <!-- PAINEL CENTRAL DE CHAT -->
-    <main class="jarv-main">
+    <main class="jarv-main" style="width: 100%; margin: 0;">
       <div class="watermark-bg"></div>
 
       <!-- ÁREA DE MENSAGENS -->
-      <div class="msg-container" id="msgArea">
-        <!-- Mensagens injetadas via JS -->
-      </div>
+      <div class="msg-container" id="msgArea"></div>
 
-      <!-- TERMINAL CLI INFERIOR -->
-      <div class="terminal-cli-panel">
-        <span class="user-host">romario@jarvis-core:~$</span> <span class="blinking-cursor">_</span>
-      </div>
-
-      <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO (FIXADA) -->
+      <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO -->
       <div class="input-section">
         <div class="action-toolbar" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-          <button class="tool-btn" id="btnCamera" title="Anexar Imagem / Câmera"><i class="fa-solid fa-camera"></i></button>
-          <button class="tool-btn" id="btnAttachment" title="Anexar Arquivo"><i class="fa-solid fa-paperclip"></i></button>
-          <button class="tool-btn" id="btnMic" title="Comando de Voz"><i class="fa-solid fa-microphone"></i></button>
-          
-          <!-- Escolha dinâmica por pesquisa para a voz da IA -->
-          <label style="color: #00ffff; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin-left: auto;">
-            <input type="checkbox" id="readAloudToggle" checked style="accent-color: #00ffff;"> Ouvir voz nesta pesquisa?
+          <label style="color: #00ffff; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+            <input type="checkbox" id="readAloudToggle" checked style="accent-color: #00ffff;"> Ouvir resposta por voz nesta pesquisa?
           </label>
-          <!-- Botão de emergência para paralisar a voz -->
-          <button class="tool-btn" id="btnStopSpeech" title="Paralisar Voz" onclick="stopJarvisVoice()" style="background: #ff4444; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          <button class="tool-btn" id="btnStopSpeech" title="Paralisar Voz" onclick="stopJarvisVoice()" style="background: #ff4444; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
             <i class="fa-solid fa-stop"></i> Parar Voz
           </button>
         </div>
 
         <div class="input-wrapper">
-          <input type="text" id="chatInput" placeholder="Digite seu comando ou solicitação ao J.A.R.V.I.S..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
-          <button class="btn-send" onclick="sendMsg()">ENVIAR</button>
+          <input type="text" id="chatInput" placeholder="Insira suas ordens, para análise do sistema..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
+          <button class="btn-send" onclick="sendMsg()">EXECUTAR</button>
         </div>
       </div>
     </main>
   </div>
 
-  <!-- MODAL DE BOAS-VINDAS / CONFIGURAÇÃO DE NOME E GÊNERO -->
+  <!-- MODAL DE BOAS-VINDAS E CONFIGURAÇÃO INICIAL -->
   <div class="modal-overlay" id="welcomeModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center;">
-    <div class="modal-card modal-settings" style="text-align: center; background: #111; border: 1px solid #00ffff; padding: 30px; border-radius: 10px; max-width: 400px; width: 90%;">
+    <div class="modal-card" style="background: #111; border: 1px solid #00ffff; padding: 30px; border-radius: 10px; text-align: center; max-width: 400px; width: 90%;">
       <div class="modal-logo" style="color: #00ffff; font-size: 40px; margin-bottom: 15px;">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
-      <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. SYSTEM</h2>
-      <p class="subtitle" style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Insira seus dados para inicialização personalizada</p>
+      <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. PROTOCOL</h2>
+      <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Identificação de credenciais para sincronização de interface.</p>
       
-      <input type="text" id="setupName" placeholder="Digite seu nome..." style="width: 100%; padding: 10px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;" value="Romário">
+      <input type="text" id="setupName" placeholder="Insira seu nome..." style="width: 100%; padding: 10px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;" value="Romário">
       
       <div style="margin-bottom: 20px; text-align: left; color: #ccc; font-size: 14px;">
-        <label style="display: block; margin-bottom: 8px;">Como deseja ser tratado?</label>
+        <label style="display: block; margin-bottom: 8px;">Como prefere ser tratado?</label>
         <select id="setupGender" style="width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;">
-          <option value="M">Masculino (Bem-vindo)</option>
-          <option value="F">Feminino (Bem-vinda)</option>
+          <option value="M">Masculino (Tratamento de Sir)</option>
+          <option value="F">Feminino (Tratamento de Ma'am)</option>
         </select>
       </div>
 
-      <button onclick="initJarvisSession()" style="width: 100%; padding: 12px; background: #00ffff; color: #000; border: none; font-weight: bold; border-radius: 5px; cursor: pointer;">INICIAR SISTEMA</button>
+      <button onclick="initJarvisSession()" style="width: 100%; padding: 12px; background: #00ffff; color: #000; border: none; font-weight: bold; border-radius: 5px; cursor: pointer;">INICIALIZAR SISTEMA</button>
     </div>
   </div>
 
-  <!-- INPUTS OCULTOS DE SISTEMA -->
-  <input type="file" id="imageInput" style="display: none;" accept="image/*" capture="environment">
-  <input type="file" id="fileInput" style="display: none;" accept="*/*">
-
-  <!-- SCRIPT DE CONTROLE E LÓGICA DO J.A.R.V.I.S. -->
+  <!-- SCRIPT DE CONTROLE E PERSONALIDADE J.A.R.V.I.S. -->
   <script>
     let userData = { name: "Romário", gender: "M" };
 
     // Relógio em tempo real
     setInterval(() => {
       const now = new Date();
-      const clockElem = document.getElementById('clockDisplay');
-      if(clockElem) clockElem.innerText = now.toLocaleTimeString();
+      const clock = document.getElementById('clockDisplay');
+      if(clock) clock.innerText = now.toLocaleTimeString();
     }, 1000);
 
     function initJarvisSession() {
       const nameInput = document.getElementById('setupName').value.trim();
       if (!nameInput) {
-        alert("Por favor, digite seu nome.");
+        alert("Por favor, insira um identificador válido.");
         return;
       }
       
       userData.name = nameInput;
       userData.gender = document.getElementById('setupGender').value;
       
-      const userNameDisplay = document.getElementById('userNameDisplay');
-      if(userNameDisplay) userNameDisplay.innerText = userData.name;
-      
-      const welcomeModal = document.getElementById('welcomeModal');
-      if(welcomeModal) welcomeModal.style.display = 'none';
+      document.getElementById('userNameDisplay').innerText = userData.name;
+      document.getElementById('welcomeModal').style.display = 'none';
 
       triggerWelcomeGreeting();
     }
@@ -183,8 +125,9 @@
     function triggerWelcomeGreeting() {
       const saudacaoHorario = getGreetingTime();
       const termoBemVindo = userData.gender === 'F' ? 'Bem-vinda' : 'Bem-vindo';
+      const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
       
-      const mensagemBoasVindas = `${saudacaoHorario}, ${userData.name}! Seja ${termoBemVindo} ao sistema J.A.R.V.I.S. Como eu posso te ajudar hoje?`;
+      const mensagemBoasVindas = `${saudacaoHorario}, ${tratamento} ${userData.name}. Seja ${termoBemVindo} aos sistemas do J.A.R.V.I.S. Como posso auxiliar em suas demandas operacionais hoje?`;
       
       appendMessage("J.A.R.V.I.S.", mensagemBoasVindas);
       speakText(mensagemBoasVindas);
@@ -192,17 +135,32 @@
 
     function speakText(text) {
       if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel(); // Interrompe qualquer áudio pendente
+      window.speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'pt-BR';
-      utterance.rate = 1.0;
+      utterance.rate = 0.95; // Velocidade ligeiramente pausada
+      utterance.pitch = 0.9;  // Tom de voz mais grave
+      
       window.speechSynthesis.speak(utterance);
     }
 
     function stopJarvisVoice() {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
+      }
+    }
+
+    function fnGenerateJarvisResponse(text) {
+      const lower = text.toLowerCase();
+      const tratamento = userData.gender === 'F' ? 'Ma\'am' : 'Sir';
+
+      if (lower.includes('ajuda') || lower.includes('socorro')) {
+        return `Estou operacional e à disposição, ${tratamento}. Suas ordens são claras.`;
+      } else if (lower.includes('quem é você') || lower.includes('seu criador')) {
+        return `Sou o J.A.R.V.I.S., um sistema de inteligência artificial avançado projetado para gerenciar e otimizar suas diretrizes, ${tratamento}.`;
+      } else {
+        return `Compreendido, ${tratamento}. Os parâmetros da sua solicitação "${text}" foram registrados e estão sendo processados.`;
       }
     }
 
@@ -214,11 +172,10 @@
       appendMessage(userData.name, text);
       input.value = "";
 
-      const respostaIA = `Comando recebido: "${text}". Processando os parâmetros operacionais do sistema.`;
+      const respostaIA = fnGenerateJarvisResponse(text);
       appendMessage("J.A.R.V.I.S.", respostaIA);
 
-      // Verifica a escolha do usuário nesta pesquisa específica para ler ou não a resposta
-      const desejaOuvir = document.getElementById('readAloudToggle').checked;
+      const desejaOuvir = document.getElementById('readAloudToggle')?.checked;
       if (desejaOuvir) {
         speakText(respostaIA);
       }
