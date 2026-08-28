@@ -18,6 +18,22 @@ if (typeof firebase !== 'undefined') {
   auth = firebase.auth();  
   db = firebase.firestore();  
   provider = new firebase.auth.GoogleAuthProvider();  
+
+  // Observador de Estado Contínuo (Garante que o login sobreviva ao recarregar a página)
+  auth.onAuthStateChanged((user) => {
+    const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');
+    const userNameDisplay = document.getElementById('userNameDisplay');
+    
+    if (user) {
+      console.log("J.A.R.V.I.S. - Operador reconhecido:", user.email);
+      if (loginModal) loginModal.style.display = 'none';
+      if (userNameDisplay) {
+        userNameDisplay.innerText = user.displayName ? user.displayName.split(' ')[0] : 'Operador';
+      }
+    } else {
+      if (loginModal) loginModal.style.display = 'flex';
+    }
+  });
 }  
   
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
@@ -63,30 +79,30 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploadListener();  
   initChatStore();  
   
-  // Tratamento do resultado de redirecionamento do Firebase Auth (Compatível com Mobile)
+  // Tratamento de Erros no resultado de redirecionamento do Firebase Auth
   if (auth) {
-    auth.getRedirectResult().then((result) => {
-      if (result.user) {
-        console.log("Usuário autenticado com sucesso via Redirect:", result.user.email);
-        const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');
-        if (loginModal) loginModal.style.display = 'none';
-      }
-    }).catch((error) => {
+    auth.getRedirectResult().catch((error) => {
       console.error("Erro no redirecionamento do Firebase Auth:", error);
     });
   }
 });  
 
-// Função de Login atualizada para usar Redirect (Ideal para navegadores móveis / Android)
+// Função de Login com Persistência LOCAL e Redirect
 function loginWithGoogle() {
   if (!auth || !provider) {
     alert("Firebase Auth não inicializado corretamente.");
     return;
   }
-  auth.signInWithRedirect(provider).catch((error) => {
-    console.error("Erro ao iniciar autenticação com redirecionamento:", error);
-    alert("Erro ao autenticar: " + error.message);
-  });
+  
+  // Força a gravação do login no dispositivo para não deslogar ao fechar
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .then(() => {
+      return auth.signInWithRedirect(provider);
+    })
+    .catch((error) => {
+      console.error("Erro ao iniciar autenticação com redirecionamento:", error);
+      alert("Erro ao autenticar: " + error.message);
+    });
 }
 
 function injectControlPanel() {
