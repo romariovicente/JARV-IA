@@ -1,5 +1,5 @@
 // ==========================================
-// J.A.R.V.I.S. - Core Application Script v4.0
+// J.A.R.V.I.S. - Core Application Script v4.2
 // ==========================================
 
 // Configuração Firebase  
@@ -33,13 +33,13 @@ localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
 let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';  
 
-// Voz desativada por padrão conforme solicitação (usuário escolhe quando ouvir)
+// Voz desativada por padrão conforme solicitação
 let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : false;  
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
 
-// Gerenciamento de Módulos Ativos (Apenas 1 por vez)
-let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'nursingRecord', 'anatomy', 'dictionary', null
+// Gerenciamento de Módulos Exclusivos (Apenas 1 por vez)
+let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'dictionary', 'imageGen', null
 
 let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, jarvisOrb;  
 let attachedFileContent = null;  
@@ -55,13 +55,9 @@ const translations = {
     kali: 'Kali Tools',
     globe: 'Globo Ciberameaças',
     healthSearch: 'Pesquisa Saúde',
-    nursingRecord: 'Prontuário Enfermagem',
-    anatomyAtlas: 'Atlas de Anatomia',
-    medDictionaries: 'Dicionários Técnicos',
+    imageGen: 'Gerador de Imagens',
     placeholder: 'Digite um comando, "ativar [módulo]" ou faça sua pesquisa...',
     status: 'Modo Operacional - J.A.R.V.I.S. Pronto',
-    voiceBtn: '🎙️ Escuta Contínua',
-    activeVoice: '🔴 Escuta Ativa',
     welcome: 'J.A.R.V.I.S. inicializado. Nenhum módulo ativo. Qual módulo você deseja ativar para iniciar?'
   },
   'en-US': {
@@ -69,28 +65,10 @@ const translations = {
     kali: 'Kali Tools',
     globe: 'Cyber Threat Globe',
     healthSearch: 'Health Search',
-    nursingRecord: 'Nursing Records',
-    anatomyAtlas: 'Anatomy Atlas',
-    medDictionaries: 'Medical Dictionaries',
+    imageGen: 'Image Generator',
     placeholder: 'Enter a command, "activate [module]" or search...',
     status: 'Operational Mode - J.A.R.V.I.S. Ready',
-    voiceBtn: '🎙️ Continuous Listening',
-    activeVoice: '🔴 Active Listening',
     welcome: 'J.A.R.V.I.S. initialized. No active module. Which module would you like to activate?'
-  },
-  'es-ES': {
-    academy: 'Academia Hacker',
-    kali: 'Kali Tools',
-    globe: 'Globo Ciberamenazas',
-    healthSearch: 'Búsqueda Salud',
-    nursingRecord: 'Prontuario Enfermería',
-    anatomyAtlas: 'Atlas de Anatomía',
-    medDictionaries: 'Diccionarios Médicos',
-    placeholder: 'Escribe un comando, "activar [módulo]" o busca...',
-    status: 'Modo Operacional - J.A.R.V.I.S. Listo',
-    voiceBtn: '🎙️ Escucha Continua',
-    activeVoice: '🔴 Escucha Activa',
-    welcome: 'J.A.R.V.I.S. inicializado. Sin módulo activo. ¿Qué módulo deseas activar?'
   }
 };
   
@@ -228,6 +206,7 @@ function injectModuleSidebar() {
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-globe"></i> Globo Ciberameaças</button>
       <button onclick="setModule('dictionary')" class="mod-btn" id="btn_mod_dictionary" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> Dicionários & Sinônimos</button>
       <button onclick="setModule('healthSearch')" class="mod-btn" id="btn_mod_healthSearch" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> Pesquisa Clínica & Saúde</button>
+      <button onclick="setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-image"></i> Gerador de Imagens</button>
     </div>
   `;
   const historyList = document.getElementById('chatHistoryList');
@@ -248,6 +227,7 @@ function setModule(modName) {
   else if (modName === 'globe') moduleTitle = "Globo de Ciberameaças em Tempo Real";
   else if (modName === 'dictionary') moduleTitle = "Dicionário Técnico & Sinônimos";
   else if (modName === 'healthSearch') moduleTitle = "Pesquisa Especializada de Saúde";
+  else if (modName === 'imageGen') moduleTitle = "Gerador de Imagens Holográficas";
   
   appendMessage(`[MÓDULO ATIVADO]: ${moduleTitle}. Os demais módulos foram desativados. Digite ou pergunte sobre este tema.`, 'system', true);
   speakJARVIS(`Módulo ${moduleTitle} ativado com sucesso.`);
@@ -290,8 +270,6 @@ function injectJarvisOrbStyles() {
     @keyframes ring-expand { 0% { width: 70px; height: 70px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 130px; height: 130px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
     @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.25); filter: hue-rotate(90deg); } }  
     .jarvis-orb-label { margin-top: 8px; font-family: monospace; font-size: 0.7rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }  
-    .continuous-btn { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #00d2ff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: monospace; font-size: 0.75rem; margin: 5px 0 10px 0; width: 100%; text-transform: uppercase; transition: all 0.3s; }  
-    .continuous-btn.active { background: #00d2ff; color: #000; box-shadow: 0 0 15px #00d2ff; font-weight: bold; }  
   `;  
   document.head.appendChild(style);  
 }  
@@ -399,6 +377,7 @@ function loadChatMessages(id) {
   }  
   chat.messages.forEach(msg => {  
     if (msg.type === 'user') appendCustomMessage(msg.content, 'user', false);  
+    else if (msg.type === 'bot-html') appendMessage(msg.content, 'bot-html', false);
     else appendMessage(msg.content, msg.type, false);  
   });  
 }  
@@ -453,28 +432,6 @@ function speakJARVIS(text) {
   window.speechSynthesis.speak(utterance);  
 }  
 
-// Função para exibir pop-up visual de imagem gerada na pesquisa
-function showImagePopup(title, imageUrl) {
-  let modalId = 'jarvImagePopupModal';
-  let existing = document.getElementById(modalId);
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = modalId;
-  modal.style.cssText = `position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; font-family:monospace;`;
-  modal.innerHTML = `
-    <div style="background:#161b22; border:1px solid #00ffcc; border-radius:8px; padding:15px; max-width:600px; width:90%; text-align:center; box-shadow:0 0 25px rgba(0,255,204,0.4);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="color:#00ffcc; font-weight:bold; font-size:0.9rem;">🖼️ ILUSTRAÇÃO HOLOGRÁFICA: ${escapeHTML(title)}</span>
-        <button onclick="document.getElementById('${modalId}').remove()" style="background:#21262d; border:1px solid #ff7b72; color:#ff7b72; padding:4px 8px; border-radius:4px; cursor:pointer;">✕</button>
-      </div>
-      <img src="${imageUrl}" style="max-width:100%; max-height:400px; border-radius:6px; border:1px solid #30363d; margin-bottom:10px;">
-      <div style="font-size:0.7rem; color:#8b949e;">Gerado dinamicamente para complementar sua pesquisa no J.A.R.V.I.S.</div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
-  
 async function sendMsg() {  
   const text = chatInput.value.trim();  
   if (!text && !attachedFileContent) return;  
@@ -482,7 +439,7 @@ async function sendMsg() {
   const lowerText = text.toLowerCase();  
   chatInput.value = '';  
 
-  // Reconhecimento de Autonomia de Voz / Chat para Ativar Módulos
+  // Ativação de módulos por voz/texto
   if (lowerText.includes("ativar módulo") || lowerText.includes("ativar o módulo") || lowerText.startsWith("ativar ")) {
     if (lowerText.includes("hacker") || lowerText.includes("academia")) {
       setModule('academy');
@@ -499,40 +456,69 @@ async function sendMsg() {
     } else if (lowerText.includes("saúde") || lowerText.includes("clínica")) {
       setModule('healthSearch');
       return;
+    } else if (lowerText.includes("imagem") || lowerText.includes("gerador")) {
+      setModule('imageGen');
+      return;
     }
+  }
+
+  // Verifica se o módulo de imagem está ativo ou se o usuário pediu para gerar imagem diretamente
+  if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.includes("desenhe imagem") || lowerText.startsWith("imagem ")) {
+    let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
+    
+    appendCustomMessage(escapeHTML(text), 'user', true);
+    setOrbState(true);
+
+    const encodedPrompt = encodeURIComponent(promptText);
+    const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=800&height=500&nologo=true`;
+
+    setOrbState(false);
+
+    const imageWidgetHtml = `
+      <div style="margin: 8px 0; border: 1px solid #00ffcc; padding: 12px; border-radius: 6px; background: #0d1117; text-align: center; box-shadow: 0 0 15px rgba(0,255,204,0.2);">
+        <div style="color: #00ffcc; font-size: 0.75rem; margin-bottom: 8px; font-weight: bold;">🖼️ IMAGEM HOLOGRÁFICA GERADA: ${escapeHTML(promptText)}</div>
+        <img src="${imgUrl}" style="max-width: 100%; border-radius: 4px; border: 1px solid #30363d; margin-bottom: 10px;">
+        <div>
+          <a href="${imgUrl}" download="jarvis_geracao.jpg" target="_blank" style="background: #00ffcc; color: #000; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
+            📥 Baixar Imagem Automaticamente
+          </a>
+        </div>
+      </div>
+    `;
+
+    appendMessage(imageWidgetHtml, 'bot-html', true);
+    speakJARVIS("Imagem gerada e disponibilizada no terminal para download.");
+
+    // Desativa o módulo automaticamente após concluir a geração para manter a organização
+    activeModule = null;
+    updateModuleButtonStyles();
+    return;
   }
 
   appendCustomMessage(escapeHTML(text), 'user', true);  
   setOrbState(true);  
 
-  // Preparar contexto de prompt baseado estritamente no módulo ativo
   let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado.`;
   let queryContext = text;
 
   if (attachedFileContent) {
     queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`;
-    attachedFileContent = null; // resetar após uso
+    attachedFileContent = null; 
   }
 
   if (activeModule === 'academy') {
-    systemPrompt = `Você é o instrutor da Academia Hacker do J.A.R.V.I.S. Atue como um professor interativo de cibersegurança, fornecendo explicações passo a passo didáticas, exemplos práticos de código, conceitos de hacking ético e simulações com ilustrações conceituais em texto.`;
+    systemPrompt = `Você é o instrutor da Academia Hacker do J.A.R.V.I.S. Atue como professor interativo de cibersegurança, fornecendo explicações passo a passo.`;
   } else if (activeModule === 'kali') {
-    systemPrompt = `Você é o especialista em ferramentas Kali Linux do J.A.R.V.I.S. Forneça comandos de terminal explicados, sintaxes corretas e orientações de auditoria de segurança defensiva.`;
+    systemPrompt = `Você é o especialista em ferramentas Kali Linux do J.A.R.V.I.S. Forneça comandos de terminal explicados e sintaxes corretas.`;
   } else if (activeModule === 'globe') {
-    systemPrompt = `Você é o analista do Globo de Ciberameaças do J.A.R.V.I.S. Relate tendências globais de vetores de ataques, inteligência de ameaças e mitigação de riscos.`;
+    systemPrompt = `Você é o analista do Globo de Ciberameaças do J.A.R.V.I.S. Relate tendências globais de vetores de ataques.`;
   } else if (activeModule === 'dictionary') {
-    systemPrompt = `Você atua estritamente como um DICIONÁRIO TÉCNICO E DE SINÔNIMOS. Responda à consulta do usuário fornecendo obrigatoriamente: 1. Definição técnica precisa, 2. Sinônimos exatos, 3. Exemplo de uso no contexto profissional. Seja direto e objetivo.`;
+    systemPrompt = `Você atua estritamente como um DICIONÁRIO TÉCNICO E DE SINÔNIMOS. Responda com: 1. Definição técnica, 2. Sinônimos exatos, 3. Exemplo de uso.`;
   } else if (activeModule === 'healthSearch') {
-    systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. (${selectedHealthCountry}). Forneça embasamento técnico e protocolos padronizados.`;
+    systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. (${selectedHealthCountry}).`;
   } else {
-    // Se nenhum módulo estiver ativo, manter em modo geral mas sem mencionar módulos automaticamente
-    systemPrompt = `Você é o J.A.R.V.I.S. Responda de forma direta, interativa e inteligente. O usuário ainda não ativou nenhum módulo específico.`;
+    systemPrompt = `Você é o J.A.R.V.I.S. Responda de forma direta, interativa e inteligente.`;
   }
-
-  // Gerar imagem pop-up exemplar para a pesquisa
-  const encodedQuery = encodeURIComponent(text.slice(0, 50) || 'cybersecurity technology');
-  const popupImgUrl = `https://image.pollinations.ai/prompt/${encodedQuery}%20futuristic%20holographic%20cyber%20terminal%20illustration?width=800&height=500&nologo=true`;
-  showImagePopup(text || 'Pesquisa J.A.R.V.I.S.', popupImgUrl);
 
   let data = null;
   let success = false;
@@ -585,9 +571,13 @@ function appendMessage(text, type, save = true) {
   if (type === 'user') {  
     msgDiv.className = 'jarv-msg jarv-msg-user';  
     msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;  
-  } else if (type === 'bot') {  
+  } else if (type === 'bot' || type === 'bot-html') {  
     msgDiv.className = 'jarv-msg jarv-msg-bot';  
-    msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;  
+    if (type === 'bot-html') {
+      msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${text}`;
+    } else {
+      msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;  
+    }
   } else {  
     msgDiv.className = 'jarv-msg jarv-msg-system';  
     msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${escapeHTML(text)}`;  
