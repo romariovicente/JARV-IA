@@ -22,9 +22,9 @@ if (typeof firebase !== 'undefined') {
   
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
 const MODEL_FALLBACK_LIST = [
+  'llama-3.3-70b-versatile',
   'openai/gpt-oss-20b',
   'openai/gpt-oss-120b',
-  'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant'
 ];
 let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];
@@ -42,7 +42,7 @@ let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'nursing
 
 let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
-let repositoryMarkdownCache = {}; // Cache para arquivos .md (Opção 2)
+let repositoryMarkdownCache = {}; // Cache para arquivos .md
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;  
   
 let recognition = null;  
@@ -165,7 +165,6 @@ function injectModuleSidebar() {
   sidebar.appendChild(container);
 }
 
-// Função Avançada de Leitura Dinâmica de Markdown (.md) - Opção 2
 async function loadRepositoryMarkdown(fileName) {
   if (repositoryMarkdownCache[fileName]) {
     return repositoryMarkdownCache[fileName];
@@ -260,7 +259,6 @@ async function setModule(modName) {
   speakJARVIS(`Subsistema ${moduleTitle} ativado.`);
 }
 
-// Simulador / Executor de Ações de API Real (Opção 3)
 async function triggerApiAction(serviceType) {
   appendMessage(`[API REAIS]: Conectando ao endpoint seguro para ${serviceType.toUpperCase()}...`, 'system', true);
   setOrbState(true);
@@ -269,6 +267,7 @@ async function triggerApiAction(serviceType) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        action: serviceType,
         model: ULTRA_FAST_MODEL,
         messages: [
           { role: "system", content: `Você simula a resposta de uma integração de API corporativa para ${serviceType}. Retorne um relatório simulado elegante e estruturado em formato markdown com status de conexões recentes.` },
@@ -549,7 +548,7 @@ async function sendMsg() {
   } else if (activeModule === 'kali') {
     systemPrompt = `Você é o especialista em ferramentas Kali Linux e PenTest do J.A.R.V.I.S. Forneça comandos de terminal explicados, sintaxes corretas e orientações para testes de intrusão éticos.`;
   } else if (activeModule === 'globe') {
-    systemPrompt = `Você é o analista do Globo de Ciberameaças do J.A.R.V.I.S. Relate tendências globais de vetores de ataques, inteligência de ameaças e monitoramento em tempo real.`;
+    systemPrompt = `You are the cybersecurity globe analyst of J.A.R.V.I.S. Report global attack trends, threat intelligence, and real-time monitoring.`;
   } else if (activeModule === 'knowledgeBase') {
     systemPrompt = `Você é o analista do Segundo Cérebro do J.A.R.V.I.S. Responda com base rigorosa nos arquivos Markdown e documentações técnicas do repositório.`;
   } else if (activeModule === 'integrations') {
