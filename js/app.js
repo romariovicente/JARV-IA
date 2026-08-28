@@ -1,6 +1,6 @@
-// ==========================================
-// J.A.R.V.I.S. - Core Application Script v4.4
-// ==========================================
+// ==========================================================
+// J.A.R.V.I.S. - Core Application Script v5.0 Master Protocol
+// ==========================================================
 
 // Configuração Firebase  
 const firebaseConfig = {  
@@ -33,15 +33,14 @@ localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
 let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';  
 
-// Voz desativada por padrão conforme solicitação
 let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : false;  
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
 
-// Gerenciamento de Módulos Exclusivos (Apenas 1 por vez)
+// Módulos Exclusivos v5.0
 let activeModule = null; // 'academy', 'kali', 'globe', 'healthSearch', 'nursingRecord', 'dictionary', 'imageGen', null
 
-let msgArea, chatInput, statusEl, loginModal, userNameEl, logoutBtn, hiddenFileInput, jarvisOrb;  
+let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;  
   
@@ -49,72 +48,29 @@ let recognition = null;
 let isContinuousActive = false;  
 let isJarvisSpeaking = false;  
 
-const translations = {
-  'pt-BR': {
-    academy: 'Academia Hacker',
-    kali: 'Kali Tools',
-    globe: 'Globo Ciberameaças',
-    healthSearch: 'Pesquisa Saúde',
-    nursingRecord: 'Prontuário & SBAR',
-    imageGen: 'Gerador de Imagens',
-    placeholder: 'Digite um comando, "ativar [módulo]" ou faça sua pesquisa...',
-    status: 'Modo Operacional - J.A.R.V.I.S. Pronto',
-    welcome: 'J.A.R.V.I.S. inicializado. Nenhum módulo ativo. Qual módulo você deseja ativar para iniciar?'
-  },
-  'en-US': {
-    academy: 'Hacker Academy',
-    kali: 'Kali Tools',
-    globe: 'Cyber Threat Globe',
-    healthSearch: 'Health Search',
-    nursingRecord: 'SBAR Record',
-    imageGen: 'Image Generator',
-    placeholder: 'Enter a command, "activate [module]" or search...',
-    status: 'Operational Mode - J.A.R.V.I.S. Ready',
-    welcome: 'J.A.R.V.I.S. initialized. No active module. Which module would you like to activate?'
-  }
-};
-  
 document.addEventListener("DOMContentLoaded", () => {  
-  msgArea = document.getElementById('msgArea');  
-  chatInput = document.getElementById('chatInput');  
-  statusEl = document.getElementById('jarvStatus');  
-  loginModal = document.getElementById('loginModal');  
-  userNameEl = document.getElementById('userName');  
-  logoutBtn = document.getElementById('logoutBtn');  
+  // Identifica elementos da interface v5.0
+  msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
+  chatInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');  
+  statusEl = document.getElementById('jarvStatus') || document.querySelector('.status-indicator');  
   
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
   injectControlPanel();
-  startRealTimeClock();  
+  injectModuleSidebar();
+  setupExecutionButtonListener();
   initAudioAnalyzer();  
   setupFileUploadListener();
-  
-  const clearChatBtn = document.querySelector('.btn-clear-chat');
-  if (clearChatBtn) {
-    clearChatBtn.onclick = () => {
-      if (confirm("Deseja limpar todo o histórico e reiniciar?")) {
-        chatsStore = {};
-        localStorage.removeItem('jarv_chats_v3');
-        activeModule = null;
-        createNewChat(true);
-        speakJARVIS("Histórico limpo. Nenhum módulo ativo.");
-      }
-    };
-  }
-
-  setTimeout(() => {  
-    injectModuleSidebar();
-  }, 500);  
   
   initChatStore();  
 });  
 
 function injectControlPanel() {
-  const sidebar = document.querySelector('.jarv-sidebar') || document.body;
+  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
   if (document.getElementById('jarvControlPanel')) return;
   const panel = document.createElement('div');
   panel.id = 'jarvControlPanel';
-  panel.style.cssText = `margin: 8px auto; padding: 6px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; display: flex; flex-direction: column; gap: 6px;`;
+  panel.style.cssText = `margin: 10px; padding: 8px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; display: flex; flex-direction: column; gap: 6px;`;
   
   panel.innerHTML = `
     <div style="font-size:0.65rem; color:#8b949e; display:flex; justify-content:space-between; align-items:center;">
@@ -126,21 +82,16 @@ function injectControlPanel() {
         ${ttsEnabled ? '🔊 Voz Ativa' : '🔇 Voz Mute'}
       </button>
       <button onclick="stopJarvisVoice()" style="background:#21262d; color:#ff7b72; border:1px solid #ff7b72; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer;">
-        ⏹️ Pausar Fala
+        ⏹️ Pausar
       </button>
     </div>
-    <div style="margin-top:2px;">
-      <label style="font-size:0.65rem; color:#8b949e; display:block; margin-bottom:2px;">📁 Anexar Arquivo / Slide:</label>
-      <input type="file" id="jarvFileUpload" accept=".txt,.pdf,.docx,.md,.json,.csv" style="font-size:0.65rem; color:#c9d1d9; width:100%;">
+    <div style="margin-top:4px;">
+      <label style="font-size:0.65rem; color:#00ffcc; display:block; margin-bottom:2px;">📁 Anexar Arquivo / Slide / Imagem:</label>
+      <input type="file" id="jarvFileUpload" accept=".txt,.pdf,.docx,.md,.json,.csv,image/*" style="font-size:0.65rem; color:#c9d1d9; width:100%;">
     </div>
   `;
   
-  const historyList = document.getElementById('chatHistoryList');
-  if (historyList && historyList.parentNode) {
-    historyList.parentNode.insertBefore(panel, historyList);
-  } else {
-    sidebar.appendChild(panel);
-  }
+  sidebar.appendChild(panel);
 }
 
 function toggleTtsMaster() {
@@ -162,14 +113,12 @@ function toggleTtsMaster() {
     isJarvisSpeaking = false;
     setOrbState(false);
   } else {
-    speakJARVIS("Voz ativada com sucesso.");
+    speakJARVIS("Voz ativada com sucesso, Sir Romário.");
   }
 }
 
 function stopJarvisVoice() {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   isJarvisSpeaking = false;
   setOrbState(false);
 }
@@ -184,40 +133,35 @@ function setupFileUploadListener() {
         const reader = new FileReader();
         reader.onload = (event) => {
           attachedFileContent = event.target.result;
-          appendMessage(`Arquivo "${file.name}" carregado com sucesso na memória do J.A.R.V.I.S. O que deseja que eu faça com ele?`, 'system', true);
+          appendMessage(`[SUBSISTEMA ANEXO]: Arquivo "${file.name}" carregado com sucesso na memória. Pronto para processamento.`, 'system', true);
           speakJARVIS(`Arquivo ${file.name} carregado.`);
         };
         reader.readAsText(file);
       };
     }
-  }, 600);
+  }, 500);
 }
 
 function injectModuleSidebar() {
-  const sidebar = document.querySelector('.jarv-sidebar') || document.body;
+  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
   if (document.getElementById('exclusiveModulesContainer')) return;
   const container = document.createElement('div');
   container.id = 'exclusiveModulesContainer';
-  container.style.cssText = `margin: 8px 0; padding: 6px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
+  container.style.cssText = `margin: 10px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos Exclusivos</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Subsistemas & Módulos</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
-      <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-graduation-cap"></i> Academia Hacker</button>
-      <button onclick="setModule('kali')" class="mod-btn" id="btn_mod_kali" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-shield-halved"></i> Kali Tools</button>
-      <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-globe"></i> Globo Ciberameaças</button>
-      <button onclick="setModule('dictionary')" class="mod-btn" id="btn_mod_dictionary" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-book-medical"></i> Dicionários & Sinônimos</button>
-      <button onclick="setModule('healthSearch')" class="mod-btn" id="btn_mod_healthSearch" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-stethoscope"></i> Pesquisa Clínica & Saúde</button>
-      <button onclick="setModule('nursingRecord')" class="mod-btn" id="btn_mod_nursingRecord" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-notes-medical"></i> Prontuário & SBAR</button>
-      <button onclick="setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;"><i class="fa-solid fa-image"></i> Gerador de Imagens</button>
+      <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker</button>
+      <button onclick="setModule('kali')" class="mod-btn" id="btn_mod_kali" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🛡️ Kali Tools & PenTest</button>
+      <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>
+      <button onclick="setModule('dictionary')" class="mod-btn" id="btn_mod_dictionary" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">📖 Dicionário & Sinônimos</button>
+      <button onclick="setModule('healthSearch')" class="mod-btn" id="btn_mod_healthSearch" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🩺 Pesquisa Clínica (${selectedHealthCountry})</button>
+      <button onclick="setModule('nursingRecord')" class="mod-btn" id="btn_mod_nursingRecord" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">📋 Prontuário & SBAR (${selectedHealthCountry})</button>
+      <button onclick="setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador de Imagens</button>
     </div>
   `;
-  const historyList = document.getElementById('chatHistoryList');
-  if (historyList && historyList.parentNode) {
-    historyList.parentNode.insertBefore(container, historyList);
-  } else {
-    sidebar.appendChild(container);
-  }
+  sidebar.appendChild(container);
 }
 
 function setModule(modName) {
@@ -233,8 +177,8 @@ function setModule(modName) {
   else if (modName === 'nursingRecord') moduleTitle = `Prontuário & SBAR - Siglas e Diretrizes de Enfermagem (${selectedHealthCountry})`;
   else if (modName === 'imageGen') moduleTitle = "Gerador de Imagens Holográficas";
   
-  appendMessage(`[MÓDULO ATIVADO]: ${moduleTitle}. Os demais módulos foram desativados. Digite ou pergunte sobre este tema.`, 'system', true);
-  speakJARVIS(`Módulo ${moduleTitle} ativado com sucesso.`);
+  appendMessage(`[SUBSISTEMA ATIVADO]: ${moduleTitle}. Os demais subsistemas estão em segundo plano.`, 'system', true);
+  speakJARVIS(`Subsistema ${moduleTitle} ativado.`);
 }
 
 function updateModuleButtonStyles() {
@@ -262,24 +206,24 @@ function injectJarvisOrbStyles() {
   const style = document.createElement('style');  
   style.id = 'jarvisOrbStyle';  
   style.innerHTML = `  
-    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 10px auto; padding: 5px; }  
-    .jarvis-orb-wrapper { position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; }  
-    .jarvis-orb { width: 70px; height: 70px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
+    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 15px auto; padding: 5px; }  
+    .jarvis-orb-wrapper { position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }  
+    .jarvis-orb { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
     .ring-wave { position: absolute; border-radius: 50%; border: 1.5px solid rgba(0, 255, 255, 0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; animation: ring-expand 4s linear infinite; }  
-    .ring-wave:nth-child(1) { width: 80px; height: 80px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
-    .ring-wave:nth-child(2) { width: 90px; height: 90px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
-    .ring-wave:nth-child(3) { width: 100px; height: 100px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
-    .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 45px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
+    .ring-wave:nth-child(1) { width: 70px; height: 70px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
+    .ring-wave:nth-child(2) { width: 80px; height: 80px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
+    .ring-wave:nth-child(3) { width: 90px; height: 90px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
+    .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 40px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
     @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 20px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 32px #00d2ff; } }  
-    @keyframes ring-expand { 0% { width: 70px; height: 70px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 130px; height: 130px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
+    @keyframes ring-expand { 0% { width: 60px; height: 60px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 120px; height: 120px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
     @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.25); filter: hue-rotate(90deg); } }  
-    .jarvis-orb-label { margin-top: 8px; font-family: monospace; font-size: 0.7rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }  
+    .jarvis-orb-label { margin-top: 6px; font-family: monospace; font-size: 0.65rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }  
   `;  
   document.head.appendChild(style);  
 }  
   
 function createJarvisOrbElement() {  
-  const sidebar = document.querySelector('.jarv-sidebar') || document.body;  
+  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
   if (document.getElementById('jarvisOrbWidget')) return;  
   const container = document.createElement('div');  
   container.id = 'jarvisOrbWidget';  
@@ -291,12 +235,7 @@ function createJarvisOrbElement() {
     </div>  
     <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>  
   `;  
-  const historyList = document.getElementById('chatHistoryList');  
-  if (historyList && historyList.parentNode) {  
-    historyList.parentNode.insertBefore(container, historyList);  
-  } else {  
-    sidebar.appendChild(container);  
-  }  
+  sidebar.insertBefore(container, sidebar.firstChild);  
   jarvisOrb = document.getElementById('visualOrb');  
 }  
   
@@ -341,20 +280,32 @@ function startFrequencyLoop() {
   };  
   updateLoop();  
 }  
+
+function setupExecutionButtonListener() {
+  const execBtn = document.getElementById('executeBtn') || document.querySelector('button.exec-btn') || document.querySelector('button[onclick*="send"]');
+  const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
   
-function startRealTimeClock() {  
-  const clockEl = document.getElementById('clockDisplay');  
-  if (!clockEl) return;  
-  const update = () => { clockEl.textContent = new Date().toLocaleTimeString(currentLang); };  
-  update();  
-  setInterval(update, 1000);  
-}  
+  if (execBtn) {
+    execBtn.onclick = (e) => {
+      e.preventDefault();
+      sendMsg();
+    };
+  }
+  
+  if (inputEl) {
+    inputEl.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMsg();
+      }
+    };
+  }
+}
   
 function initChatStore() {  
   if (!activeChatId || !chatsStore[activeChatId]) {  
     createNewChat(false);  
   } else {  
-    renderHistoryList();  
     loadChatMessages(activeChatId);  
   }  
 }  
@@ -365,37 +316,23 @@ function createNewChat(shouldRender = true) {
   activeChatId = id;  
   activeModule = null;
   saveStore();  
-  if (shouldRender) { renderHistoryList(); loadChatMessages(activeChatId); }  
+  if (shouldRender) { loadChatMessages(activeChatId); }  
 }  
   
 function loadChatMessages(id) {  
   activeChatId = id;  
   saveStore();  
-  renderHistoryList();  
   if (!msgArea) return;  
   msgArea.innerHTML = '';  
   const chat = chatsStore[id];  
   if (!chat || !chat.messages || chat.messages.length === 0) {  
-    appendMessage(translations[currentLang].welcome, 'system', false);  
+    appendMessage(`J.A.R.V.I.S.: Boa tarde, Sir Romário. Todos os agentes especialistas estão sincronizados e operacionais. Como posso auxiliar em suas diretrizes hoje?`, 'system', false);  
     return;  
   }  
   chat.messages.forEach(msg => {  
     if (msg.type === 'user') appendCustomMessage(msg.content, 'user', false);  
     else if (msg.type === 'bot-html') appendMessage(msg.content, 'bot-html', false);
     else appendMessage(msg.content, msg.type, false);  
-  });  
-}  
-  
-function renderHistoryList() {  
-  const listEl = document.getElementById('chatHistoryList');  
-  if (!listEl) return;  
-  listEl.innerHTML = '';  
-  Object.keys(chatsStore).reverse().forEach(id => {  
-    const btn = document.createElement('button');  
-    btn.className = `history-item ${id === activeChatId ? 'active' : ''}`;  
-    btn.textContent = chatsStore[id].title;  
-    btn.onclick = () => loadChatMessages(id);  
-    listEl.appendChild(btn);  
   });  
 }  
   
@@ -408,7 +345,6 @@ function speakJARVIS(text) {
   if (!ttsEnabled || !('speechSynthesis' in window)) return;  
   window.speechSynthesis.cancel();  
   isJarvisSpeaking = true;  
-  if (recognition && isContinuousActive) { try { recognition.stop(); } catch(e) {} }  
   
   let cleanText = text
     .replace(/[-]{3,}/g, ' ')
@@ -437,49 +373,34 @@ function speakJARVIS(text) {
 }  
 
 async function sendMsg() {  
-  const text = chatInput.value.trim();  
+  const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
+  const text = inputEl ? inputEl.value.trim() : '';  
   if (!text && !attachedFileContent) return;  
 
   const lowerText = text.toLowerCase();  
-  chatInput.value = '';  
+  if (inputEl) inputEl.value = '';  
 
-  // Ativação de módulos por voz/texto
+  // Ativação rápida de módulos por texto ou comandos
   if (lowerText.includes("ativar módulo") || lowerText.includes("ativar o módulo") || lowerText.startsWith("ativar ")) {
-    if (lowerText.includes("hacker") || lowerText.includes("academia")) {
-      setModule('academy');
-      return;
-    } else if (lowerText.includes("kali") || lowerText.includes("tools")) {
-      setModule('kali');
-      return;
-    } else if (lowerText.includes("globo") || lowerText.includes("ameaça")) {
-      setModule('globe');
-      return;
-    } else if (lowerText.includes("dicionário") || lowerText.includes("sinônimo")) {
-      setModule('dictionary');
-      return;
-    } else if (lowerText.includes("saúde") || lowerText.includes("clínica")) {
-      setModule('healthSearch');
-      return;
-    } else if (lowerText.includes("prontuário") || lowerText.includes("sbar")) {
-      setModule('nursingRecord');
-      return;
-    } else if (lowerText.includes("imagem") || lowerText.includes("gerador")) {
-      setModule('imageGen');
-      return;
-    }
+    if (lowerText.includes("hacker") || lowerText.includes("academia")) { setModule('academy'); return; }
+    else if (lowerText.includes("kali") || lowerText.includes("tools")) { setModule('kali'); return; }
+    else if (lowerText.includes("globo") || lowerText.includes("ameaça")) { setModule('globe'); return; }
+    else if (lowerText.includes("dicionário") || lowerText.includes("sinônimo")) { setModule('dictionary'); return; }
+    else if (lowerText.includes("saúde") || lowerText.includes("clínica")) { setModule('healthSearch'); return; }
+    else if (lowerText.includes("prontuário") || lowerText.includes("sbar")) { setModule('nursingRecord'); return; }
+    else if (lowerText.includes("imagem") || lowerText.includes("gerador")) { setModule('imageGen'); return; }
   }
 
-  // Atalho direto via texto
   if (lowerText === "prontuário" || lowerText === "sbar") {
     setModule('nursingRecord');
     return;
   }
 
-  // Verifica se o módulo de imagem está ativo ou se o usuário pediu para gerar imagem diretamente
+  // Tratamento para Gerador de Imagens
   if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.includes("desenhe imagem") || lowerText.startsWith("imagem ")) {
     let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
     
-    appendCustomMessage(escapeHTML(text), 'user', true);
+    appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
     setOrbState(true);
 
     const encodedPrompt = encodeURIComponent(promptText);
@@ -501,17 +422,15 @@ async function sendMsg() {
 
     appendMessage(imageWidgetHtml, 'bot-html', true);
     speakJARVIS("Imagem gerada e disponibilizada no terminal para download.");
-
-    // Desativa o módulo automaticamente após concluir a geração para manter a organização
     activeModule = null;
     updateModuleButtonStyles();
     return;
   }
 
-  appendCustomMessage(escapeHTML(text), 'user', true);  
+  appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.0.`;
   let queryContext = text;
 
   if (attachedFileContent) {
@@ -520,26 +439,20 @@ async function sendMsg() {
   }
 
   if (activeModule === 'academy') {
-    systemPrompt = `Você é o instrutor da Academia Hacker do J.A.R.V.I.S. Atue como professor interativo de cibersegurança, fornecendo explicações passo a passo.`;
+    systemPrompt = `Você é o instrutor da Academia Hacker do J.A.R.V.I.S. Atue como professor interativo de cibersegurança e estudos hackers, fornecendo explicações técnicas passo a passo.`;
   } else if (activeModule === 'kali') {
-    systemPrompt = `Você é o especialista em ferramentas Kali Linux do J.A.R.V.I.S. Forneça comandos de terminal explicados e sintaxes corretas.`;
+    systemPrompt = `Você é o especialista em ferramentas Kali Linux e PenTest do J.A.R.V.I.S. Forneça comandos de terminal explicados, sintaxes corretas e orientações para testes de intrusão éticos.`;
   } else if (activeModule === 'globe') {
-    systemPrompt = `Você é o analista do Globo de Ciberameaças do J.A.R.V.I.S. Relate tendências globais de vetores de ataques.`;
+    systemPrompt = `Você é o analista do Globo de Ciberameaças do J.A.R.V.I.S. Relate tendências globais de vetores de ataques, inteligência de ameaças e monitoramento em tempo real.`;
   } else if (activeModule === 'dictionary') {
     systemPrompt = `Você atua estritamente como um DICIONÁRIO TÉCNICO E DE SINÔNIMOS. Responda com: 1. Definição técnica, 2. Sinônimos exatos, 3. Exemplo de uso.`;
   } else if (activeModule === 'healthSearch') {
     systemPrompt = `Você é o especialista em pesquisa de Saúde e Enfermagem do J.A.R.V.I.S. Atue focando nas diretrizes, terminologias e siglas de enfermagem específicas do país selecionado: ${selectedHealthCountry}.`;
   } else if (activeModule === 'nursingRecord') {
     systemPrompt = `Você é o especialista em documentação de Prontuário e Passagem de Plantão do J.A.R.V.I.S., operando com foco estrito nas normas, diretrizes e siglas de enfermagem do país selecionado: ${selectedHealthCountry}. 
-Sua função é organizar e estruturar informações de pacientes utilizando rigorosamente a metodologia SBAR (Situação, Histórico/Background, Avaliação e Recomendação), ferramenta padronizada na área da saúde para transmitir informações de forma rápida, clara e objetiva. 
-As siglas, terminologias técnicas e abreviações clínicas utilizadas nas etapas devem refletir obrigatoriamente o contexto profissional e normativo de ${selectedHealthCountry}.
-Estruture suas respostas seguindo as quatro etapas do mnemônico SBAR:
-- **S – Situação (Situation):** Diga quem é o paciente, o local e o problema atual em uma frase curta, utilizando as siglas clínicas adequadas para ${selectedHealthCountry}.
-- **B – Histórico / Contexto (Background):** Explique o motivo da internação e os antecedentes clínicos relevantes.
-- **A – Avaliação (Assessment):** Apresente suas conclusões sobre a situação atual, incluindo sinais vitais e alterações observadas.
-- **R – Recomendação (Recommendation):** Peça a ação necessária ou sugira o plano de conduta para o caso.`;
+Utilize rigorosamente a metodologia SBAR (Situação, Histórico/Background, Avaliação e Recomendação) para transmitir informações médicas de forma clara e profissional, adaptada ao contexto normativo de ${selectedHealthCountry}.`;
   } else {
-    systemPrompt = `Você é o J.A.R.V.I.S. Responda de forma direta, interativa e inteligente.`;
+    systemPrompt = `Você é o J.A.R.V.I.S. Responda de forma direta, interativa e inteligente a Romário.`;
   }
 
   let data = null;
@@ -571,7 +484,7 @@ Estruture suas respostas seguindo as quatro etapas do mnemônico SBAR:
 
   if (!success || !data || data.error) {
     const errorMsg = data && data.error ? (data.error.message || JSON.stringify(data.error)) : "Falha na conexão com os modelos.";
-    appendMessage("Erro na API: " + errorMsg, 'system', true);
+    appendMessage("J.A.R.V.I.S.: Erro na API: " + errorMsg, 'system', true);
     return;
   }
 
@@ -584,25 +497,29 @@ Estruture suas respostas seguindo as quatro etapas do mnemônico SBAR:
     botResponse = "Retorno inesperado da API.";  
   }  
 
-  appendMessage(botResponse, 'bot', true);  
+  appendMessage(`J.A.R.V.I.S.: ${botResponse}`, 'bot', true);  
   speakJARVIS(botResponse);  
 }  
   
 function appendMessage(text, type, save = true) {  
+  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.body;
+  
   const msgDiv = document.createElement('div');  
+  msgDiv.style.cssText = "margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.4; background: #161b22; border: 1px solid #30363d; color: #c9d1d9;";
+  
   if (type === 'user') {  
-    msgDiv.className = 'jarv-msg jarv-msg-user';  
-    msgDiv.innerHTML = `<span class="jarv-code">[USER]</span> ${escapeHTML(text)}`;  
+    msgDiv.style.borderColor = '#005cc5';
+    msgDiv.innerHTML = `<strong style="color: #58a6ff;">${escapeHTML(text)}</strong>`;  
   } else if (type === 'bot' || type === 'bot-html') {  
-    msgDiv.className = 'jarv-msg jarv-msg-bot';  
+    msgDiv.style.borderColor = '#00ffcc';
     if (type === 'bot-html') {
-      msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${text}`;
+      msgDiv.innerHTML = text;
     } else {
-      msgDiv.innerHTML = `<span class="jarv-code">[J.A.R.V.I.S.]</span> ${formatMarkdown(text)}`;  
+      msgDiv.innerHTML = formatMarkdown(text);  
     }
   } else {  
-    msgDiv.className = 'jarv-msg jarv-msg-system';  
-    msgDiv.innerHTML = `<span class="jarv-code">[SYSTEM]</span> ${escapeHTML(text)}`;  
+    msgDiv.style.borderColor = '#d73a49';
+    msgDiv.innerHTML = `<span style="color: #ff7b72;">${escapeHTML(text)}</span>`;  
   }  
   msgArea.appendChild(msgDiv);  
   msgArea.scrollTop = msgArea.scrollHeight;  
@@ -629,8 +546,8 @@ function formatMarkdown(text) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff;">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code style="background:#161b22; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>')
+    .replace(/`([^`]+)`/g, '<code style="background:#0d1117; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>')
     .replace(/\n/g, '<br>');
 }
