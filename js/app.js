@@ -59,8 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
   injectModuleSidebar();
   setupExecutionButtonListener();
   initAudioAnalyzer();  
-  setupFileUploadListener();
-  
+  setupFileUploadListener();  
   initChatStore();  
 });  
 
@@ -384,8 +383,8 @@ function speakJARVIS(text) {
 
   const utterance = new SpeechSynthesisUtterance(cleanText);  
   utterance.lang = currentLang;  
-  utterance.rate = 0.85;   
-  utterance.pitch = 0.72;   
+  utterance.rate = 0.85;    
+  utterance.pitch = 0.72;    
 
   const voices = window.speechSynthesis.getVoices();  
   const nativeVoice = voices.find(v => v.lang.includes(currentLang)) || voices.find(v => v.lang.includes('pt'));  
@@ -563,7 +562,7 @@ function appendCustomMessage(text, type, save = true) {
 
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,  
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
