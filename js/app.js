@@ -107,7 +107,7 @@ function startSystemClock() {
   setInterval(update, 1000);
 }
 
-// Configuração Oficial de Reconhecimento de Voz e Evento do Botão Microfone
+// Configuração Oficial de Reconhecimento de Voz e Evento do Botão Microfone (Otimizado para Mobile)
 function setupVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   
@@ -153,7 +153,7 @@ function setupVoiceRecognition() {
     console.error("Erro no reconhecimento de voz:", event.error);
     isContinuousActive = false;
     setOrbState(false);
-    appendMessage(`[VOZ ERRO]: Falha ao capturar áudio (${event.error}). Verifique as permissões do microfone no navegador.`, 'system', true);
+    appendMessage(`[VOZ ERRO]: Falha ao capturar áudio (${event.error}). Verifique se o site está em HTTPS e se permitiu o microfone.`, 'system', true);
   };
 
   recognition.onend = () => {
@@ -192,22 +192,20 @@ function toggleVoiceListening() {
   }
 
   if (isContinuousActive) {
-    recognition.stop();
+    try {
+      recognition.stop();
+    } catch (e) {}
     isContinuousActive = false;
     setOrbState(false);
   } else {
     try {
-      // Força a solicitação de permissão de áudio do navegador
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
-          recognition.start();
-        })
-        .catch(err => {
-          console.error("Permissão de microfone negada:", err);
-          alert("Permissão de microfone negada ou bloqueada. Por favor, habilite o acesso ao microfone nas configurações do seu navegador.");
-        });
-    } catch (e) {
+      // Chamada síncrona direta: preserva o gesto do usuário no Chrome Mobile e aciona a permissão nativa
       recognition.start();
+    } catch (err) {
+      console.error("Erro ao iniciar reconhecimento de voz:", err);
+      isContinuousActive = false;
+      setOrbState(false);
+      alert("Não foi possível iniciar o microfone. Certifique-se de que a página está acessada via HTTPS e que a permissão foi concedida nas configurações do navegador.");
     }
   }
 }
