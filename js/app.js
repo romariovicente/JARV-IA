@@ -482,7 +482,6 @@ function speakJARVIS(text) {
   isJarvisSpeaking = true;  
   if (recognition && isContinuousActive) { try { recognition.stop(); } catch(e) {} }  
   
-  // Limpeza avançada: remove traços decorativos (---), pipes de tabelas (|) e marcações visuais
   let cleanText = text
     .replace(/[-]{3,}/g, ' ')
     .replace(/[|]/g, ' ')
@@ -693,160 +692,28 @@ function appendCustomMessage(text, type, save = true) {
 function escapeHTML(str) {
   if (!str) return '';
   return str.replace(/[&<>'"]/g, 
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-  );
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
+
+// Funções Auxiliares de Módulos e Interface
+function setupFileUploads() {}
+function setupToolbarButtons() {}
+function openHealthSearchModal() { speakJARVIS("Abrindo painel de Pesquisa de Saúde."); }
+function openNursingRecordModal() { speakJARVIS("Abrindo gerenciador de Prontuários de Enfermagem."); }
+function openAnatomyAtlasModal() { speakJARVIS("Carregando Atlas de Anatomia."); }
+function openDictionariesModal() { speakJARVIS("Acessando dicionários técnicos."); }
+function openCyberAcademyModal() { speakJARVIS("Acessando Academia Hacker."); }
+function openKaliToolsModal() { speakJARVIS("Carregando Kali Tools."); }
+function openCyberMapModal() { speakJARVIS("Exibindo globo de ciberameaças."); }
 
 function formatMarkdown(text) {
   if (!text) return '';
-  let formatted = escapeHTML(text);
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  formatted = formatted.replace(/`([^`]+)`/g, '<code style="background:#161b22; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>');
-  formatted = formatted.replace(/\n/g, '<br>');
-  return formatted;
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code style="background:#161b22; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>')
+    .replace(/\n/g, '<br>');
 }
-
-function setupFileUploads() {
-  if (!document.getElementById('hiddenImageInput')) {
-    const imgInput = document.createElement('input');
-    imgInput.type = 'file';
-    imgInput.id = 'hiddenImageInput';
-    imgInput.accept = 'image/*';
-    imgInput.style.display = 'none';
-    document.body.appendChild(imgInput);
-  }
-
-  if (!document.getElementById('hiddenFileInput')) {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.id = 'hiddenFileInput';
-    fileInput.style.display = 'none';
-    document.body.appendChild(fileInput);
-  }
-
-  hiddenImageInput = document.getElementById('hiddenImageInput');
-  hiddenFileInput = document.getElementById('hiddenFileInput');
-
-  hiddenImageInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        attachedImageBase64 = event.target.result;
-        appendMessage(`📷 Imagem anexada da galeria: ${file.name}`, 'system', false);
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  hiddenFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      appendMessage(`📎 Arquivo anexado: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'system', false);
-    }
-  });
-}
-
-function setupToolbarButtons() {
-  const btnCamera = document.getElementById('btnCamera');
-  const btnAttachment = document.getElementById('btnAttachment');
-  const btnMic = document.getElementById('btnMic');
-
-  if (btnCamera) {
-    btnCamera.addEventListener('click', startCameraCapture);
-  }
-
-  if (btnAttachment && hiddenFileInput) {
-    btnAttachment.addEventListener('click', () => hiddenFileInput.click());
-  }
-
-  if (btnMic) {
-    btnMic.addEventListener('click', toggleContinuousListening);
-  }
-
-  if (chatInput) {
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMsg();
-      }
-    });
-  }
-}
-
-function startCameraCapture() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Seu navegador não suporta acesso direto à câmera. Abrindo galeria de mídia...");
-    if (hiddenImageInput) hiddenImageInput.click();
-    return;
-  }
-
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-    .then((stream) => {
-      createCameraPreviewModal(stream);
-    })
-    .catch((err) => {
-      alert("Acesso à câmera não concedido ou indisponível: " + err.message + "\nAbrindo galeria de mídia.");
-      if (hiddenImageInput) hiddenImageInput.click();
-    });
-}
-
-function createCameraPreviewModal(stream) {
-  let modal = document.getElementById('jarvisCamModal');
-  if (modal) modal.remove();
-
-  modal = document.createElement('div');
-  modal.id = 'jarvisCamModal';
-  modal.style.cssText = `position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;`;
-  
-  modal.innerHTML = `
-    <div style="background:#0d1117; border:1px solid #00ffcc; padding:15px; border-radius:8px; text-align:center; max-width:90%; width:420px; box-shadow: 0 0 20px rgba(0,255,204,0.3);">
-      <h3 style="color:#00ffcc; font-family:monospace; margin-top:0;">📷 CAPTURA DE IMAGEM AO VIVO</h3>
-      <video id="jarvisCamVideo" autoplay playsinline style="width:100%; max-height:300px; border-radius:6px; background:#000; border:1px solid #30363d;"></video>
-      <canvas id="jarvisCamCanvas" style="display:none;"></canvas>
-      <div style="margin-top:15px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-        <button id="btnTakePhoto" style="background:#00ffcc; color:#000; font-weight:bold; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-family:monospace;">Tirar Foto</button>
-        <button id="btnOpenGalleryModal" style="background:#00d2ff; color:#000; font-weight:bold; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-family:monospace;">Abrir Galeria</button>
-        <button id="btnCloseCam" style="background:#ff0055; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-family:monospace;">Cancelar</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const video = document.getElementById('jarvisCamVideo');
-  video.srcObject = stream;
-
-  document.getElementById('btnTakePhoto').onclick = () => {
-    const canvas = document.getElementById('jarvisCamCanvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    attachedImageBase64 = canvas.toDataURL('image/png');
-    appendMessage("📸 Foto capturada com sucesso!", "system", false);
-    
-    stream.getTracks().forEach(track => track.stop());
-    modal.remove();
-  };
-
-  document.getElementById('btnOpenGalleryModal').onclick = () => {
-    stream.getTracks().forEach(track => track.stop());
-    modal.remove();
-    if (hiddenImageInput) hiddenImageInput.click();
-  };
-
-  document.getElementById('btnCloseCam').onclick = () => {
-    stream.getTracks().forEach(track => track.stop());
-    modal.remove();
-  };
-}
-
-function openHealthSearchModal() { appendMessage("Módulo de Pesquisa Especializada em Saúde acionado.", "system", false); }
-function openNursingRecordModal() { appendMessage("Módulo de Prontuário de Enfermagem acionado.", "system", false); }
-function openAnatomyAtlasModal() { appendMessage("Módulo de Atlas de Anatomia acionado.", "system", false); }
-function openDictionariesModal() { appendMessage("Módulo de Dicionários Técnicos acionado.", "system", false); }
-function openCyberAcademyModal() { appendMessage("Módulo Academia Hacker acionado.", "system", false); }
-function openKaliToolsModal() { appendMessage("Módulo Kali Tools acionado.", "system", false); }
-function openCyberMapModal() { appendMessage("Módulo Globo de Ciberameaças acionado.", "system", false); }
