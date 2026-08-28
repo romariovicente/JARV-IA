@@ -62,7 +62,32 @@ document.addEventListener("DOMContentLoaded", () => {
   initAudioAnalyzer();  
   setupFileUploadListener();  
   initChatStore();  
+  
+  // Tratamento do resultado de redirecionamento do Firebase Auth (Compatível com Mobile)
+  if (auth) {
+    auth.getRedirectResult().then((result) => {
+      if (result.user) {
+        console.log("Usuário autenticado com sucesso via Redirect:", result.user.email);
+        const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');
+        if (loginModal) loginModal.style.display = 'none';
+      }
+    }).catch((error) => {
+      console.error("Erro no redirecionamento do Firebase Auth:", error);
+    });
+  }
 });  
+
+// Função de Login atualizada para usar Redirect (Ideal para navegadores móveis / Android)
+function loginWithGoogle() {
+  if (!auth || !provider) {
+    alert("Firebase Auth não inicializado corretamente.");
+    return;
+  }
+  auth.signInWithRedirect(provider).catch((error) => {
+    console.error("Erro ao iniciar autenticação com redirecionamento:", error);
+    alert("Erro ao autenticar: " + error.message);
+  });
+}
 
 function injectControlPanel() {
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
