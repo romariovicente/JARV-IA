@@ -38,11 +38,11 @@
     </div>
     <div class="header-right">
       <div class="system-controls">
-        <span>Status: <strong id="jarvStatus" class="text-cyan">Inicializando...</strong></span>
+        <span>Status: <strong id="jarvStatus" class="text-cyan">Online</strong></span>
         <span class="clock-display" id="clockDisplay">00:00:00</span>
       </div>
       <div class="user-profile">
-        <span class="user-name" id="userName">Romário</span>
+        <span class="user-name" id="userNameDisplay">Usuário</span>
         <button class="btn-logout" id="logoutBtn" style="display:none;" title="Sair"><i class="fa-solid fa-power-off"></i></button>
       </div>
     </div>
@@ -92,11 +92,21 @@
 
       <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO (FIXADA) -->
       <div class="input-section">
-        <div class="action-toolbar">
+        <div class="action-toolbar" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
           <button class="tool-btn" id="btnCamera" title="Anexar Imagem / Câmera"><i class="fa-solid fa-camera"></i></button>
           <button class="tool-btn" id="btnAttachment" title="Anexar Arquivo"><i class="fa-solid fa-paperclip"></i></button>
           <button class="tool-btn" id="btnMic" title="Comando de Voz"><i class="fa-solid fa-microphone"></i></button>
+          
+          <!-- Escolha dinâmica por pesquisa para a voz da IA -->
+          <label style="color: #00ffff; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin-left: auto;">
+            <input type="checkbox" id="readAloudToggle" checked style="accent-color: #00ffff;"> Ouvir voz nesta pesquisa?
+          </label>
+          <!-- Botão de emergência para paralisar a voz -->
+          <button class="tool-btn" id="btnStopSpeech" title="Paralisar Voz" onclick="stopJarvisVoice()" style="background: #ff4444; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+            <i class="fa-solid fa-stop"></i> Parar Voz
+          </button>
         </div>
+
         <div class="input-wrapper">
           <input type="text" id="chatInput" placeholder="Digite seu comando ou solicitação ao J.A.R.V.I.S..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
           <button class="btn-send" onclick="sendMsg()">ENVIAR</button>
@@ -105,30 +115,130 @@
     </main>
   </div>
 
-  <!-- MODAL DE LOGIN / AUTENTICAÇÃO -->
-  <div class="modal-overlay" id="loginModal">
-    <div class="modal-card modal-settings" style="text-align: center;">
-      <div class="modal-logo">
+  <!-- MODAL DE BOAS-VINDAS / CONFIGURAÇÃO DE NOME E GÊNERO -->
+  <div class="modal-overlay" id="welcomeModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center;">
+    <div class="modal-card modal-settings" style="text-align: center; background: #111; border: 1px solid #00ffff; padding: 30px; border-radius: 10px; max-width: 400px; width: 90%;">
+      <div class="modal-logo" style="color: #00ffff; font-size: 40px; margin-bottom: 15px;">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
-      <h2>J.A.R.V.I.S. SYSTEM</h2>
-      <p class="subtitle">Autenticação de Segurança Necessária</p>
-      <button class="btn-google-login" id="loginBtn">
-        <i class="fa-brands fa-google"></i> Entrar com Google
-      </button>
+      <h2 style="color: #fff; margin-bottom: 10px;">J.A.R.V.I.S. SYSTEM</h2>
+      <p class="subtitle" style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Insira seus dados para inicialização personalizada</p>
+      
+      <input type="text" id="setupName" placeholder="Digite seu nome..." style="width: 100%; padding: 10px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;" value="Romário">
+      
+      <div style="margin-bottom: 20px; text-align: left; color: #ccc; font-size: 14px;">
+        <label style="display: block; margin-bottom: 8px;">Como deseja ser tratado?</label>
+        <select id="setupGender" style="width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px;">
+          <option value="M">Masculino (Bem-vindo)</option>
+          <option value="F">Feminino (Bem-vinda)</option>
+        </select>
+      </div>
+
+      <button onclick="initJarvisSession()" style="width: 100%; padding: 12px; background: #00ffff; color: #000; border: none; font-weight: bold; border-radius: 5px; cursor: pointer;">INICIAR SISTEMA</button>
     </div>
   </div>
 
-  <!-- INPUTS OCULTOS DE SISTEMA (ACIONADOS PELOS BOTÕES DE CÂMERA E ANEXO) -->
+  <!-- INPUTS OCULTOS DE SISTEMA -->
   <input type="file" id="imageInput" style="display: none;" accept="image/*" capture="environment">
   <input type="file" id="fileInput" style="display: none;" accept="*/*">
 
-  <!-- Firebase SDK Compat -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- SCRIPT DE CONTROLE E LÓGICA DO J.A.R.V.I.S. -->
+  <script>
+    let userData = { name: "Romário", gender: "M" };
 
-  <!-- Script Principal do J.A.R.V.I.S. -->
-  <script src="js/app.js"></script>
+    // Relógio em tempo real
+    setInterval(() => {
+      const now = new Date();
+      const clockElem = document.getElementById('clockDisplay');
+      if(clockElem) clockElem.innerText = now.toLocaleTimeString();
+    }, 1000);
+
+    function initJarvisSession() {
+      const nameInput = document.getElementById('setupName').value.trim();
+      if (!nameInput) {
+        alert("Por favor, digite seu nome.");
+        return;
+      }
+      
+      userData.name = nameInput;
+      userData.gender = document.getElementById('setupGender').value;
+      
+      const userNameDisplay = document.getElementById('userNameDisplay');
+      if(userNameDisplay) userNameDisplay.innerText = userData.name;
+      
+      const welcomeModal = document.getElementById('welcomeModal');
+      if(welcomeModal) welcomeModal.style.display = 'none';
+
+      triggerWelcomeGreeting();
+    }
+
+    function getGreetingTime() {
+      const hora = new Date().getHours();
+      if (hora >= 5 && hora < 12) return "Bom dia";
+      if (hora >= 12 && hora < 18) return "Boa tarde";
+      if (hora >= 18 && hora < 24) return "Boa noite";
+      return "Boa madrugada";
+    }
+
+    function triggerWelcomeGreeting() {
+      const saudacaoHorario = getGreetingTime();
+      const termoBemVindo = userData.gender === 'F' ? 'Bem-vinda' : 'Bem-vindo';
+      
+      const mensagemBoasVindas = `${saudacaoHorario}, ${userData.name}! Seja ${termoBemVindo} ao sistema J.A.R.V.I.S. Como eu posso te ajudar hoje?`;
+      
+      appendMessage("J.A.R.V.I.S.", mensagemBoasVindas);
+      speakText(mensagemBoasVindas);
+    }
+
+    function speakText(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel(); // Interrompe qualquer áudio pendente
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'pt-BR';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopJarvisVoice() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function sendMsg() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendMessage(userData.name, text);
+      input.value = "";
+
+      const respostaIA = `Comando recebido: "${text}". Processando os parâmetros operacionais do sistema.`;
+      appendMessage("J.A.R.V.I.S.", respostaIA);
+
+      // Verifica a escolha do usuário nesta pesquisa específica para ler ou não a resposta
+      const desejaOuvir = document.getElementById('readAloudToggle').checked;
+      if (desejaOuvir) {
+        speakText(respostaIA);
+      }
+    }
+
+    function appendMessage(sender, text) {
+      const msgArea = document.getElementById('msgArea');
+      if (!msgArea) return;
+      
+      const msgDiv = document.createElement('div');
+      msgDiv.style.margin = "10px 0";
+      msgDiv.style.padding = "10px";
+      msgDiv.style.borderRadius = "8px";
+      msgDiv.style.background = sender === "J.A.R.V.I.S." ? "#1a1a1a" : "#222";
+      msgDiv.style.borderLeft = sender === "J.A.R.V.I.S." ? "3px solid #00ffff" : "3px solid #888";
+      
+      msgDiv.innerHTML = `<strong style="color: ${sender === "J.A.R.V.I.S." ? "#00ffff" : "#fff"};">${sender}:</strong> <span style="color: #ccc;">${text}</span>`;
+      msgArea.appendChild(msgDiv);
+      msgArea.scrollTop = msgArea.scrollHeight;
+    }
+  </script>
 </body>
 </html>
