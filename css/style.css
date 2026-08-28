@@ -1,3 +1,7 @@
+/* ========================================================== */
+/* J.A.R.V.I.S. - Cyberpunk & Neon Master Protocol style.css  */
+/* ========================================================== */
+
 :root {
   --bg-dark: #070b12;
   --bg-sidebar: #0b1220;
@@ -6,9 +10,12 @@
   --accent-blue: #0078d4;
   --accent-cyan: #00d2ff;
   --accent-green: #00ff66;
+  --neon-pink: #ff0077;
   --border-color: #162646;
   --text-main: #d0e1ff;
   --text-muted: #5c78a5;
+  --neon-glow: 0 0 15px rgba(0, 210, 255, 0.35);
+  --transition-fluid: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -25,6 +32,7 @@ body.kali-theme {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: var(--transition-fluid);
 }
 
 /* BARRA SUPERIOR (HEADER) */
@@ -37,6 +45,7 @@ body.kali-theme {
   align-items: center;
   padding: 0 15px;
   flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .header-left {
@@ -49,6 +58,13 @@ body.kali-theme {
 .logo-icon {
   color: var(--accent-cyan);
   font-size: 1.2rem;
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.6);
+  transition: var(--transition-fluid);
+}
+
+.logo-icon:hover {
+  transform: scale(1.1);
+  text-shadow: 0 0 14px var(--accent-cyan);
 }
 
 .brand-title small {
@@ -73,19 +89,24 @@ body.kali-theme {
 
 .system-controls i {
   cursor: pointer;
-  transition: color 0.2s;
+  transition: var(--transition-fluid);
 }
 
 .system-controls i:hover {
   color: var(--accent-cyan);
+  text-shadow: 0 0 8px var(--accent-cyan);
 }
 
-.text-cyan { color: var(--accent-cyan); }
+.text-cyan { 
+  color: var(--accent-cyan); 
+  text-shadow: 0 0 6px rgba(0, 210, 255, 0.3);
+}
 
 .clock-display {
   font-family: monospace;
   color: var(--accent-green);
   font-weight: bold;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
 }
 
 .user-profile {
@@ -106,6 +127,12 @@ body.kali-theme {
   padding: 3px 8px;
   border-radius: 4px;
   cursor: pointer;
+  transition: var(--transition-fluid);
+}
+
+.btn-logout:hover {
+  background-color: rgba(255, 85, 85, 0.2);
+  box-shadow: 0 0 10px rgba(255, 85, 85, 0.4);
 }
 
 /* LAYOUT PRINCIPAL */
@@ -126,6 +153,7 @@ body.kali-theme {
   padding: 12px 10px;
   gap: 12px;
   flex-shrink: 0;
+  transition: var(--transition-fluid);
 }
 
 .sidebar-top-actions {
@@ -147,10 +175,13 @@ body.kali-theme {
   gap: 6px;
   font-weight: bold;
   font-size: 0.85rem;
+  transition: var(--transition-fluid);
 }
 
 .btn-new-chat:hover {
   background-color: #163668;
+  box-shadow: var(--neon-glow);
+  border-color: var(--accent-cyan);
 }
 
 .btn-clear-chat {
@@ -160,10 +191,12 @@ body.kali-theme {
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
+  transition: var(--transition-fluid);
 }
 
 .btn-clear-chat:hover {
   background-color: rgba(255, 85, 85, 0.15);
+  box-shadow: 0 0 10px rgba(255, 85, 85, 0.3);
 }
 
 .chat-history-container {
@@ -174,6 +207,15 @@ body.kali-theme {
   gap: 5px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
+  scroll-behavior: smooth;
+}
+
+.chat-history-container::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-history-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
 }
 
 .history-label {
@@ -201,12 +243,15 @@ body.kali-theme {
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
+  transition: var(--transition-fluid);
 }
 
 .history-item.active, .history-item:hover {
   background-color: #12203a;
   border-color: var(--border-color);
   color: var(--accent-cyan);
+  box-shadow: inset 0 0 8px rgba(0, 210, 255, 0.15);
+  transform: translateX(3px);
 }
 
 .sidebar-nav {
@@ -227,12 +272,14 @@ body.kali-theme {
   align-items: center;
   gap: 10px;
   font-size: 0.85rem;
+  transition: var(--transition-fluid);
 }
 
 .jarv-nav-item.active, .jarv-nav-item:hover {
   background-color: #12203a;
   color: #ffffff;
   border-left: 3px solid var(--accent-cyan);
+  box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.2);
 }
 
 .btn-reset {
@@ -247,9 +294,15 @@ body.kali-theme {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition: var(--transition-fluid);
 }
 
-/* PAINEL CENTRAL DE CHAT (Corrigido para mobile e desktop) */
+.btn-reset:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+/* PAINEL CENTRAL DE CHAT */
 .jarv-main {
   flex: 1;
   position: relative;
@@ -272,9 +325,10 @@ body.kali-theme {
   background-size: contain;
   opacity: 0.08;
   pointer-events: none;
+  transition: var(--transition-fluid);
 }
 
-/* MENSAGENS COM SCROLL INTERNO */
+/* MENSAGENS COM SCROLL INTERNO FLUÍDO */
 .msg-container {
   flex: 1;
   overflow-y: auto;
@@ -283,6 +337,23 @@ body.kali-theme {
   gap: 15px;
   padding-bottom: 15px;
   z-index: 2;
+  scroll-behavior: smooth;
+}
+
+.msg-container::-webkit-scrollbar {
+  width: 6px;
+}
+.msg-container::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+.msg-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+  transition: var(--transition-fluid);
+}
+.msg-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+  box-shadow: var(--neon-glow);
 }
 
 .jarv-msg {
@@ -293,12 +364,19 @@ body.kali-theme {
   line-height: 1.4;
   border: 1px solid var(--border-color);
   position: relative;
+  animation: fadeInMsg 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInMsg {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .jarv-msg-system {
-  background-color: rgba(13, 23, 42, 0.8);
+  background-color: rgba(13, 23, 42, 0.85);
   border-color: #1c3560;
   color: var(--accent-green);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.1);
 }
 
 .jarv-msg-user {
@@ -306,6 +384,7 @@ body.kali-theme {
   background-color: #0e2447;
   border-color: #1d4580;
   color: #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 120, 212, 0.2);
 }
 
 .jarv-msg-bot {
@@ -313,12 +392,14 @@ body.kali-theme {
   background-color: #0b182d;
   border-color: #183460;
   color: var(--text-main);
+  box-shadow: 0 4px 15px rgba(0, 210, 255, 0.1);
 }
 
 .jarv-code {
   font-family: monospace;
   font-weight: bold;
   color: var(--accent-cyan);
+  text-shadow: 0 0 5px rgba(0, 210, 255, 0.4);
 }
 
 /* ESTILO PARA TABELAS GERADAS PELO BOT */
@@ -328,6 +409,7 @@ body.kali-theme {
   margin-top: 10px;
   margin-bottom: 10px;
   color: var(--text-main);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .jarv-msg-bot th, .jarv-msg-bot td {
@@ -339,11 +421,12 @@ body.kali-theme {
 .jarv-msg-bot th {
   background-color: rgba(0, 210, 255, 0.15);
   color: var(--accent-cyan);
+  text-shadow: 0 0 5px rgba(0, 210, 255, 0.4);
 }
 
 /* TERMINAL CLI INFERIOR */
 .terminal-cli-panel {
-  background-color: rgba(5, 9, 16, 0.9);
+  background-color: rgba(5, 9, 16, 0.92);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 10px;
@@ -352,6 +435,8 @@ body.kali-theme {
   margin-bottom: 8px;
   z-index: 2;
   flex-shrink: 0;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
+  transition: var(--transition-fluid);
 }
 
 .user-host { color: var(--accent-green); }
@@ -359,7 +444,7 @@ body.kali-theme {
 
 @keyframes blink { 50% { opacity: 0; } }
 
-/* BARRA DE FERRAMENTAS E CAMPO DE TEXTO (FIXADA NA TELA) */
+/* BARRA DE FERRAMENTAS E CAMPO DE TEXTO */
 .input-section {
   display: flex;
   flex-direction: column;
@@ -386,9 +471,15 @@ body.kali-theme {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: var(--transition-fluid);
 }
 
-.tool-btn:hover { background-color: #162a4d; }
+.tool-btn:hover { 
+  background-color: #162a4d; 
+  border-color: var(--accent-cyan);
+  box-shadow: var(--neon-glow);
+  transform: translateY(-2px);
+}
 
 .input-wrapper {
   display: flex;
@@ -403,20 +494,35 @@ body.kali-theme {
   padding: 12px 15px;
   border-radius: 6px;
   outline: none;
+  transition: var(--transition-fluid);
 }
 
 .input-wrapper input:focus {
   border-color: var(--accent-cyan);
+  box-shadow: var(--neon-glow);
+  background-color: #0d1626;
 }
 
 .btn-send {
-  background: linear-gradient(135deg, #005bb5, #0088ff);
+  background: linear-gradient(135deg, #005bb5, #00d2ff);
   border: none;
   color: #ffffff;
   padding: 0 25px;
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
+  transition: var(--transition-fluid);
+  box-shadow: 0 4px 15px rgba(0, 210, 255, 0.2);
+}
+
+.btn-send:hover {
+  background: linear-gradient(135deg, #0078d4, #00ff66);
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-send:active {
+  transform: translateY(0);
 }
 
 /* MODAL DE CONFIGURAÇÕES & LOGIN */
@@ -424,20 +530,32 @@ body.kali-theme {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(3, 6, 12, 0.85);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeInModal 0.25s ease-out forwards;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(8px); }
 }
 
 .modal-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--accent-cyan);
   border-radius: 12px;
   padding: 30px;
   width: 420px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 15px 40px rgba(0, 210, 255, 0.2), inset 0 0 15px rgba(0, 210, 255, 0.05);
+  animation: scaleUpModal 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes scaleUpModal {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .modal-settings .modal-header {
@@ -456,6 +574,12 @@ body.kali-theme {
   color: var(--text-muted);
   font-size: 1.5rem;
   cursor: pointer;
+  transition: var(--transition-fluid);
+}
+
+.btn-close-modal:hover {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 8px var(--accent-cyan);
 }
 
 .setting-group {
@@ -480,6 +604,12 @@ body.kali-theme {
   padding: 10px;
   border-radius: 6px;
   outline: none;
+  transition: var(--transition-fluid);
+}
+
+.setting-group select:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--neon-glow);
 }
 
 .toggle-wrapper {
@@ -494,6 +624,7 @@ body.kali-theme {
   font-size: 3rem;
   color: var(--accent-cyan);
   margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(0, 210, 255, 0.6);
 }
 
 .subtitle {
@@ -516,4 +647,12 @@ body.kali-theme {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  transition: var(--transition-fluid);
+  box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
+}
+
+.btn-google-login:hover {
+  background-color: #5292ff;
+  box-shadow: 0 0 20px rgba(66, 133, 244, 0.6);
+  transform: translateY(-2px);
 }
