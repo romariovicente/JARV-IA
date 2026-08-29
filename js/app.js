@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.3 Master Protocol
+// J.A.R.V.I.S. - Core Application Script v5.4 Master Protocol
 // ==========================================================
 
 // Configuração Firebase  
@@ -39,9 +39,9 @@ if (typeof firebase !== 'undefined') {
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
 const MODEL_FALLBACK_LIST = [
   'llama-3.3-70b-versatile',
-  'openai/gpt-oss-20b',
+  'llama-3.1-8b-instant',
   'openai/gpt-oss-120b',
-  'llama-3.1-8b-instant'
+  'openai/gpt-oss-20b'
 ];
 let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
@@ -303,7 +303,7 @@ function injectModuleSidebar() {
   container.style.cssText = `margin: 10px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Subsistemas & Módulos v5.3</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Subsistemas & Módulos v5.4</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
       <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('kali')" class="mod-btn" id="btn_mod_kali" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🛡️ Kali Tools & PenTest</button>
@@ -618,7 +618,6 @@ async function sendMsg() {
     appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
     setOrbState(true);
 
-    const encodedPrompt = encodeURIComponent(promptText);
     const videoStreamUrl = `https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-31918-large.mp4`; 
     setOrbState(false);
 
@@ -671,7 +670,7 @@ async function sendMsg() {
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.3.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.4. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação exata enviada pelo operador Romário.`;
   let queryContext = text;
 
   if (attachedFileContent) {
@@ -697,14 +696,14 @@ async function sendMsg() {
         })  
       });  
       data = await response.json();
-      if (!data.error) { success = true; break; }
+      if (data && !data.error) { success = true; break; }
     } catch (err) {}
   }
 
   setOrbState(false);  
 
   if (!success || !data || data.error) {
-    appendMessage("J.A.R.V.I.S.: Erro na API de modelos.", 'system', true);
+    appendMessage("J.A.R.V.I.S.: Houve uma oscilação na leitura da query. Repetindo diretriz...", 'system', true);
     return;
   }
 
