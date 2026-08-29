@@ -547,10 +547,72 @@ function speakJARVIS(text) {
   window.speechSynthesis.speak(utterance);  
 }  
 
+// ==========================================================
+// MOTOR DE ATMOSFERA VISUAL DINÂMICA (Camaleão do Terminal)
+// ==========================================================
+function applyDynamicTheme(queryText) {
+  const terminalContainer = document.querySelector('.jarv-chat-area') || document.body;
+  const lower = queryText.toLowerCase();
+
+  let themeStyle = {
+    bg: "radial-gradient(circle at center, #0a0e17 0%, #030712 100%)",
+    border: "#30363d",
+    glow: "0 0 15px rgba(0, 255, 255, 0.15)",
+    accent: "#00ffff"
+  };
+
+  if (lower.match(/hack|kali|pentest|segurança|ciber|cc50|senha|exploit/i)) {
+    // Tema Cibersegurança / Matrix (Verde Hacker Intenso)
+    themeStyle = {
+      bg: "radial-gradient(circle at center, #05190f 0%, #020b06 100%)",
+      border: "#00ff66",
+      glow: "0 0 25px rgba(0, 255, 102, 0.35)",
+      accent: "#00ff66"
+    };
+  } else if (lower.match(/saúde|clínica|médico|prontuário|sbar|enfermagem|paciente/i)) {
+    // Tema Clínico / Hospitalar (Azul Científico Profundo)
+    themeStyle = {
+      bg: "radial-gradient(circle at center, #081226 0%, #020617 100%)",
+      border: "#38bdf8",
+      glow: "0 0 25px rgba(56, 189, 248, 0.35)",
+      accent: "#38bdf8"
+    };
+  } else if (lower.match(/vídeo|filme|imagem|gerar|holograma|arte|foto/i)) {
+    // Tema Holográfico / Multimídia (Rosa Neon e Roxo Cibernético)
+    themeStyle = {
+      bg: "radial-gradient(circle at center, #1f0a1f 0%, #0a020f 100%)",
+      border: "#ff0077",
+      glow: "0 0 25px rgba(255, 0, 119, 0.35)",
+      accent: "#ff0077"
+    };
+  } else if (lower.match(/código|python|javascript|bug|erro|função|script/i)) {
+    // Tema Desenvolvimento / Engenharia (Âmbar / Laranja Terminal Clássico)
+    themeStyle = {
+      bg: "radial-gradient(circle at center, #1c1408 0%, #0a0702 100%)",
+      border: "#f59e0b",
+      glow: "0 0 25px rgba(245, 158, 11, 0.35)",
+      accent: "#f59e0b"
+    };
+  }
+
+  terminalContainer.style.transition = "background 0.8s ease, box-shadow 0.8s ease, border-color 0.8s ease";
+  terminalContainer.style.background = themeStyle.bg;
+  terminalContainer.style.borderColor = themeStyle.border;
+  terminalContainer.style.boxShadow = themeStyle.glow;
+
+  if (jarvisOrb) {
+    jarvisOrb.style.transition = "background 0.8s ease, box-shadow 0.8s ease";
+    jarvisOrb.style.boxShadow = `0 0 30px ${themeStyle.accent}, inset 0 0 15px #ffffff`;
+  }
+}
+
 async function sendMsg() {  
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
   const text = inputEl ? inputEl.value.trim() : '';  
   if (!text && !attachedFileContent) return;  
+
+  // Ativa a mudança de atmosfera visual instantaneamente baseada no assunto pesquisado
+  applyDynamicTheme(text);
 
   const lowerText = text.toLowerCase();  
   if (inputEl) inputEl.value = '';  
