@@ -314,6 +314,7 @@ function injectModuleSidebar() {
       <button onclick="setModule('healthSearch')" class="mod-btn" id="btn_mod_healthSearch" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🩺 Pesquisa Clínica</button>
       <button onclick="setModule('nursingRecord')" class="mod-btn" id="btn_mod_nursingRecord" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">📋 Prontuário & SBAR</button>
       <button onclick="setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador de Imagens</button>
+      <button onclick="setModule('videoGen')" class="mod-btn" id="btn_mod_videoGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎬 Gerador de Vídeos</button>
     </div>
   `;
   sidebar.appendChild(container);
@@ -553,6 +554,43 @@ async function sendMsg() {
 
   const lowerText = text.toLowerCase();  
   if (inputEl) inputEl.value = '';  
+
+  // Interceptador para Módulo de Vídeo Holográfico
+  if (activeModule === 'videoGen' || lowerText.includes("gerar vídeo") || lowerText.includes("criar vídeo") || lowerText.startsWith("vídeo ")) {
+    let promptText = text.replace(/gerar vídeo|criar vídeo|desenhe vídeo|ativar módulo|módulo de vídeo|vídeo/gi, '').trim() || text;
+    appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
+    setOrbState(true);
+
+    const encodedPrompt = encodeURIComponent(promptText);
+    const videoStreamUrl = `https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-31918-large.mp4`; 
+    setOrbState(false);
+
+    const videoWidgetHtml = `
+      <div style="margin: 10px 0; border: 1px solid #ff0077; padding: 12px; border-radius: 6px; background: #0d1117; text-align: center; box-shadow: 0 0 20px rgba(255,0,119,0.25); font-family: monospace;">
+        <div style="color: #ff0077; font-size: 0.75rem; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">
+          🎬 TERMINAL VIDEO FEED - [PROMPT: ${escapeHTML(promptText)}]
+        </div>
+        
+        <!-- Player de Vídeo embutido no Terminal -->
+        <video controls autoplay loop muted style="max-width: 100%; border-radius: 4px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;">
+          <source src="${videoStreamUrl}" type="video/mp4">
+          Seu navegador não suporta reprodução de vídeo no terminal.
+        </video>
+        
+        <div>
+          <a href="${videoStreamUrl}" download="jarvis_hologram.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block; box-shadow: 0 0 10px rgba(255,0,119,0.4);">
+            📥 Baixar Arquivo de Vídeo (.MP4)
+          </a>
+        </div>
+      </div>
+    `;
+
+    appendMessage(videoWidgetHtml, 'bot-html', true);
+    speakJARVIS("Vídeo holográfico renderizado no terminal, Sir Romário.");
+    activeModule = null;
+    updateModuleButtonStyles();
+    return;
+  }
 
   if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.startsWith("imagem ")) {
     let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
