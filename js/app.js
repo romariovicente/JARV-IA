@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.6 Master Protocol
+// J.A.R.V.I.S. - Core Application Script v5.7 (Anonymous Official Seal)
 // ==========================================================
 
 // Configuração Firebase  
@@ -105,20 +105,22 @@ function startSystemClock() {
   setInterval(update, 1000);
 }
 
-// Insere a logomarca dos Anonymous no topo da interface
+// Insere o selo oficial circular e interativo dos Anonymous no topo da interface
 function injectAnonymousLogoAndStyles() {
   if (document.getElementById('anonymousBranding')) return;
   const headerArea = document.querySelector('header') || document.querySelector('.app-header') || document.querySelector('.sidebar') || document.body;
   
   const logoDiv = document.createElement('div');
   logoDiv.id = 'anonymousBranding';
-  logoDiv.style.cssText = `display: flex; align-items: center; gap: 8px; padding: 10px; margin: 5px; background: #0d1117; border: 1px solid #ff0055; border-radius: 6px; font-family: monospace; box-shadow: 0 0 15px rgba(255,0,85,0.3);`;
+  logoDiv.style.cssText = `display: flex; align-items: center; gap: 10px; padding: 10px; margin: 5px; background: #000000; border: 1.5px solid #ffffff; border-radius: 8px; font-family: monospace; box-shadow: 0 0 20px rgba(255,255,255,0.25);`;
   
   logoDiv.innerHTML = `
-    <div style="font-size: 1.4rem;">🎭</div>
-    <div>
-      <div style="font-size: 0.75rem; color: #ff0055; font-weight: bold; letter-spacing: 2px;">ANONYMOUS SEC</div>
-      <div style="font-size: 0.55rem; color: #8b949e;">PROTOCOL v5.6 ACTIVE</div>
+    <div style="position: relative; width: 45px; height: 45px; flex-shrink: 0;">
+      <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Seal" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 1px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5);">
+    </div>
+    <div style="overflow: hidden;">
+      <div style="font-size: 0.7rem; color: #ffffff; font-weight: bold; letter-spacing: 1px; white-space: nowrap; text-overflow: ellipsis;">ANONYMOUS LEGION</div>
+      <div style="font-size: 0.55rem; color: #00ffcc; letter-spacing: 0.5px;">KNOWLEDGE IS FREE</div>
     </div>
   `;
   headerArea.insertBefore(logoDiv, headerArea.firstChild);
@@ -289,7 +291,7 @@ function injectModuleSidebar() {
   container.style.cssText = `margin: 10px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.6 3D</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.7 3D</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
       <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>
@@ -676,7 +678,7 @@ async function processQueryText(text) {
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.6. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.7. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
   let queryContext = text;
 
   if (attachedFileContent) {
