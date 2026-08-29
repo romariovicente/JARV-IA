@@ -209,6 +209,36 @@ body.kali-theme {
   box-shadow: 0 0 10px rgba(255, 85, 85, 0.3);
 }
 
+/* CARD LATERAL ANONYMOUS - ESTILO SELO CIRCULAR CYBERPUNK */
+.anonymous-card, .jarv-sidebar .anonymous-card {
+  width: 100%;
+  max-width: 150px;
+  height: 150px;
+  background-color: #000000;
+  border: 2px solid var(--accent-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.3), inset 0 0 10px rgba(0, 255, 102, 0.15);
+  margin: 5px auto;
+  overflow: hidden;
+  position: relative;
+  transition: var(--transition-fluid);
+}
+
+.anonymous-card:hover {
+  box-shadow: 0 0 22px rgba(0, 255, 102, 0.6), inset 0 0 15px rgba(0, 255, 102, 0.3);
+  border-color: var(--accent-cyan);
+}
+
+.anonymous-card img, .anonymous-card svg {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
 .chat-history-container {
   flex: 1;
   overflow-y: auto;
