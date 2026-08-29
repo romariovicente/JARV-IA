@@ -562,7 +562,6 @@ function applyDynamicTheme(queryText) {
   };
 
   if (lower.match(/hack|kali|pentest|segurança|ciber|cc50|senha|exploit/i)) {
-    // Tema Cibersegurança / Matrix (Verde Hacker Intenso)
     themeStyle = {
       bg: "radial-gradient(circle at center, #05190f 0%, #020b06 100%)",
       border: "#00ff66",
@@ -570,7 +569,6 @@ function applyDynamicTheme(queryText) {
       accent: "#00ff66"
     };
   } else if (lower.match(/saúde|clínica|médico|prontuário|sbar|enfermagem|paciente/i)) {
-    // Tema Clínico / Hospitalar (Azul Científico Profundo)
     themeStyle = {
       bg: "radial-gradient(circle at center, #081226 0%, #020617 100%)",
       border: "#38bdf8",
@@ -578,7 +576,6 @@ function applyDynamicTheme(queryText) {
       accent: "#38bdf8"
     };
   } else if (lower.match(/vídeo|filme|imagem|gerar|holograma|arte|foto/i)) {
-    // Tema Holográfico / Multimídia (Rosa Neon e Roxo Cibernético)
     themeStyle = {
       bg: "radial-gradient(circle at center, #1f0a1f 0%, #0a020f 100%)",
       border: "#ff0077",
@@ -586,7 +583,6 @@ function applyDynamicTheme(queryText) {
       accent: "#ff0077"
     };
   } else if (lower.match(/código|python|javascript|bug|erro|função|script/i)) {
-    // Tema Desenvolvimento / Engenharia (Âmbar / Laranja Terminal Clássico)
     themeStyle = {
       bg: "radial-gradient(circle at center, #1c1408 0%, #0a0702 100%)",
       border: "#f59e0b",
@@ -611,7 +607,6 @@ async function sendMsg() {
   const text = inputEl ? inputEl.value.trim() : '';  
   if (!text && !attachedFileContent) return;  
 
-  // Ativa a mudança de atmosfera visual instantaneamente baseada no assunto pesquisado
   applyDynamicTheme(text);
 
   const lowerText = text.toLowerCase();  
@@ -632,13 +627,10 @@ async function sendMsg() {
         <div style="color: #ff0077; font-size: 0.75rem; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">
           🎬 TERMINAL VIDEO FEED - [PROMPT: ${escapeHTML(promptText)}]
         </div>
-        
-        <!-- Player de Vídeo embutido no Terminal -->
         <video controls autoplay loop muted style="max-width: 100%; border-radius: 4px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;">
           <source src="${videoStreamUrl}" type="video/mp4">
           Seu navegador não suporta reprodução de vídeo no terminal.
         </video>
-        
         <div>
           <a href="${videoStreamUrl}" download="jarvis_hologram.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block; box-shadow: 0 0 10px rgba(255,0,119,0.4);">
             📥 Baixar Arquivo de Vídeo (.MP4)
