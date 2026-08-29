@@ -107,7 +107,7 @@ function startSystemClock() {
   setInterval(update, 1000);
 }
 
-// Configuração Oficial de Reconhecimento de Voz e Evento do Botão Microfone (Otimizado para Mobile)
+// Configuração Oficial de Reconhecimento de Voz (Otimizado para Mobile e Envio Estável)
 function setupVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   
@@ -128,24 +128,14 @@ function setupVoiceRecognition() {
   };
 
   recognition.onresult = (event) => {
-    let interimTranscript = '';
-    let finalTranscript = '';
-
+    let transcript = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
-      } else {
-        interimTranscript += event.results[i][0].transcript;
-      }
+      transcript += event.results[i][0].transcript;
     }
 
     const targetInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
-    if (targetInput && (finalTranscript || interimTranscript)) {
-      targetInput.value = finalTranscript || interimTranscript;
-    }
-
-    if (finalTranscript) {
-      sendMsg();
+    if (targetInput && transcript) {
+      targetInput.value = transcript;
     }
   };
 
@@ -159,9 +149,15 @@ function setupVoiceRecognition() {
   recognition.onend = () => {
     isContinuousActive = false;
     setOrbState(false);
+    
+    // Dispara o envio automaticamente assim que o reconhecimento de voz processa o texto e fecha
+    const targetInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
+    if (targetInput && targetInput.value.trim() !== '') {
+      sendMsg();
+    }
   };
 
-  // Vincula o clique ao botão de microfone existente no HTML (procura por ícones ou botões com SVG/mic)
+  // Vincula o clique ao botão de microfone existente no HTML
   setTimeout(() => {
     const micButtons = document.querySelectorAll('button');
     micButtons.forEach(btn => {
@@ -174,7 +170,6 @@ function setupVoiceRecognition() {
       }
     });
 
-    // Fallback por seletor comum de ícone de microfone na interface
     const specificMicBtn = document.querySelector('button:has(svg), .mic-btn, [id*="mic"]');
     if (specificMicBtn && !specificMicBtn.onclick) {
       specificMicBtn.onclick = (e) => {
@@ -199,7 +194,6 @@ function toggleVoiceListening() {
     setOrbState(false);
   } else {
     try {
-      // Chamada síncrona direta: preserva o gesto do usuário no Chrome Mobile e aciona a permissão nativa
       recognition.start();
     } catch (err) {
       console.error("Erro ao iniciar reconhecimento de voz:", err);
