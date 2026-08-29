@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.8 (Layout Rectified)
+// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado)
 // ==========================================================
 
 // Configuração Firebase  
@@ -53,21 +53,20 @@ let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 let activeModule = null; 
 let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
-let repositoryMarkdownCache = {}; 
 let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;  
   
 let recognition = null;  
 let isContinuousActive = false;  
 let isJarvisSpeaking = false;  
+let userRequestedMicStop = true; // Mic inicia pausado por padrão
+let speechQueue = []; // Fila de falas para não travar o mobile
 
 document.addEventListener("DOMContentLoaded", () => {  
   msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
   chatInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');  
   statusEl = document.getElementById('jarvStatus') || document.querySelector('.status-indicator');  
   
-  // Limpa elementos duplicados estáticos do HTML original que conflitam com o app dinâmico
   cleanupLegacyElements();
-
   injectAnonymousLogoAndStyles();
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
@@ -87,26 +86,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (auth) {
-    auth.getRedirectResult().catch((error) => {
-      console.error("Erro no redirecionamento do Firebase Auth:", error);
-    });
+    auth.getRedirectResult().catch((error) => console.error("Erro Auth:", error));
   }
 });  
 
-// Remove blocos estáticos antigos da barra lateral para evitar duplicidade visual
 function cleanupLegacyElements() {
   const legacyNewChatBtn = document.querySelector('button[onclick*="Nova Conversa"]') || document.querySelector('.fa-plus')?.parentElement;
   if (legacyNewChatBtn && legacyNewChatBtn.innerText.includes('Nova Conversa')) {
     legacyNewChatBtn.style.display = 'none';
   }
-  
-  // Remove títulos soltos de histórico antigos se existirem na sidebar
   document.querySelectorAll('.sidebar *, aside *').forEach(el => {
     if (el.innerText === 'HISTÓRICO DE SESSÕES' || el.innerText === 'SESSÕES DE CHAT') {
-      // Deixa apenas o nosso container gerarel criado via script
-      if (!el.closest('#jarvChatHistoryContainer')) {
-        el.style.display = 'none';
-      }
+      if (!el.closest('#jarvChatHistoryContainer')) el.style.display = 'none';
     }
   });
 }
@@ -114,27 +105,20 @@ function cleanupLegacyElements() {
 function startSystemClock() {
   const clockDisplay = document.getElementById('clockDisplay');
   if (!clockDisplay) return;
-
   function update() {
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    clockDisplay.innerText = `${hh}:${mm}:${ss}`;
+    clockDisplay.innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
   }
   update();
   setInterval(update, 1000);
 }
 
-// Injeção do Selo Oficial Circular dos Anonymous perfeitamente dimensionado
 function injectAnonymousLogoAndStyles() {
   if (document.getElementById('anonymousBranding')) return;
   const sidebarArea = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.querySelector('header') || document.body;
-  
   const logoDiv = document.createElement('div');
   logoDiv.id = 'anonymousBranding';
   logoDiv.style.cssText = `display: flex; align-items: center; gap: 10px; padding: 10px; margin: 8px 5px; background: #000000; border: 1.5px solid #00ffcc; border-radius: 8px; font-family: monospace; box-shadow: 0 0 15px rgba(0,255,204,0.25);`;
-  
   logoDiv.innerHTML = `
     <div style="position: relative; width: 45px; height: 45px; flex-shrink: 0;">
       <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Seal" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 1px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.6);">
@@ -147,67 +131,98 @@ function injectAnonymousLogoAndStyles() {
   sidebarArea.insertBefore(logoDiv, sidebarArea.firstChild);
 }
 
+// ----------------------------------------------------
+// SISTEMA DE ESCUTA CONTÍNUA E INTERAÇÃO DE VOZ
+// ----------------------------------------------------
 function setupVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return;
 
   recognition = new SpeechRecognition();
   recognition.lang = currentLang;
-  recognition.continuous = false;
+  recognition.continuous = true; // Mantém ouvindo
   recognition.interimResults = false;
 
   recognition.onstart = () => {
     isContinuousActive = true;
     setOrbState(true);
-    appendMessage("[VOZ]: Ouvindo comando de pesquisa...", 'system', true);
+    updateMicUI();
   };
 
   recognition.onresult = (event) => {
-    let transcript = event.results[0][0].transcript.trim();
-    if (transcript) processQueryText(transcript);
+    let transcript = event.results[event.results.length - 1][0].transcript.trim();
+    if (transcript) {
+      // Pausa o mic temporariamente para processar e responder sem ouvir a si mesmo
+      try { recognition.stop(); } catch (e) {} 
+      processQueryText(transcript);
+    }
   };
 
-  recognition.onerror = () => { isContinuousActive = false; setOrbState(false); };
-  recognition.onend = () => { isContinuousActive = false; setOrbState(false); };
+  recognition.onerror = (event) => {
+    if (event.error !== 'no-speech') {
+      isContinuousActive = false;
+      setOrbState(false);
+    }
+  };
+
+  recognition.onend = () => {
+    isContinuousActive = false;
+    setOrbState(false);
+    updateMicUI();
+
+    // Reinício Automático: A mágica da escuta contínua no Android/Web
+    if (!userRequestedMicStop && !isJarvisSpeaking) {
+      setTimeout(() => {
+        if (!isJarvisSpeaking && !userRequestedMicStop) {
+          try { recognition.start(); } catch (e) {}
+        }
+      }, 300);
+    }
+  };
 
   setTimeout(() => {
-    const micButtons = document.querySelectorAll('button');
-    micButtons.forEach(btn => {
-      const htmlContent = btn.innerHTML.toLowerCase();
-      if (htmlContent.includes('mic') || btn.querySelector('svg') || btn.querySelector('.fa-microphone') || htmlContent.includes('escuta')) {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          toggleVoiceListening();
-        };
+    const micIcons = document.querySelectorAll('.fa-microphone, button');
+    micIcons.forEach(btn => {
+      const htmlContent = (btn.innerHTML || '').toLowerCase();
+      if (btn.id !== 'btnMicToggle' && btn.id !== 'btnMicPause' && (htmlContent.includes('mic') || btn.querySelector('svg') || btn.classList.contains('fa-microphone'))) {
+        btn.onclick = (e) => { e.preventDefault(); startContinuousMic(); };
       }
     });
   }, 600);
 }
 
-function toggleVoiceListening() {
-  if (!recognition) {
-    alert("Reconhecimento de voz não suportado neste navegador. Utilize o Google Chrome.");
-    return;
-  }
-  if (isContinuousActive) {
-    try { recognition.stop(); } catch (e) {}
-    isContinuousActive = false;
-    setOrbState(false);
-  } else {
-    try { recognition.start(); } catch (err) {
-      isContinuousActive = false;
-      setOrbState(false);
+function startContinuousMic() {
+  if (!recognition) { alert("Navegador não suporta reconhecimento de voz."); return; }
+  userRequestedMicStop = false;
+  try { recognition.start(); } catch (e) {}
+  updateMicUI();
+}
+
+function pauseContinuousMic() {
+  userRequestedMicStop = true;
+  if (recognition) { try { recognition.stop(); } catch (e) {} }
+  updateMicUI();
+  appendMessage("[SISTEMA]: Microfone pausado pelo operador.", 'system', false);
+}
+
+function updateMicUI() {
+  const btnLig = document.getElementById('btnMicToggle');
+  if (btnLig) {
+    if (!userRequestedMicStop && isContinuousActive) {
+      btnLig.style.background = '#00ffff';
+      btnLig.style.color = '#000';
+      btnLig.innerHTML = '🎙️ Mic LIGADO';
+    } else {
+      btnLig.style.background = '#161b22';
+      btnLig.style.color = '#00ffff';
+      btnLig.innerHTML = '🎙️ Ligar Mic';
     }
   }
 }
 
-function loginWithGoogle() {
-  if (!auth || !provider) return;
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-    .then(() => auth.signInWithRedirect(provider))
-    .catch((error) => alert("Erro ao autenticar: " + error.message));
-}
-
+// ----------------------------------------------------
+// INJEÇÃO DO PAINEL DE CONTROLE ATUALIZADO
+// ----------------------------------------------------
 function injectControlPanel() {
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
   if (document.getElementById('jarvControlPanel')) return;
@@ -217,7 +232,7 @@ function injectControlPanel() {
   
   panel.innerHTML = `
     <div style="font-size:0.65rem; color:#8b949e; display:flex; justify-content:space-between; align-items:center;">
-      <span>CONTROLE DE VOZ:</span>
+      <span>SÍNTESE VOCAL:</span>
       <span id="voiceStatusBadge" style="color:${ttsEnabled ? '#00ffcc' : '#ff5555'}">${ttsEnabled ? 'LIGADA' : 'DESLIGADA'}</span>
     </div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px;">
@@ -225,12 +240,16 @@ function injectControlPanel() {
         ${ttsEnabled ? '🔊 Voz Ativa' : '🔇 Voz Mute'}
       </button>
       <button onclick="stopJarvisVoice()" style="background:#21262d; color:#ff7b72; border:1px solid #ff7b72; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer;">
-        ⏹️ Pausar
+        ⏹️ Calar I.A.
       </button>
     </div>
-    <div style="margin-top:4px;">
-      <button onclick="toggleVoiceListening()" style="background:#161b22; color:#00ffff; border:1px solid #00ffff; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; width:100%; font-weight:bold;">
-        🎙️ Ativar Microfone / Escuta
+    <div style="font-size:0.65rem; color:#8b949e; margin-top:4px;">ESCUTA CONTÍNUA (MICROFONE):</div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+      <button id="btnMicToggle" onclick="startContinuousMic()" style="background:#161b22; color:#00ffff; border:1px solid #00ffff; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; font-weight:bold;">
+        🎙️ Ligar Mic
+      </button>
+      <button id="btnMicPause" onclick="pauseContinuousMic()" style="background:#21262d; color:#ff7b72; border:1px solid #ff7b72; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; font-weight:bold;">
+        ⏸️ Pausar Mic
       </button>
     </div>
     <div style="margin-top:4px;">
@@ -239,6 +258,7 @@ function injectControlPanel() {
     </div>
   `;
   sidebar.appendChild(panel);
+  updateMicUI();
 }
 
 function toggleTtsMaster() {
@@ -256,20 +276,92 @@ function toggleTtsMaster() {
     btn.textContent = ttsEnabled ? '🔊 Voz Ativa' : '🔇 Voz Mute';
   }
   if (!ttsEnabled) {
-    window.speechSynthesis.cancel();
+    stopJarvisVoice();
+  } else {
+    speakJARVIS("Síntese vocal reativada.");
+  }
+}
+
+// ----------------------------------------------------
+// SISTEMA DE LEITURA EM VOZ (CHUNKED TTS) - EVITA CORTES
+// ----------------------------------------------------
+function speakJARVIS(text) {  
+  if (!ttsEnabled || !('speechSynthesis' in window)) return;  
+  window.speechSynthesis.cancel();  
+  speechQueue = [];
+  isJarvisSpeaking = true;  
+  
+  // Limpeza profunda para evitar que caracteres de markdown e emojis travem o leitor mobile
+  let cleanText = text.replace(/[-|_|=]{2,}/g, ' ') 
+                      .replace(/[#*`~\[\]>]/g, '')
+                      .replace(/(https?:\/\/[^\s]+)/g, "link oculto")
+                      .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') 
+                      .replace(/\s+/g, ' ').trim();
+
+  // Divide o texto longo em sentenças menores usando pontuação para o Android não mutar
+  let chunks = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
+  
+  let finalChunks = [];
+  chunks.forEach(c => {
+    if (c.length > 200) {
+      let sub = c.match(/.{1,200}(\s|$)/g) || [c];
+      finalChunks.push(...sub);
+    } else {
+      finalChunks.push(c);
+    }
+  });
+
+  speechQueue = finalChunks.map(c => c.trim()).filter(c => c.length > 0);
+  playNextSpeechChunk();
+}  
+
+function playNextSpeechChunk() {
+  if (speechQueue.length === 0) {
     isJarvisSpeaking = false;
     setOrbState(false);
-  } else {
-    speakJARVIS("Voz ativada com sucesso, Sir Romário.");
+    // Retoma o microfone se a escuta contínua estiver ativada
+    if (recognition && !userRequestedMicStop) {
+      setTimeout(() => { try { recognition.start(); } catch(e){} }, 400);
+    }
+    return;
   }
+
+  let chunk = speechQueue.shift();
+  const utterance = new SpeechSynthesisUtterance(chunk);  
+  utterance.lang = currentLang;  
+  utterance.rate = 0.95;    
+  utterance.pitch = 0.72;    
+
+  const voices = window.speechSynthesis.getVoices();  
+  const nativeVoice = voices.find(v => v.lang.includes(currentLang)) || voices.find(v => v.lang.includes('pt'));  
+  if (nativeVoice) utterance.voice = nativeVoice;  
+
+  utterance.onstart = () => { 
+    setOrbState(true); 
+    if (recognition && !userRequestedMicStop) {
+      try { recognition.stop(); } catch(e){} // Garante que a IA não ouça a si mesma
+    }
+  };  
+  utterance.onend = () => { playNextSpeechChunk(); };  
+  utterance.onerror = () => { playNextSpeechChunk(); };  
+
+  window.speechSynthesis.speak(utterance);  
 }
 
 function stopJarvisVoice() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  speechQueue = [];
   isJarvisSpeaking = false;
   setOrbState(false);
+  // Retoma escuta se necessário
+  if (recognition && !userRequestedMicStop) {
+    setTimeout(() => { try { recognition.start(); } catch(e){} }, 400);
+  }
 }
 
+// ----------------------------------------------------
+// UI, EFEITOS VISUAIS E MÓDULOS
+// ----------------------------------------------------
 function setupFileUploadListener() {
   setTimeout(() => {
     const fileInput = document.getElementById('jarvFileUpload');
@@ -280,7 +372,7 @@ function setupFileUploadListener() {
         const reader = new FileReader();
         reader.onload = (event) => {
           attachedFileContent = event.target.result;
-          appendMessage(`[SUBSISTEMA ANEXO]: Arquivo "${file.name}" carregado na memória.`, 'system', true);
+          appendMessage(`[SUBSISTEMA ANEXO]: Arquivo "${file.name}" carregado.`, 'system', true);
           speakJARVIS(`Arquivo ${file.name} carregado.`);
         };
         reader.readAsText(file);
@@ -297,7 +389,7 @@ function injectModuleSidebar() {
   container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.8 3D</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.9 3D</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
       <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>
@@ -308,7 +400,6 @@ function injectModuleSidebar() {
   sidebar.appendChild(container);
 }
 
-// Gerenciador de Sessões de Chat Limpo e Organizado na Sidebar
 function injectChatHistoryUI() {
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
   if (document.getElementById('jarvChatHistoryContainer')) return;
@@ -316,7 +407,6 @@ function injectChatHistoryUI() {
   const container = document.createElement('div');
   container.id = 'jarvChatHistoryContainer';
   container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;`;
-  
   container.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
       <span style="font-size: 0.7rem; color: #00ffcc; font-weight: bold; text-transform: uppercase;">📂 Sessões de Chat</span>
@@ -361,8 +451,7 @@ function switchChat(chatId) {
 }
 
 function renameChatPrompt(chatId) {
-  const currentTitle = chatsStore[chatId]?.title || 'Chat';
-  const newTitle = prompt("Digite o novo nome para este chat:", currentTitle);
+  const newTitle = prompt("Digite o novo nome para este chat:", chatsStore[chatId]?.title || 'Chat');
   if (newTitle && newTitle.trim() !== '') {
     chatsStore[chatId].title = newTitle.trim();
     saveStore();
@@ -372,15 +461,10 @@ function renameChatPrompt(chatId) {
 
 function deleteChat(chatId) {
   const keys = Object.keys(chatsStore);
-  if (keys.length <= 1) {
-    alert("Você deve manter pelo menos uma sessão de chat ativa.");
-    return;
-  }
-  if (confirm("Deseja excluir esta sessão de chat?")) {
+  if (keys.length <= 1) { alert("Mantenha pelo menos um chat."); return; }
+  if (confirm("Deseja excluir esta sessão?")) {
     delete chatsStore[chatId];
-    if (activeChatId === chatId) {
-      activeChatId = Object.keys(chatsStore)[0];
-    }
+    if (activeChatId === chatId) activeChatId = Object.keys(chatsStore)[0];
     saveStore();
     loadChatMessages(activeChatId);
     renderChatHistoryList();
@@ -390,7 +474,6 @@ function deleteChat(chatId) {
 async function setModule(modName) {
   activeModule = modName;
   updateModuleButtonStyles();
-  
   if (modName === 'academy') {
     appendMessage(`<div style="margin:8px 0; border:1px solid #00ffcc; padding:12px; border-radius:6px; background:#0d1117; font-family:monospace;"><strong>🎓 ACADEMIA HACKER & CC50</strong><br>Progresso: 9% (8 de 90 aulas). Digite sua dúvida sobre o CC50!</div>`, 'bot-html', true);
     speakJARVIS("Academia Hacker ativada, Sir Romário.");
@@ -500,9 +583,7 @@ function setupExecutionButtonListener() {
   const execBtn = document.getElementById('executeBtn') || document.querySelector('button.exec-btn') || document.querySelector('button[onclick*="send"]');
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
   
-  if (execBtn) {
-    execBtn.onclick = (e) => { e.preventDefault(); sendMsg(); };
-  }
+  if (execBtn) { execBtn.onclick = (e) => { e.preventDefault(); sendMsg(); }; }
   if (inputEl) {
     inputEl.onkeydown = (e) => {
       if (e.key === 'Enter') { e.preventDefault(); sendMsg(); }
@@ -511,11 +592,8 @@ function setupExecutionButtonListener() {
 }
   
 function initChatStore() {  
-  if (!activeChatId || !chatsStore[activeChatId]) {  
-    createNewChat(false);  
-  } else {  
-    loadChatMessages(activeChatId);  
-  }  
+  if (!activeChatId || !chatsStore[activeChatId]) createNewChat(false);  
+  else loadChatMessages(activeChatId);  
   renderChatHistoryList();
 }  
   
@@ -525,10 +603,7 @@ function createNewChat(shouldRender = true) {
   activeChatId = id;  
   activeModule = null;
   saveStore();  
-  if (shouldRender) { 
-    loadChatMessages(activeChatId); 
-    renderChatHistoryList();
-  }  
+  if (shouldRender) { loadChatMessages(activeChatId); renderChatHistoryList(); }  
 }  
   
 function loadChatMessages(id) {  
@@ -554,35 +629,11 @@ function saveStore() {
   localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
   localStorage.setItem('jarv_active_chat', activeChatId);  
 }  
-  
-function speakJARVIS(text) {  
-  if (!ttsEnabled || !('speechSynthesis' in window)) return;  
-  window.speechSynthesis.cancel();  
-  isJarvisSpeaking = true;  
-  
-  let cleanText = text.replace(/[-]{3,}/g, ' ').replace(/[|]/g, ' ').replace(/[*_#`\[\]]/g, '').replace(/\s+/g, ' ').trim();
-  const utterance = new SpeechSynthesisUtterance(cleanText);  
-  utterance.lang = currentLang;  
-  utterance.rate = 0.85;    
-  utterance.pitch = 0.72;    
-
-  const voices = window.speechSynthesis.getVoices();  
-  const nativeVoice = voices.find(v => v.lang.includes(currentLang)) || voices.find(v => v.lang.includes('pt'));  
-  if (nativeVoice) utterance.voice = nativeVoice;  
-
-  utterance.onstart = () => { setOrbState(true); };  
-  utterance.onend = () => { isJarvisSpeaking = false; setOrbState(false); };  
-  utterance.onerror = () => { isJarvisSpeaking = false; setOrbState(false); };  
-
-  window.speechSynthesis.speak(utterance);  
-}  
 
 function applyDynamicTheme(queryText) {
   const terminalContainer = document.querySelector('.jarv-chat-area') || document.body;
   const lower = queryText.toLowerCase();
-
   let bgImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1600&auto=format&fit=crop"; 
-
   if (lower.match(/hack|kali|pentest|segurança|ciber|cc50|senha|exploit/i)) {
     bgImageUrl = "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1600&auto=format&fit=crop"; 
   } else if (lower.match(/saúde|clínica|médico|prontuário|sbar|enfermagem|paciente/i)) {
@@ -592,7 +643,6 @@ function applyDynamicTheme(queryText) {
   } else if (lower.match(/código|python|javascript|bug|erro|função|script/i)) {
     bgImageUrl = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop"; 
   }
-
   terminalContainer.style.transition = "background 1s ease";
   terminalContainer.style.backgroundImage = `linear-gradient(rgba(3, 7, 18, 0.92), rgba(3, 7, 18, 0.94)), url('${bgImageUrl}')`;
   terminalContainer.style.backgroundSize = "cover";
@@ -615,30 +665,18 @@ async function processQueryText(text) {
     let promptText = text.replace(/gerar vídeo|criar vídeo|desenhe vídeo|ativar módulo|módulo de vídeo|vídeo|3d/gi, '').trim() || text;
     appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
     setOrbState(true);
-
     const videoStreamUrl = `https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-31918-large.mp4`; 
     setOrbState(false);
-
     const videoWidgetHtml = `
       <div style="margin: 12px 0; border: 1.5px solid #ff0077; padding: 14px; border-radius: 8px; background: rgba(13, 17, 23, 0.95); text-align: center; box-shadow: 0 0 30px rgba(255,0,119,0.4); font-family: monospace; backdrop-filter: blur(10px);">
-        <div style="color: #ff0077; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">
-          🎬 HOLOGRAPHIC 3D VIDEO FEED - [PROMPT: ${escapeHTML(promptText)}]
-        </div>
-        <video controls autoplay loop muted style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;">
-          <source src="${videoStreamUrl}" type="video/mp4">
-        </video>
-        <div>
-          <a href="${videoStreamUrl}" download="jarvis_hologram_3d.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block;">
-            📥 Baixar Vídeo 3D (.MP4)
-          </a>
-        </div>
+        <div style="color: #ff0077; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">🎬 HOLOGRAPHIC 3D VIDEO FEED - [PROMPT: ${escapeHTML(promptText)}]</div>
+        <video controls autoplay loop muted style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;"><source src="${videoStreamUrl}" type="video/mp4"></video>
+        <div><a href="${videoStreamUrl}" download="jarvis_hologram_3d.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block;">📥 Baixar Vídeo 3D (.MP4)</a></div>
       </div>
     `;
     appendMessage(videoWidgetHtml, 'bot-html', true);
     speakJARVIS("Renderização de vídeo 3D concluída.");
-    activeModule = null;
-    updateModuleButtonStyles();
-    return;
+    activeModule = null; updateModuleButtonStyles(); return;
   }
 
   if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.startsWith("imagem ")) {
@@ -648,7 +686,6 @@ async function processQueryText(text) {
     const encodedPrompt = encodeURIComponent(promptText + " 3d render photorealistic highly detailed octane render studio lighting");
     const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=900&height=550&nologo=true`;
     setOrbState(false);
-
     const imageWidgetHtml = `
       <div style="margin: 12px 0; border: 1.5px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13, 17, 23, 0.95); text-align: center; box-shadow: 0 0 30px rgba(0,255,204,0.35); backdrop-filter: blur(10px);">
         <div style="color: #00ffcc; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold;">🖼️ RENDERIZAÇÃO HOLOGRÁFICA 3D REALISTA</div>
@@ -658,49 +695,32 @@ async function processQueryText(text) {
     `;
     appendMessage(imageWidgetHtml, 'bot-html', true);
     speakJARVIS("Imagem 3D renderizada com sucesso.");
-    activeModule = null;
-    updateModuleButtonStyles();
-    return;
+    activeModule = null; updateModuleButtonStyles(); return;
   }
 
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.8. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.9. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
   let queryContext = text;
+  if (attachedFileContent) { queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`; attachedFileContent = null; }
 
-  if (attachedFileContent) {
-    queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`;
-    attachedFileContent = null; 
-  }
-
-  let data = null;
-  let success = false;
-
+  let data = null, success = false;
   for (let i = 0; i < MODEL_FALLBACK_LIST.length; i++) {
-    const currentModelToTest = MODEL_FALLBACK_LIST[i];
     try {
       const response = await fetch(WORKER_URL, {  
-        method: "POST",  
-        headers: { "Content-Type": "application/json" },  
-        body: JSON.stringify({  
-          model: currentModelToTest,  
-          messages: [  
-            { role: "system", content: systemPrompt },  
-            { role: "user", content: queryContext }  
-          ]  
-        })  
+        method: "POST", headers: { "Content-Type": "application/json" },  
+        body: JSON.stringify({ model: MODEL_FALLBACK_LIST[i], messages: [ { role: "system", content: systemPrompt }, { role: "user", content: queryContext } ] })  
       });  
       data = await response.json();
       if (data && !data.error) { success = true; break; }
     } catch (err) {}
   }
-
   setOrbState(false);  
 
   if (!success || !data || data.error) {
     appendMessage("J.A.R.V.I.S.: Oscilação detectada. Repetindo diretriz...", 'system', true);
-    speakJARVIS("Oscilação detectada. Repetindo diretriz.");
+    speakJARVIS("Oscilação detectada na rede neural.");
     return;
   }
 
