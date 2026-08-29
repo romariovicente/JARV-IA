@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.7 (Anonymous Official Seal)
+// J.A.R.V.I.S. - Core Application Script v5.8 (Layout Rectified)
 // ==========================================================
 
 // Configuração Firebase  
@@ -65,6 +65,9 @@ document.addEventListener("DOMContentLoaded", () => {
   chatInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');  
   statusEl = document.getElementById('jarvStatus') || document.querySelector('.status-indicator');  
   
+  // Limpa elementos duplicados estáticos do HTML original que conflitam com o app dinâmico
+  cleanupLegacyElements();
+
   injectAnonymousLogoAndStyles();
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
@@ -90,6 +93,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });  
 
+// Remove blocos estáticos antigos da barra lateral para evitar duplicidade visual
+function cleanupLegacyElements() {
+  const legacyNewChatBtn = document.querySelector('button[onclick*="Nova Conversa"]') || document.querySelector('.fa-plus')?.parentElement;
+  if (legacyNewChatBtn && legacyNewChatBtn.innerText.includes('Nova Conversa')) {
+    legacyNewChatBtn.style.display = 'none';
+  }
+  
+  // Remove títulos soltos de histórico antigos se existirem na sidebar
+  document.querySelectorAll('.sidebar *, aside *').forEach(el => {
+    if (el.innerText === 'HISTÓRICO DE SESSÕES' || el.innerText === 'SESSÕES DE CHAT') {
+      // Deixa apenas o nosso container gerarel criado via script
+      if (!el.closest('#jarvChatHistoryContainer')) {
+        el.style.display = 'none';
+      }
+    }
+  });
+}
+
 function startSystemClock() {
   const clockDisplay = document.getElementById('clockDisplay');
   if (!clockDisplay) return;
@@ -105,35 +126,30 @@ function startSystemClock() {
   setInterval(update, 1000);
 }
 
-// Insere o selo oficial circular e interativo dos Anonymous no topo da interface
+// Injeção do Selo Oficial Circular dos Anonymous perfeitamente dimensionado
 function injectAnonymousLogoAndStyles() {
   if (document.getElementById('anonymousBranding')) return;
-  const headerArea = document.querySelector('header') || document.querySelector('.app-header') || document.querySelector('.sidebar') || document.body;
+  const sidebarArea = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.querySelector('header') || document.body;
   
   const logoDiv = document.createElement('div');
   logoDiv.id = 'anonymousBranding';
-  logoDiv.style.cssText = `display: flex; align-items: center; gap: 10px; padding: 10px; margin: 5px; background: #000000; border: 1.5px solid #ffffff; border-radius: 8px; font-family: monospace; box-shadow: 0 0 20px rgba(255,255,255,0.25);`;
+  logoDiv.style.cssText = `display: flex; align-items: center; gap: 10px; padding: 10px; margin: 8px 5px; background: #000000; border: 1.5px solid #00ffcc; border-radius: 8px; font-family: monospace; box-shadow: 0 0 15px rgba(0,255,204,0.25);`;
   
   logoDiv.innerHTML = `
     <div style="position: relative; width: 45px; height: 45px; flex-shrink: 0;">
-      <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Seal" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 1px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5);">
+      <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Seal" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 1px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.6);">
     </div>
     <div style="overflow: hidden;">
-      <div style="font-size: 0.7rem; color: #ffffff; font-weight: bold; letter-spacing: 1px; white-space: nowrap; text-overflow: ellipsis;">ANONYMOUS LEGION</div>
+      <div style="font-size: 0.7rem; color: #ffffff; font-weight: bold; letter-spacing: 1px; white-space: nowrap;">ANONYMOUS LEGION</div>
       <div style="font-size: 0.55rem; color: #00ffcc; letter-spacing: 0.5px;">KNOWLEDGE IS FREE</div>
     </div>
   `;
-  headerArea.insertBefore(logoDiv, headerArea.firstChild);
+  sidebarArea.insertBefore(logoDiv, sidebarArea.firstChild);
 }
 
-// Configuração Oficial de Reconhecimento de Voz
 function setupVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  
-  if (!SpeechRecognition) {
-    console.warn("SpeechRecognition não suportado neste navegador.");
-    return;
-  }
+  if (!SpeechRecognition) return;
 
   recognition = new SpeechRecognition();
   recognition.lang = currentLang;
@@ -148,26 +164,17 @@ function setupVoiceRecognition() {
 
   recognition.onresult = (event) => {
     let transcript = event.results[0][0].transcript.trim();
-    if (transcript) {
-      processQueryText(transcript);
-    }
+    if (transcript) processQueryText(transcript);
   };
 
-  recognition.onerror = (event) => {
-    isContinuousActive = false;
-    setOrbState(false);
-  };
-
-  recognition.onend = () => {
-    isContinuousActive = false;
-    setOrbState(false);
-  };
+  recognition.onerror = () => { isContinuousActive = false; setOrbState(false); };
+  recognition.onend = () => { isContinuousActive = false; setOrbState(false); };
 
   setTimeout(() => {
     const micButtons = document.querySelectorAll('button');
     micButtons.forEach(btn => {
       const htmlContent = btn.innerHTML.toLowerCase();
-      if (htmlContent.includes('mic') || btn.querySelector('svg') || btn.querySelector('.fa-microphone')) {
+      if (htmlContent.includes('mic') || btn.querySelector('svg') || btn.querySelector('.fa-microphone') || htmlContent.includes('escuta')) {
         btn.onclick = (e) => {
           e.preventDefault();
           toggleVoiceListening();
@@ -182,7 +189,6 @@ function toggleVoiceListening() {
     alert("Reconhecimento de voz não suportado neste navegador. Utilize o Google Chrome.");
     return;
   }
-
   if (isContinuousActive) {
     try { recognition.stop(); } catch (e) {}
     isContinuousActive = false;
@@ -207,7 +213,7 @@ function injectControlPanel() {
   if (document.getElementById('jarvControlPanel')) return;
   const panel = document.createElement('div');
   panel.id = 'jarvControlPanel';
-  panel.style.cssText = `margin: 10px; padding: 8px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; display: flex; flex-direction: column; gap: 6px;`;
+  panel.style.cssText = `margin: 10px 5px; padding: 8px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; display: flex; flex-direction: column; gap: 6px;`;
   
   panel.innerHTML = `
     <div style="font-size:0.65rem; color:#8b949e; display:flex; justify-content:space-between; align-items:center;">
@@ -288,10 +294,10 @@ function injectModuleSidebar() {
   if (document.getElementById('exclusiveModulesContainer')) return;
   const container = document.createElement('div');
   container.id = 'exclusiveModulesContainer';
-  container.style.cssText = `margin: 10px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
+  container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.7 3D</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.8 3D</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
       <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>
@@ -302,21 +308,21 @@ function injectModuleSidebar() {
   sidebar.appendChild(container);
 }
 
-// Injeção do Gerenciador de Sessões de Chat na Sidebar com Edição e Lixeira Real
+// Gerenciador de Sessões de Chat Limpo e Organizado na Sidebar
 function injectChatHistoryUI() {
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
   if (document.getElementById('jarvChatHistoryContainer')) return;
 
   const container = document.createElement('div');
   container.id = 'jarvChatHistoryContainer';
-  container.style.cssText = `margin: 10px; padding: 8px; font-family: monospace; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;`;
+  container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;`;
   
   container.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
       <span style="font-size: 0.7rem; color: #00ffcc; font-weight: bold; text-transform: uppercase;">📂 Sessões de Chat</span>
       <button onclick="createNewChat(true)" style="background:#161b22; color:#00ffcc; border:1px solid #00ffcc; padding:3px 8px; border-radius:4px; font-size:0.65rem; cursor:pointer; font-weight:bold;">+ Novo Chat</button>
     </div>
-    <div id="chatHistoryList" style="display:flex; flex-direction:column; gap:4px; max-height: 160px; overflow-y: auto;"></div>
+    <div id="chatHistoryList" style="display:flex; flex-direction:column; gap:4px; max-height: 150px; overflow-y: auto;"></div>
   `;
   sidebar.insertBefore(container, sidebar.firstChild);
   renderChatHistoryList();
@@ -337,8 +343,8 @@ function renderChatHistoryList() {
     item.innerHTML = `
       <span onclick="switchChat('${chatId}')" style="font-size: 0.7rem; color: ${isActive ? '#00ffcc' : '#c9d1d9'}; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Clique para abrir">${escapeHTML(chat.title)}</span>
       <div style="display:flex; gap:4px; align-items:center;">
-        <button onclick="renameChatPrompt('${chatId}')" style="background:none; border:none; color:#8b949e; font-size:0.65rem; cursor:pointer;" title="Renomear Chat">✏️</button>
-        <button onclick="deleteChat('${chatId}')" style="background:none; border:none; color:#ff7b72; font-size:0.65rem; cursor:pointer;" title="Excluir Sessão">🗑️</button>
+        <button onclick="renameChatPrompt('${chatId}')" style="background:none; border:none; color:#8b949e; font-size:0.65rem; cursor:pointer;" title="Renomear">✏️</button>
+        <button onclick="deleteChat('${chatId}')" style="background:none; border:none; color:#ff7b72; font-size:0.65rem; cursor:pointer;" title="Excluir">🗑️</button>
       </div>
     `;
     listEl.appendChild(item);
@@ -370,7 +376,7 @@ function deleteChat(chatId) {
     alert("Você deve manter pelo menos uma sessão de chat ativa.");
     return;
   }
-  if (confirm("Tem certeza que deseja excluir esta sessão de chat?")) {
+  if (confirm("Deseja excluir esta sessão de chat?")) {
     delete chatsStore[chatId];
     if (activeChatId === chatId) {
       activeChatId = Object.keys(chatsStore)[0];
@@ -378,19 +384,6 @@ function deleteChat(chatId) {
     saveStore();
     loadChatMessages(activeChatId);
     renderChatHistoryList();
-  }
-}
-
-async function loadRepositoryMarkdown(fileName) {
-  if (repositoryMarkdownCache[fileName]) return repositoryMarkdownCache[fileName];
-  try {
-    const response = await fetch(`./${fileName}`);
-    if (!response.ok) throw new Error(`Arquivo não encontrado.`);
-    const text = await response.text();
-    repositoryMarkdownCache[fileName] = text;
-    return text;
-  } catch (err) {
-    return `[Aviso]: Não foi possível carregar ${fileName} via fetch local.`;
   }
 }
 
@@ -428,18 +421,18 @@ function injectJarvisOrbStyles() {
   const style = document.createElement('style');  
   style.id = 'jarvisOrbStyle';  
   style.innerHTML = `  
-    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 15px auto; padding: 5px; }  
-    .jarvis-orb-wrapper { position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }  
-    .jarvis-orb { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 25px #00ffff, inset 0 0 15px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
+    .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 10px auto; padding: 2px; }  
+    .jarvis-orb-wrapper { position: relative; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }  
+    .jarvis-orb { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 20px #00ffff, inset 0 0 10px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
     .ring-wave { position: absolute; border-radius: 50%; border: 1.5px solid rgba(0, 255, 255, 0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; animation: ring-expand 4s linear infinite; }  
-    .ring-wave:nth-child(1) { width: 70px; height: 70px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
-    .ring-wave:nth-child(2) { width: 80px; height: 80px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
-    .ring-wave:nth-child(3) { width: 90px; height: 90px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
-    .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 40px #00ffcc, 0 0 20px #ff0077, inset 0 0 25px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
-    @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 20px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 32px #00d2ff; } }  
-    @keyframes ring-expand { 0% { width: 60px; height: 60px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 120px; height: 120px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
-    @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.25); filter: hue-rotate(90deg); } }  
-    .jarvis-orb-label { margin-top: 6px; font-family: monospace; font-size: 0.65rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }  
+    .ring-wave:nth-child(1) { width: 60px; height: 60px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
+    .ring-wave:nth-child(2) { width: 70px; height: 70px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
+    .ring-wave:nth-child(3) { width: 80px; height: 80px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
+    .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 35px #00ffcc, 0 0 15px #ff0077, inset 0 0 20px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
+    @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 15px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 25px #00d2ff; } }  
+    @keyframes ring-expand { 0% { width: 50px; height: 50px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 100px; height: 100px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
+    @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.2); filter: hue-rotate(90deg); } }  
+    .jarvis-orb-label { margin-top: 4px; font-family: monospace; font-size: 0.6rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 6px rgba(0, 255, 255, 0.6); }  
   `;  
   document.head.appendChild(style);  
 }  
@@ -496,7 +489,7 @@ function startFrequencyLoop() {
     let average = sum / dataArray.length;  
     let scaleVal = 0.95 + (average / 120);  
     if (jarvisOrb && jarvisOrb.classList.contains('active-speaking')) {  
-      jarvisOrb.style.transform = `scale(${Math.min(scaleVal, 1.35)})`;  
+      jarvisOrb.style.transform = `scale(${Math.min(scaleVal, 1.3)})`;  
       animFrameId = requestAnimationFrame(updateLoop);  
     }  
   };  
@@ -584,25 +577,23 @@ function speakJARVIS(text) {
   window.speechSynthesis.speak(utterance);  
 }  
 
-// Motor de Atmosfera Visual Dinâmica com Fundo Inteligente e Legibilidade Preservada
 function applyDynamicTheme(queryText) {
   const terminalContainer = document.querySelector('.jarv-chat-area') || document.body;
   const lower = queryText.toLowerCase();
 
-  let bgImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1600&auto=format&fit=crop"; // Tech Matrix
+  let bgImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1600&auto=format&fit=crop"; 
 
   if (lower.match(/hack|kali|pentest|segurança|ciber|cc50|senha|exploit/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1600&auto=format&fit=crop"; // Cyber Security
+    bgImageUrl = "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1600&auto=format&fit=crop"; 
   } else if (lower.match(/saúde|clínica|médico|prontuário|sbar|enfermagem|paciente/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=1600&auto=format&fit=crop"; // Medical tech
+    bgImageUrl = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=1600&auto=format&fit=crop"; 
   } else if (lower.match(/vídeo|filme|imagem|gerar|holograma|arte|foto|3d/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600&auto=format&fit=crop"; // 3D Hologram Art
+    bgImageUrl = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600&auto=format&fit=crop"; 
   } else if (lower.match(/código|python|javascript|bug|erro|função|script/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop"; // Code lines
+    bgImageUrl = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop"; 
   }
 
-  // Fundo com dupla camada: Imagem dinâmica + Gradiente translúcido escuro garantindo 100% de legibilidade do texto
-  terminalContainer.style.transition = "background 1s ease, box-shadow 1s ease";
+  terminalContainer.style.transition = "background 1s ease";
   terminalContainer.style.backgroundImage = `linear-gradient(rgba(3, 7, 18, 0.92), rgba(3, 7, 18, 0.94)), url('${bgImageUrl}')`;
   terminalContainer.style.backgroundSize = "cover";
   terminalContainer.style.backgroundPosition = "center";
@@ -620,7 +611,6 @@ async function processQueryText(text) {
   applyDynamicTheme(text);
   const lowerText = text.toLowerCase();  
 
-  // Interceptador para Gerador de Vídeo 3D Realista Holográfico
   if (activeModule === 'videoGen' || lowerText.includes("gerar vídeo") || lowerText.includes("criar vídeo") || lowerText.startsWith("vídeo ") || lowerText.includes("3d")) {
     let promptText = text.replace(/gerar vídeo|criar vídeo|desenhe vídeo|ativar módulo|módulo de vídeo|vídeo|3d/gi, '').trim() || text;
     appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
@@ -634,25 +624,23 @@ async function processQueryText(text) {
         <div style="color: #ff0077; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">
           🎬 HOLOGRAPHIC 3D VIDEO FEED - [PROMPT: ${escapeHTML(promptText)}]
         </div>
-        <video controls autoplay loop muted style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; background: #000; box-shadow: inset 0 0 20px rgba(255,0,119,0.3);">
+        <video controls autoplay loop muted style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;">
           <source src="${videoStreamUrl}" type="video/mp4">
         </video>
         <div>
-          <a href="${videoStreamUrl}" download="jarvis_hologram_3d.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block; box-shadow: 0 0 15px rgba(255,0,119,0.5);">
+          <a href="${videoStreamUrl}" download="jarvis_hologram_3d.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block;">
             📥 Baixar Vídeo 3D (.MP4)
           </a>
         </div>
       </div>
     `;
-
     appendMessage(videoWidgetHtml, 'bot-html', true);
-    speakJARVIS("Renderização de vídeo 3D concluída no terminal.");
+    speakJARVIS("Renderização de vídeo 3D concluída.");
     activeModule = null;
     updateModuleButtonStyles();
     return;
   }
 
-  // Interceptador para Gerador de Imagem 3D Realista Holográfico
   if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.startsWith("imagem ")) {
     let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
     appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
@@ -664,8 +652,8 @@ async function processQueryText(text) {
     const imageWidgetHtml = `
       <div style="margin: 12px 0; border: 1.5px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13, 17, 23, 0.95); text-align: center; box-shadow: 0 0 30px rgba(0,255,204,0.35); backdrop-filter: blur(10px);">
         <div style="color: #00ffcc; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold;">🖼️ RENDERIZAÇÃO HOLOGRÁFICA 3D REALISTA</div>
-        <img src="${imgUrl}" style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; box-shadow: 0 0 20px rgba(0,255,204,0.2);">
-        <div><a href="${imgUrl}" download="jarvis_3d_render.jpg" target="_blank" style="background: #00ffcc; color: #000; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; box-shadow: 0 0 15px rgba(0,255,204,0.4);">📥 Baixar Imagem 3D</a></div>
+        <img src="${imgUrl}" style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px;">
+        <div><a href="${imgUrl}" download="jarvis_3d_render.jpg" target="_blank" style="background: #00ffcc; color: #000; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold;">📥 Baixar Imagem 3D</a></div>
       </div>
     `;
     appendMessage(imageWidgetHtml, 'bot-html', true);
@@ -678,7 +666,7 @@ async function processQueryText(text) {
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.7. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.8. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
   let queryContext = text;
 
   if (attachedFileContent) {
