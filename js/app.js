@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.4 Master Protocol
+// J.A.R.V.I.S. - Core Application Script v5.5 Master Protocol
 // ==========================================================
 
 // Configuração Firebase  
@@ -19,7 +19,6 @@ if (typeof firebase !== 'undefined') {
   db = firebase.firestore();  
   provider = new firebase.auth.GoogleAuthProvider();  
 
-  // Observador de Estado Contínuo
   auth.onAuthStateChanged((user) => {
     const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');
     const userNameDisplay = document.getElementById('userNameDisplay');
@@ -28,7 +27,7 @@ if (typeof firebase !== 'undefined') {
       console.log("J.A.R.V.I.S. - Operador reconhecido:", user.email);
       if (loginModal) loginModal.style.display = 'none';
       if (userNameDisplay) {
-        userNameDisplay.innerText = user.displayName ? user.displayName.split(' ')[0] : 'Operador';
+        userNameDisplay.innerText = user.displayName ? user.displayName.split(' ')[0] : 'Romário';
       }
     } else {
       if (loginModal) loginModal.style.display = 'flex';
@@ -47,9 +46,7 @@ let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
   
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
-let selectedHealthCountry = localStorage.getItem('jarv_health_country') || 'Brasil';  
-
-let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : false;  
+let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : true; // Padrão ligado para garantir boas-vindas faladas
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v3')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
 
@@ -73,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
   injectControlPanel();
   injectModuleSidebar();
   setupExecutionButtonListener();
-  setupVoiceRecognition(); // Inicializa o reconhecimento de voz e eventos do microfone
+  setupVoiceRecognition(); 
   initAudioAnalyzer();  
   setupFileUploadListener();  
   initChatStore();  
@@ -91,7 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });  
 
-// Função para o Relógio em Tempo Real
 function startSystemClock() {
   const clockDisplay = document.getElementById('clockDisplay');
   if (!clockDisplay) return;
@@ -107,7 +103,7 @@ function startSystemClock() {
   setInterval(update, 1000);
 }
 
-// Configuração Oficial de Reconhecimento de Voz (Otimizado para Mobile e Envio Estável)
+// Configuração Oficial de Reconhecimento de Voz (Envio Direto sem passar pelo input)
 function setupVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   
@@ -119,23 +115,19 @@ function setupVoiceRecognition() {
   recognition = new SpeechRecognition();
   recognition.lang = currentLang;
   recognition.continuous = false;
-  recognition.interimResults = true;
+  recognition.interimResults = false; // Aguarda o comando finalizado para enviar direto
 
   recognition.onstart = () => {
     isContinuousActive = true;
     setOrbState(true);
-    appendMessage("[VOZ]: Ouvindo comandos...", 'system', true);
+    appendMessage("[VOZ]: Ouvindo comando de pesquisa...", 'system', true);
   };
 
   recognition.onresult = (event) => {
-    let transcript = '';
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      transcript += event.results[i][0].transcript;
-    }
-
-    const targetInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
-    if (targetInput && transcript) {
-      targetInput.value = transcript;
+    let transcript = event.results[0][0].transcript.trim();
+    if (transcript) {
+      // Dispara a pesquisa DIRETAMENTE com a fala capturada, sem digitar no input
+      sendMsgDirect(transcript);
     }
   };
 
@@ -143,21 +135,14 @@ function setupVoiceRecognition() {
     console.error("Erro no reconhecimento de voz:", event.error);
     isContinuousActive = false;
     setOrbState(false);
-    appendMessage(`[VOZ ERRO]: Falha ao capturar áudio (${event.error}). Verifique se o site está em HTTPS e se permitiu o microfone.`, 'system', true);
+    appendMessage(`[VOZ ERRO]: Falha ao capturar áudio (${event.error}).`, 'system', true);
   };
 
   recognition.onend = () => {
     isContinuousActive = false;
     setOrbState(false);
-    
-    // Dispara o envio automaticamente assim que o reconhecimento de voz processa o texto e fecha
-    const targetInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
-    if (targetInput && targetInput.value.trim() !== '') {
-      sendMsg();
-    }
   };
 
-  // Vincula o clique ao botão de microfone existente no HTML
   setTimeout(() => {
     const micButtons = document.querySelectorAll('button');
     micButtons.forEach(btn => {
@@ -199,7 +184,7 @@ function toggleVoiceListening() {
       console.error("Erro ao iniciar reconhecimento de voz:", err);
       isContinuousActive = false;
       setOrbState(false);
-      alert("Não foi possível iniciar o microfone. Certifique-se de que a página está acessada via HTTPS e que a permissão foi concedida nas configurações do navegador.");
+      alert("Não foi possível iniciar o microfone. Verifique as permissões HTTPS.");
     }
   }
 }
@@ -303,7 +288,7 @@ function injectModuleSidebar() {
   container.style.cssText = `margin: 10px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Subsistemas & Módulos v5.4</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Subsistemas & Módulos v5.5</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
       <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('kali')" class="mod-btn" id="btn_mod_kali" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🛡️ Kali Tools & PenTest</button>
@@ -510,7 +495,9 @@ function loadChatMessages(id) {
   msgArea.innerHTML = '';  
   const chat = chatsStore[id];  
   if (!chat || !chat.messages || chat.messages.length === 0) {  
-    appendMessage(`J.A.R.V.I.S.: Boa tarde, Sir Romário. Todos os agentes especialistas estão sincronizados e operacionais. Como posso auxiliar em suas diretrizes hoje?`, 'system', false);  
+    const welcomeText = "J.A.R.V.I.S.: Boa tarde, Sir Romário. Todos os agentes especialistas estão sincronizados e operacionais. Como posso auxiliar em suas diretrizes hoje?";
+    appendMessage(welcomeText, 'system', true);  
+    speakJARVIS("Boa tarde, Sir Romário. Todos os agentes especialistas estão sincronizados e operacionais. Como posso auxiliar em suas diretrizes hoje?");
     return;  
   }  
   chat.messages.forEach(msg => {  
@@ -547,9 +534,7 @@ function speakJARVIS(text) {
   window.speechSynthesis.speak(utterance);  
 }  
 
-// ==========================================================
-// MOTOR DE ATMOSFERA VISUAL DINÂMICA (Camaleão do Terminal)
-// ==========================================================
+// Motor de Atmosfera Visual Dinâmica
 function applyDynamicTheme(queryText) {
   const terminalContainer = document.querySelector('.jarv-chat-area') || document.body;
   const lower = queryText.toLowerCase();
@@ -602,17 +587,26 @@ function applyDynamicTheme(queryText) {
   }
 }
 
-async function sendMsg() {  
+// Envio direto disparado por voz (sem digitar no chat)
+function sendMsgDirect(text) {
+  const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
+  if (inputEl) inputEl.value = ''; // Mantém limpo sem escrever em baixo
+  processQueryText(text);
+}
+
+function sendMsg() {  
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
   const text = inputEl ? inputEl.value.trim() : '';  
   if (!text && !attachedFileContent) return;  
-
-  applyDynamicTheme(text);
-
-  const lowerText = text.toLowerCase();  
   if (inputEl) inputEl.value = '';  
+  processQueryText(text);
+}
 
-  // Interceptador para Módulo de Vídeo Holográfico
+async function processQueryText(text) {
+  applyDynamicTheme(text);
+  const lowerText = text.toLowerCase();  
+
+  // Interceptador para Módulo de Vídeo
   if (activeModule === 'videoGen' || lowerText.includes("gerar vídeo") || lowerText.includes("criar vídeo") || lowerText.startsWith("vídeo ")) {
     let promptText = text.replace(/gerar vídeo|criar vídeo|desenhe vídeo|ativar módulo|módulo de vídeo|vídeo/gi, '').trim() || text;
     appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
@@ -628,10 +622,9 @@ async function sendMsg() {
         </div>
         <video controls autoplay loop muted style="max-width: 100%; border-radius: 4px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;">
           <source src="${videoStreamUrl}" type="video/mp4">
-          Seu navegador não suporta reprodução de vídeo no terminal.
         </video>
         <div>
-          <a href="${videoStreamUrl}" download="jarvis_hologram.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block; box-shadow: 0 0 10px rgba(255,0,119,0.4);">
+          <a href="${videoStreamUrl}" download="jarvis_hologram.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block;">
             📥 Baixar Arquivo de Vídeo (.MP4)
           </a>
         </div>
@@ -645,6 +638,7 @@ async function sendMsg() {
     return;
   }
 
+  // Interceptador para Módulo de Imagem
   if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.startsWith("imagem ")) {
     let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
     appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
@@ -670,7 +664,7 @@ async function sendMsg() {
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.4. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação exata enviada pelo operador Romário.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.5. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação exata enviada pelo operador Romário.`;
   let queryContext = text;
 
   if (attachedFileContent) {
@@ -704,11 +698,14 @@ async function sendMsg() {
 
   if (!success || !data || data.error) {
     appendMessage("J.A.R.V.I.S.: Houve uma oscilação na leitura da query. Repetindo diretriz...", 'system', true);
+    speakJARVIS("Houve uma oscilação na leitura da query. Repetindo diretriz.");
     return;
   }
 
   let botResponse = data.choices?.[0]?.message?.content || data.response || "Retorno recebido.";  
   appendMessage(`J.A.R.V.I.S.: ${botResponse}`, 'bot', true);  
+  
+  // Lê automaticamente a resposta no terminal em voz alta se a voz estiver ativa
   speakJARVIS(botResponse);  
 }  
   
