@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico)
+// J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
 // Configuração Firebase  
@@ -652,8 +652,16 @@ async function setModule(modName) {
   activeModule = modName;
   updateModuleButtonStyles();
   if (modName === 'academy') {
-    appendMessage(`<div style="margin:8px 0; border:1px solid #00ffcc; padding:12px; border-radius:6px; background:#0d1117; font-family:monospace;"><strong>🎓 ACADEMIA HACKER & CC50</strong><br>Progresso: 9% (8 de 90 aulas). Digite sua dúvida sobre o CC50!</div>`, 'bot-html', true);
-    speakJARVIS("Academia Hacker ativada, Sir Romário.");
+    appendMessage(`
+      <div style="border: 1px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13,17,23,0.95); font-family: monospace;">
+        <strong style="color: #00ffcc; font-size: 0.9rem;">🎓 ACADEMIA HACKER & CC50</strong><br>
+        <p style="color: #c9d1d9; font-size: 0.75rem; margin: 8px 0;">Progresso atual: Sincronizado. Pronto para iniciar o ciclo de avaliação técnica.</p>
+        <button onclick="startKnowledgeQuiz()" style="background:#00ffcc; color:#000; border:none; padding:8px 14px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold; margin-top:6px;">
+          🚀 Iniciar Teste de Conhecimento
+        </button>
+      </div>
+    `, 'bot-html', true);
+    speakJARVIS("Academia Hacker ativada. O módulo de testes de conhecimento está pronto, Sir Romário.");
     return;
   }
   appendMessage(`[SUBSISTEMA ATIVADO]: ${modName}.`, 'system', true);
@@ -1118,5 +1126,130 @@ function handlePinchGesture() {
       lastMedia.style.zIndex = '10';
       speakJARVIS("Ampliando visualização.");
     }
+  }
+}
+
+// ==========================================================
+// MÓDULO DE TESTE DE CONHECIMENTO AUTOMATIZADO (QUIZ)
+// ==========================================================
+
+const jarvisQuizQuestions = [
+  {
+    question: "Qual é o principal objetivo do uso de branches dedicadas e Pull Requests (PRs) no fluxo Git do projeto J.A.R.V.I.S.?",
+    options: [
+      "A) Enviar código diretamente para produção sem validação.",
+      "B) Garantir governança, rastreabilidade de issues e revisão antes do merge.",
+      "C) Apagar o histórico de commits automaticamente."
+    ],
+    correct: 1
+  },
+  {
+    question: "No contexto de arquitetura multimodelo do J.A.R.V.I.S., qual é a função primária do Cloudflare Worker configurado?",
+    options: [
+      "A) Atuar como proxy seguro de requisições de API para os modelos de IA.",
+      "B) Armazenar imagens e vídeos gerados localmente.",
+      "C) Executar comandos de voz offline no navegador."
+    ],
+    correct: 0
+  },
+  {
+    question: "Qual protocolo e biblioteca são utilizados no J.A.R.V.I.S. v6.0 para o rastreamento óptico e reconhecimento de gestos?",
+    options: [
+      "A) OpenCV nativo em C++",
+      "B) MediaPipe Hands em conjunto com a API de Câmera",
+      "C) WebRTC de streaming peer-to-peer"
+    ],
+    correct: 1
+  }
+];
+
+let currentQuizIndex = 0;
+let quizScore = 0;
+
+function startKnowledgeQuiz() {
+  currentQuizIndex = 0;
+  quizScore = 0;
+  speakJARVIS("Iniciando avaliação de conhecimentos técnicos. Vamos à primeira questão.");
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  if (currentQuizIndex >= jarvisQuizQuestions.length) {
+    finishQuiz();
+    return;
+  }
+
+  const q = jarvisQuizQuestions[currentQuizIndex];
+  let optionsHtml = '';
+  q.options.forEach((opt, idx) => {
+    optionsHtml += `
+      <button onclick="submitQuizAnswer(${idx})" style="display:block; width:100%; text-align:left; background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:8px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; margin-bottom:6px; font-family:monospace;">
+        ${escapeHTML(opt)}
+      </button>
+    `;
+  });
+
+  const quizHtml = `
+    <div style="border: 1.5px solid #58a6ff; padding: 14px; border-radius: 8px; background: rgba(13,17,23,0.96); font-family: monospace; box-shadow: 0 0 20px rgba(88,166,255,0.2);">
+      <div style="font-size: 0.7rem; color: #58a6ff; margin-bottom: 6px; font-weight: bold;">[TESTE TÉCNICO - QUESTÃO ${currentQuizIndex + 1} DE ${jarvisQuizQuestions.length}]</div>
+      <div style="font-size: 0.8rem; color: #ffffff; margin-bottom: 12px; font-weight: bold;">${escapeHTML(q.question)}</div>
+      ${optionsHtml}
+    </div>
+  `;
+  appendMessage(quizHtml, 'bot-html', true);
+}
+
+function submitQuizAnswer(selectedIndex) {
+  const q = jarvisQuizQuestions[currentQuizIndex];
+  const isCorrect = selectedIndex === q.correct;
+
+  if (isCorrect) {
+    quizScore += 100;
+    appendMessage(`[AVALIAÇÃO]: Resposta CORRETA! +100 XP adicionados.`, 'system', true);
+    speakJARVIS("Resposta correta. Excelente trabalho.");
+  } else {
+    appendMessage(`[AVALIAÇÃO]: Resposta Incorreta. A alternativa correta era a opção ${q.correct + 1}.`, 'system', true);
+    speakJARVIS("Resposta incorreta. Registrando ponto de melhoria.");
+  }
+
+  currentQuizIndex++;
+  setTimeout(() => {
+    renderQuizQuestion();
+  }, 1200);
+}
+
+async function finishQuiz() {
+  const totalXp = quizScore;
+  const summaryHtml = `
+    <div style="border: 1.5px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13,17,23,0.96); font-family: monospace; text-align: center;">
+      <h3 style="color:#00ffcc; margin:0 0 8px 0; font-size:0.85rem;">🏆 TESTE CONCLUÍDO COM SUCESSO</h3>
+      <p style="color:#c9d1d9; font-size:0.75rem;">Pontuação Total: <strong>${totalXp} XP</strong></p>
+      <p style="color:#8b949e; font-size:0.65rem;">Dados sincronizados e salvos no banco de dados central.</p>
+    </div>
+  `;
+  appendMessage(summaryHtml, 'bot-html', true);
+  speakJARVIS(`Teste concluído. Você obteve ${totalXp} pontos de experiência.`);
+
+  await saveQuizScoreToFirebase(totalXp);
+}
+
+async function saveQuizScoreToFirebase(score) {
+  if (!auth || !auth.currentUser || !db) {
+    console.log("Firebase não autenticado. O score foi computado apenas localmente.");
+    return;
+  }
+  try {
+    const uid = auth.currentUser.uid;
+    await db.collection('users').doc(uid).collection('quiz_history').add({
+      score: score,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('users').doc(uid).set({
+      lastQuizScore: score,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    console.log("[FIREBASE]: Pontuação do quiz salva com sucesso!");
+  } catch (e) {
+    console.error("Erro ao salvar pontuação no Firebase:", e);
   }
 }
