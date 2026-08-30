@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado + Visão Computacional + Firebase Dinâmico + Calendar)
+// J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico)
 // ==========================================================
 
 // Configuração Firebase  
@@ -91,9 +91,10 @@ let isJarvisSpeaking = false;
 let userRequestedMicStop = true; 
 let speechQueue = []; 
 
-// Variáveis de Visão Computacional
+// Variáveis de Visão Computacional e Sistema Autônomo
 let jarvisVisionActive = false;
 let isPinching = false;
+let autonomousInterval = null;
 
 document.addEventListener("DOMContentLoaded", () => {  
   msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
@@ -113,6 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFileUploadListener();  
   initChatStore();  
   startSystemClock(); 
+  injectAnimations();
   
   if (statusEl) {
     statusEl.innerText = "ONLINE";
@@ -123,6 +125,25 @@ document.addEventListener("DOMContentLoaded", () => {
     auth.getRedirectResult().catch((error) => console.error("Erro Auth:", error));
   }
 });  
+
+function injectAnimations() {
+  if (document.getElementById('jarvAnimations')) return;
+  const style = document.createElement('style');
+  style.id = 'jarvAnimations';
+  style.innerHTML = `
+    @keyframes pulse-shimmer {
+      0% { opacity: 0.5; background-position: -1000px 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; background-position: 1000px 0; }
+    }
+    .skeleton-shimmer {
+      background: linear-gradient(to right, #161b22 4%, #21262d 25%, #161b22 36%);
+      background-size: 1000px 100%;
+      animation: pulse-shimmer 2s infinite linear;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 function cleanupLegacyElements() {
   const legacyNewChatBtn = document.querySelector('button[onclick*="Nova Conversa"]') || document.querySelector('.fa-plus')?.parentElement;
@@ -391,7 +412,7 @@ function stopJarvisVoice() {
 }
 
 // ----------------------------------------------------
-// UI, EFEITOS VISUAIS E MÓDULOS
+// UI, EFEITOS VISUAIS E MÓDULOS INCLUINDO AUTÔNOMOS E DASHBOARDS
 // ----------------------------------------------------
 function setupFileUploadListener() {
   setTimeout(() => {
@@ -420,8 +441,10 @@ function injectModuleSidebar() {
   container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;
   
   container.innerHTML = `
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v5.9 3D</div>
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v6.0 Core</div>
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">
+      <button onclick="openLifeDashboard()" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#ff0077; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🎮 Minha Vida é um Jogo</button>
+      <button onclick="toggleAutonomousMode()" id="btn_mod_autonomous" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#00ffff; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🧠 JARV Core Autônomo</button>
       <button onclick="setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>
       <button onclick="setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>
       <button onclick="setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador Imagem 3D</button>
@@ -430,6 +453,124 @@ function injectModuleSidebar() {
   `;
   sidebar.appendChild(container);
 }
+
+// Lógica Gamificação / Dashboard
+function openLifeDashboard() {
+  appendMessage(`
+    <div style="border: 1px solid #ff0077; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,119,0.3);">
+      <h3 style="color:#ff0077; margin:0 0 12px 0; text-transform: uppercase; font-size: 0.9rem;">🎮 Dashboard: Minha Vida é um Jogo</h3>
+      <div id="shimmerContainer">
+        <div class="skeleton-shimmer" style="height: 15px; margin-bottom: 8px; border-radius: 4px;"></div>
+        <div class="skeleton-shimmer" style="height: 15px; margin-bottom: 8px; border-radius: 4px;"></div>
+        <div class="skeleton-shimmer" style="height: 15px; border-radius: 4px; width: 80%;"></div>
+      </div>
+      <p style="color:#c9d1d9; font-size:0.75rem; margin-top:12px;">Sincronizando métricas biométricas, produtividade e conquistas diárias...</p>
+    </div>
+  `, 'bot-html', true);
+  speakJARVIS("Acessando painel de gamificação da vida real, aguarde a sincronização de métricas.");
+  
+  // Simulação de carregamento do Dashboard
+  setTimeout(() => {
+    appendMessage(`
+      <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,204,0.2);">
+        <h3 style="color:#00ffcc; margin:0 0 10px 0; font-size: 0.85rem;">[STATUS DO JOGADOR: ROMÁRIO]</h3>
+        <ul style="color:#c9d1d9; font-size:0.75rem; list-style-type: none; padding-left: 0;">
+          <li>🛡️ <strong>Classe:</strong> Especialista de Suporte (Nível 45)</li>
+          <li>🧠 <strong>Inteligência:</strong> +12% (Estudos Xiaomi/Mecânica)</li>
+          <li>💼 <strong>Ouro Diário:</strong> Sincronizando com Fintechs...</li>
+          <li>🏆 <strong>Conquista Desbloqueada:</strong> Google Local Guide Nível 3</li>
+        </ul>
+      </div>
+    `, 'bot-html', true);
+  }, 2500);
+}
+
+// Lógica do Sistema de Conhecimento Autônomo
+function toggleAutonomousMode() {
+  const btn = document.getElementById('btn_mod_autonomous');
+  if (autonomousInterval) {
+    clearInterval(autonomousInterval);
+    autonomousInterval = null;
+    if(btn) {
+      btn.style.background = '#161b22';
+      btn.style.color = '#00ffff';
+      btn.innerHTML = '🧠 JARV Core Autônomo';
+    }
+    appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo em background SUSPENSO.", 'system', true);
+    speakJARVIS("Módulo de pesquisa autônoma suspenso.");
+  } else {
+    if(btn) {
+      btn.style.background = '#0044ff';
+      btn.style.color = '#fff';
+      btn.innerHTML = '🧠 Suspensão Autônoma';
+    }
+    
+    // Cria ou foca num chat isolado imutável
+    const id = 'chat_auto_core';
+    if(!chatsStore[id]) {
+      chatsStore[id] = { title: `🧠 Registro Autônomo`, timestamp: Date.now(), messages: [], is_readonly: true };
+    }
+    saveStore();
+    switchChat(id);
+
+    appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);
+    speakJARVIS("Iniciando loop de conhecimento autônomo. Efetuando varredura nos bancos de dados globais.");
+
+    // Loop de requisição assíncrona (A cada 30 segundos para demonstração, ideal: 1h)
+    autonomousInterval = setInterval(async () => {
+      const areas = ["Mecânica Quântica e Vetores", "Reparo Avançado de Software Xiaomi MIUI 15", "Biologia Molecular", "Engenharia de Prompt", "Mercado Financeiro e Fintechs"];
+      const area = areas[Math.floor(Math.random() * areas.length)];
+      await generateAutonomousReport(area);
+    }, 30000); 
+  }
+}
+
+async function generateAutonomousReport(area) {
+  setOrbState(true);
+  const prompt = `Gere um relatório técnico curto e direto (máximo 150 palavras) contendo fatos avançados sobre: ${area}. Formate em Markdown leve.`;
+  let botResponse = "Falha de conexão autônoma.";
+  
+  try {
+    const response = await fetch(WORKER_URL, {  
+      method: "POST", headers: { "Content-Type": "application/json" },  
+      body: JSON.stringify({ model: MODEL_FALLBACK_LIST[0], messages: [ { role: "system", content: "Você é o JARV KNOWLEDGE ENGINE operando de forma autônoma." }, { role: "user", content: prompt } ] })  
+    });  
+    const data = await response.json();
+    if (data && !data.error) botResponse = data.choices?.[0]?.message?.content || data.response;
+  } catch (err) {
+    console.error("Erro no módulo autônomo:", err);
+  }
+  setOrbState(false);
+  
+  const reportHtml = `
+    <div style="border: 1px solid #005cc5; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px; font-family: monospace;">
+      <h4 style="color:#58a6ff; margin:0 0 8px 0; font-size:0.8rem;">[RELATÓRIO AUTÔNOMO]: ${area}</h4>
+      <div style="font-size:0.75rem; color:#c9d1d9; margin-bottom: 10px;">${formatMarkdown(botResponse)}</div>
+      <button onclick="copyToClipboard(this)" data-content="${escapeHTML(botResponse)}" style="background:#161b22; color:#58a6ff; border:1px solid #58a6ff; padding:5px 10px; border-radius:4px; font-size:0.65rem; cursor:pointer; font-weight:bold; display: flex; align-items: center; gap: 5px;">
+        📋 Copiar Área de Transferência
+      </button>
+    </div>
+  `;
+  appendMessage(reportHtml, 'bot-html', true);
+}
+
+window.copyToClipboard = async function(btnElement) {
+  try {
+    const text = btnElement.getAttribute('data-content');
+    await navigator.clipboard.writeText(text);
+    const originalText = btnElement.innerHTML;
+    btnElement.innerHTML = '✅ Copiado!';
+    btnElement.style.background = '#005cc5';
+    btnElement.style.color = '#fff';
+    setTimeout(() => {
+      btnElement.innerHTML = originalText;
+      btnElement.style.background = '#161b22';
+      btnElement.style.color = '#58a6ff';
+    }, 2000);
+  } catch (err) {
+    console.error('Falha ao copiar', err);
+  }
+};
 
 function injectChatHistoryUI() {
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
@@ -457,15 +598,18 @@ function renderChatHistoryList() {
   Object.keys(chatsStore).forEach(chatId => {
     const chat = chatsStore[chatId];
     const isActive = chatId === activeChatId;
+    const isReadonly = chat.is_readonly === true;
 
     const item = document.createElement('div');
     item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: ${isActive ? '#1f2937' : '#161b22'}; border: 1px solid ${isActive ? '#00ffcc' : '#30363d'}; cursor: pointer;`;
 
     item.innerHTML = `
-      <span onclick="switchChat('${chatId}')" style="font-size: 0.7rem; color: ${isActive ? '#00ffcc' : '#c9d1d9'}; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Clique para abrir">${escapeHTML(chat.title)}</span>
+      <span onclick="switchChat('${chatId}')" style="font-size: 0.7rem; color: ${isActive ? '#00ffcc' : '#c9d1d9'}; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Clique para abrir">
+        ${isReadonly ? '🧠 ' : ''}${escapeHTML(chat.title)}
+      </span>
       <div style="display:flex; gap:4px; align-items:center;">
         <button onclick="renameChatPrompt('${chatId}')" style="background:none; border:none; color:#8b949e; font-size:0.65rem; cursor:pointer;" title="Renomear">✏️</button>
-        <button onclick="deleteChat('${chatId}')" style="background:none; border:none; color:#ff7b72; font-size:0.65rem; cursor:pointer;" title="Excluir">🗑️</button>
+        <button onclick="deleteChat('${chatId}')" style="background:none; border:none; color:${isReadonly ? '#444' : '#ff7b72'}; font-size:0.65rem; cursor:${isReadonly ? 'not-allowed' : 'pointer'};" title="Excluir">🗑️</button>
       </div>
     `;
     listEl.appendChild(item);
@@ -491,6 +635,11 @@ function renameChatPrompt(chatId) {
 }
 
 function deleteChat(chatId) {
+  const chat = chatsStore[chatId];
+  if (chat && chat.is_readonly) {
+    alert("Protocolo de Segurança: Acesso Negado. Registros Autônomos do Sistema não podem ser excluídos pelo operador.");
+    return;
+  }
   const keys = Object.keys(chatsStore);
   if (keys.length <= 1) { alert("Mantenha pelo menos um chat."); return; }
   if (confirm("Deseja excluir esta sessão?")) {
@@ -610,6 +759,7 @@ function startFrequencyLoop() {
   updateLoop();  
 }  
 
+// Adicionado Try/Catch no Envio
 function setupExecutionButtonListener() {
   const execBtn = document.getElementById('executeBtn') || document.querySelector('button.exec-btn') || document.querySelector('button[onclick*="send"]');
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
@@ -630,7 +780,7 @@ function initChatStore() {
   
 function createNewChat(shouldRender = true) {  
   const id = 'chat_' + Date.now();  
-  chatsStore[id] = { title: `Chat ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [] };  
+  chatsStore[id] = { title: `Chat ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [], is_readonly: false };  
   activeChatId = id;  
   activeModule = null;
   saveStore();  
@@ -680,12 +830,19 @@ function applyDynamicTheme(queryText) {
   terminalContainer.style.backgroundPosition = "center";
 }
 
-function sendMsg() {  
+// Fluxo de envio robusto
+async function sendMsg() {  
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
   const text = inputEl ? inputEl.value.trim() : '';  
   if (!text && !attachedFileContent) return;  
   if (inputEl) inputEl.value = '';  
-  processQueryText(text);
+  
+  try {
+    await processQueryText(text);
+  } catch (error) {
+    console.error("Erro no envio da mensagem:", error);
+    appendMessage("[ERRO CRÍTICO]: Falha de comunicação com o núcleo. Operação abortada.", 'system', false);
+  }
 }
 
 async function processQueryText(text) {
@@ -751,7 +908,7 @@ async function processQueryText(text) {
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado, leal, altamente amigável e prestativo sob o Master Protocol v5.9. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.${firebaseContext}`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado, leal, altamente amigável e prestativo sob o Master Protocol v6.0. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.${firebaseContext}`;
   
   let queryContext = text;
   if (attachedFileContent) { queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`; attachedFileContent = null; }
@@ -865,7 +1022,6 @@ function startMediaPipe() {
   const canvasCtx = canvasElement.getContext('2d');
   const widget = document.getElementById('jarvisVisionWidget');
 
-  // Correção de segurança robusta para detecção dos objetos globais do MediaPipe CDN
   const HandsClass = window.Hands || (typeof Hands !== 'undefined' ? Hands : null);
   const CameraClass = window.Camera || (typeof Camera !== 'undefined' ? Camera : null);
 
