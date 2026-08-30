@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado + Visão Computacional)
+// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado + Visão Computacional + Firebase Dinâmico)
 // ==========================================================
 
 // Configuração Firebase  
@@ -699,10 +699,30 @@ async function processQueryText(text) {
     activeModule = null; updateModuleButtonStyles(); return;
   }
 
+  // Busca dados do Firebase Firestore para injetar no System Prompt dinamicamente
+  let firebaseContext = "";
+  if (db && auth && auth.currentUser) {
+    try {
+      const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+      if (userDoc.exists) {
+        firebaseContext += `\n[DADOS DO OPERADOR NO FIREBASE]: ${JSON.stringify(userDoc.data())}`;
+      }
+      const memoriesSnapshot = await db.collection('memories').get();
+      if (!memoriesSnapshot.empty) {
+        let memories = [];
+        memoriesSnapshot.forEach(doc => memories.push(doc.data()));
+        firebaseContext += `\n[MEMÓRIAS DO SISTEMA]: ${JSON.stringify(memories)}`;
+      }
+    } catch (e) {
+      console.log("Aviso: Carregando prompt padrão sem dados adicionais do Firestore.", e);
+    }
+  }
+
   appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
   setOrbState(true);  
 
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado sob o Master Protocol v5.9. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.`;
+  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado, leal, altamente amigável e prestativo sob o Master Protocol v5.9. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.${firebaseContext}`;
+  
   let queryContext = text;
   if (attachedFileContent) { queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`; attachedFileContent = null; }
 
