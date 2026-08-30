@@ -839,7 +839,7 @@ function injectVisionUI() {
     <div style="position:absolute; top:0; left:0; width:100%; background:rgba(0,255,204,0.2); color:#00ffcc; font-size:0.6rem; padding:2px 5px; text-align:center; font-weight:bold; z-index:2;">
       VISÃO ÓPTICA ONLINE
     </div>
-    <video id="visionVideo" style="display:none;"></video>
+    <video id="visionVideo" style="display:none;" playsinline></video>
     <canvas id="visionCanvas" width="200" height="150" style="width:100%; height:100%; object-fit:cover;"></canvas>
   `;
   document.body.appendChild(widget);
@@ -856,7 +856,7 @@ function initJarvisVision() {
 
   setTimeout(() => {
     startMediaPipe();
-  }, 6000); 
+  }, 1000); 
 }
 
 function startMediaPipe() {
@@ -865,73 +865,87 @@ function startMediaPipe() {
   const canvasCtx = canvasElement.getContext('2d');
   const widget = document.getElementById('jarvisVisionWidget');
 
-  if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+  // Correção de segurança robusta para detecção dos objetos globais do MediaPipe CDN
+  const HandsClass = window.Hands || (typeof Hands !== 'undefined' ? Hands : null);
+  const CameraClass = window.Camera || (typeof Camera !== 'undefined' ? Camera : null);
+
+  if (!HandsClass || !CameraClass) {
      appendMessage("[ERRO]: Bibliotecas MediaPipe não foram carregadas. Verifique o arquivo index.html.", 'system', false);
+     speakJARVIS("Erro crítico. Bibliotecas de visão computacional ausentes.");
      return;
   }
 
-  const hands = new Hands({locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-  }});
+  try {
+    const hands = new HandsClass({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
 
-  hands.setOptions({
-    maxNumHands: 1, 
-    modelComplexity: 1,
-    minDetectionConfidence: 0.7,
-    minTrackingConfidence: 0.7
-  });
+    hands.setOptions({
+      maxNumHands: 1, 
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7
+    });
 
-  hands.onResults((results) => {
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-    
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      const landmarks = results.multiHandLandmarks[0];
+    hands.onResults((results) => {
+      if (!canvasCtx || !results.image) return;
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
       
-      for (let i = 0; i < landmarks.length; i++) {
-        const x = landmarks[i].x * canvasElement.width;
-        const y = landmarks[i].y * canvasElement.height;
-        canvasCtx.fillStyle = '#00ffcc';
-        canvasCtx.fillRect(x - 2, y - 2, 4, 4);
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        
+        for (let i = 0; i < landmarks.length; i++) {
+          const x = landmarks[i].x * canvasElement.width;
+          const y = landmarks[i].y * canvasElement.height;
+          canvasCtx.fillStyle = '#00ffcc';
+          canvasCtx.fillRect(x - 2, y - 2, 4, 4);
+        }
+
+        const thumb = landmarks[4];
+        const index = landmarks[8];
+        
+        const distance = Math.sqrt(Math.pow(thumb.x - index.x, 2) + Math.pow(thumb.y - index.y, 2));
+        
+        if (distance < 0.05 && !isPinching) {
+          isPinching = true;
+          handlePinchGesture(); 
+          canvasCtx.fillStyle = '#ff0077'; 
+          canvasCtx.beginPath();
+          canvasCtx.arc(index.x * canvasElement.width, index.y * canvasElement.height, 10, 0, 2 * Math.PI);
+          canvasCtx.fill();
+        } else if (distance > 0.08) {
+          isPinching = false;
+        }
       }
+      canvasCtx.restore();
+    });
 
-      const thumb = landmarks[4];
-      const index = landmarks[8];
-      
-      const distance = Math.sqrt(Math.pow(thumb.x - index.x, 2) + Math.pow(thumb.y - index.y, 2));
-      
-      if (distance < 0.05 && !isPinching) {
-        isPinching = true;
-        handlePinchGesture(); 
-        canvasCtx.fillStyle = '#ff0077'; 
-        canvasCtx.beginPath();
-        canvasCtx.arc(index.x * canvasElement.width, index.y * canvasElement.height, 10, 0, 2 * Math.PI);
-        canvasCtx.fill();
-      } else if (distance > 0.08) {
-        isPinching = false;
-      }
-    }
-    canvasCtx.restore();
-  });
+    const camera = new CameraClass(videoElement, {
+      onFrame: async () => {
+        if (videoElement) {
+          await hands.send({image: videoElement});
+        }
+      },
+      width: 640,
+      height: 480
+    });
 
-  const camera = new Camera(videoElement, {
-    onFrame: async () => {
-      await hands.send({image: videoElement});
-    },
-    width: 640,
-    height: 480
-  });
+    camera.start().then(() => {
+      jarvisVisionActive = true;
+      widget.style.display = 'block';
+      appendMessage("[VISÃO ÓPTICA]: Câmera conectada. Rastreamento de gestos ativado.", 'system', false);
+      speakJARVIS("Interface óptica online. Rastreamento de gestos calibrado.");
+    }).catch((err) => {
+      appendMessage(`[ERRO DE CÂMERA]: Acesso negado ou dispositivo indisponível. (${err})`, 'system', false);
+      speakJARVIS("Houve uma falha ao tentar acessar os sensores ópticos.");
+    });
 
-  camera.start().then(() => {
-    jarvisVisionActive = true;
-    widget.style.display = 'block';
-    appendMessage("[VISÃO ÓPTICA]: Câmera conectada. Rastreamento de gestos ativado.", 'system', false);
-    speakJARVIS("Interface óptica online. Rastreamento de gestos calibrado.");
-  }).catch((err) => {
-    appendMessage(`[ERRO DE CÂMERA]: Acesso negado ou dispositivo indisponível. (${err})`, 'system', false);
-    speakJARVIS("Houve uma falha ao tentar acessar os sensores ópticos.");
-  });
+  } catch (err) {
+    console.error("Erro interno ao instanciar MediaPipe:", err);
+    appendMessage(`[ERRO MEDIAPIPE]: ${err.message}`, 'system', false);
+  }
 }
 
 function handlePinchGesture() {
