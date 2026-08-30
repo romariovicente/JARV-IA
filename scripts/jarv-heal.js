@@ -1,10 +1,55 @@
 /**
- * J.A.R.V.I.S. Auto-Heal Engine
+ * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback)
  * Módulo de auto-correção e diagnóstico contínuo via Groq API.
  */
 
 const fs = require('fs');  
 const path = require('path');
+
+// Lista de modelos priorizados para seleção automática e fallback em cascata
+const GROQ_MODELS = [
+  'llama-3.3-70b-versatile', // Modelo primário (Alta inteligência e raciocínio complexo)
+  'llama-3.1-70b-versatile', // Alternativa robusta de 70B
+  'llama-3.1-8b-instant'     // Fallback de alta velocidade e leveza
+];
+
+async function callGroqWithAutoModel(apiKey, prompt) {
+  for (const model of GROQ_MODELS) {
+    try {
+      console.log(`[JARV-HEAL] 🔄 Tentando conexão com o modelo: ${model}...`);
+      
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        console.warn(`[JARV-HEAL] ⚠️ O modelo ${model} retornou status ${response.status}. Alternando para o próximo da fila...`);
+        continue;
+      }
+
+      const data = await response.json();
+      const textResponse = data.choices?.[0]?.message?.content;
+
+      if (textResponse) {
+        console.log(`[JARV-HEAL] ✨ Sucesso! Resposta obtida usando o modelo: ${model}`);
+        return textResponse;
+      }
+    } catch (err) {
+      console.warn(`[JARV-HEAL] ⚠️ Falha técnica no modelo ${model}: ${err.message}. Tentando próxima opção...`);
+    }
+  }
+  
+  throw new Error('Todos os modelos da lista de fallback falharam ou atingiram o limite de requisições.');
+}
 
 async function runAutoHeal() {  
   console.log("[JARV-HEAL] Robô de auto-correção iniciado...");  
@@ -46,29 +91,11 @@ Se o código estiver perfeitamente íntegro e sem falhas, defina "hasError" como
 `;
 
   try {
-    console.log("[JARV-HEAL] Conectando com a API da Groq para varredura lógica...");
+    console.log("[JARV-HEAL] Acionando o seletor automático de inteligência...");
     
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1
-      })
-    });
+    const textResponse = await callGroqWithAutoModel(apiKey, prompt);
 
-    const data = await response.json();
-    const textResponse = data.choices?.[0]?.message?.content;
-
-    if (!textResponse) {
-      throw new Error('A resposta da API da Groq veio vazia.');
-    }
-
-    // Extrai o JSON limpo da resposta da IA
+    // Extrai o JSON limpo da resposta da IA escolhida
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('A IA não retornou um formato JSON válido.');
