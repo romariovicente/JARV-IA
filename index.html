@@ -66,6 +66,11 @@
           <i class="fa-solid fa-microchip"></i> Autonomous Core
         </button>
 
+        <!-- MÓDULO DE DIAGNÓSTICO -->
+        <button class="jarv-nav-item" id="btn_mod_diagnostics" onclick="if(window.siteDiagnostics) window.siteDiagnostics.togglePanel();">
+          <i class="fa-solid fa-bug"></i> Diagnóstico
+        </button>
+
         <button class="jarv-nav-item" onclick="switchModule('gmail', event)"><i class="fa-solid fa-envelope"></i> Gmail Agent</button>
         <button class="jarv-nav-item" onclick="switchModule('calendar', event)"><i class="fa-solid fa-calendar-days"></i> Calendar Agent</button>
         <button class="jarv-nav-item" onclick="switchModule('airtable', event)"><i class="fa-solid fa-database"></i> Airtable CRM</button>
