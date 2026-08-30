@@ -464,6 +464,35 @@ body.kali-theme {
   text-shadow: 0 0 5px rgba(0, 210, 255, 0.4);
 }
 
+/* ========================================================== */
+/* NOVOS ESTILOS: FEED DE RELATÓRIOS AUTÔNOMOS & ANIMAÇÕES CYBER*/
+/* ========================================================== */
+
+@keyframes slideInCyber {
+  0% { 
+    opacity: 0; 
+    transform: translateY(20px) scale(0.98); 
+    filter: blur(4px);
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+    filter: blur(0);
+  }
+}
+
+.cyber-report-entry {
+  animation: slideInCyber 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  background: rgba(0, 255, 255, 0.03);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  color: #c9d1d9;
+  font-family: 'Courier New', Courier, monospace;
+}
+
 /* TERMINAL CLI INFERIOR */
 .terminal-cli-panel {
   background-color: rgba(5, 9, 16, 0.92);
