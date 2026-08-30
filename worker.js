@@ -13,12 +13,25 @@ export default {
 
     if (request.method === "POST") {
       try {
-        const data = await request.json();
+        const { message } = await request.json();
 
-        // Aqui entra a lógica de envio para a API da IA (ex: Groq / Gemini)
-        // Usando a chave secreta salva no ambiente da Cloudflare (env.GROQ_API_KEY)
+        // 🤖 Envio da diretriz para a API da Groq
+        const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.GROQ_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: message }]
+          })
+        });
 
-        return new Response(JSON.stringify({ success: true, message: "Mensagem processada pelo Worker com sucesso!" }), {
+        const data = await aiResponse.json();
+        const reply = data.choices?.[0]?.message?.content || "Sem resposta da IA.";
+
+        return new Response(JSON.stringify({ success: true, reply }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       } catch (error) {
@@ -29,7 +42,6 @@ export default {
       }
     }
 
-    return new Response("J.A.R.V.I.S. Worker Online", { status: 200, headers: corsHeaders });
+    return new Response("J.A.R.V.I.S. Worker Online 🚀", { status: 200, headers: corsHeaders });
   }
 };
-
