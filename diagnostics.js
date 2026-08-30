@@ -50,6 +50,15 @@ class SiteDiagnostics {
     if (this.uiCreated) this.render();
   }
 
+  togglePanel() {
+    if (!this.uiCreated) this.createDiagnosticUI();
+    this.isMinimized = !this.isMinimized;
+    const bodyEl = document.getElementById('diag-body');
+    const toggleEl = document.getElementById('diag-toggle');
+    if (bodyEl) bodyEl.style.display = this.isMinimized ? 'none' : 'flex';
+    if (toggleEl) toggleEl.innerText = this.isMinimized ? '▼' : '▲';
+  }
+
   createDiagnosticUI() {
     if (this.uiCreated || !document.body) return;
 
@@ -93,9 +102,7 @@ class SiteDiagnostics {
     // Eventos do Painel
     document.getElementById('diag-header').addEventListener('click', (e) => {
       if (e.target.id === 'diag-clear') return;
-      this.isMinimized = !this.isMinimized;
-      document.getElementById('diag-body').style.display = this.isMinimized ? 'none' : 'flex';
-      document.getElementById('diag-toggle').innerText = this.isMinimized ? '▼' : '▲';
+      this.togglePanel();
     });
 
     document.getElementById('diag-clear').addEventListener('click', () => {
