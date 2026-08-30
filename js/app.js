@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado + Visão Computacional + Firebase Dinâmico)
+// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado + Visão Computacional + Firebase Dinâmico + Calendar)
 // ==========================================================
 
 // Configuração Firebase  
@@ -17,7 +17,11 @@ if (typeof firebase !== 'undefined') {
   if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }  
   auth = firebase.auth();  
   db = firebase.firestore();  
+  
+  // Configuração do Google Auth Provider com escopos de acesso ao Google Calendar
   provider = new firebase.auth.GoogleAuthProvider();  
+  provider.addScope('https://www.googleapis.com/auth/calendar');
+  provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 
   auth.onAuthStateChanged((user) => {
     const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');
@@ -34,6 +38,32 @@ if (typeof firebase !== 'undefined') {
     }
   });
 }  
+
+// Função de Login com Google integrada
+function loginWithGoogle() {
+  if (!auth || !provider) {
+    alert("Firebase Auth não inicializado.");
+    return;
+  }
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error("Erro no login com popup, tentando redirect:", error);
+    auth.signInWithRedirect(provider);
+  });
+}
+
+// Função para salvar preferências ou memórias no Firebase (Módulo de Memória)
+async function saveUserPreferenceToFirebase(key, value) {
+  if (!auth || !auth.currentUser || !db) return;
+  try {
+    await db.collection('users').doc(auth.currentUser.uid).set({
+      [key]: value,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    console.log(`[MEMÓRIA J.A.R.V.I.S.]: Preferência '${key}' salva no Firebase.`);
+  } catch (e) {
+    console.error("Erro ao salvar preferência no Firebase:", e);
+  }
+}
   
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";
 const MODEL_FALLBACK_LIST = [
