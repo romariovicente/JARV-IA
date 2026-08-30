@@ -57,6 +57,12 @@
       <nav class="sidebar-nav">
         <button class="jarv-nav-item active" onclick="switchModule('master', event)"><i class="fa-solid fa-brain"></i> Master Agent</button>
         <button class="jarv-nav-item" onclick="switchModule('brain', event)"><i class="fa-solid fa-network-wired"></i> Segundo Cérebro</button>
+        
+        <!-- MÓDULO AUTÔNOMO INTEGRADO -->
+        <button class="jarv-nav-item" id="btn_mod_autonomous" onclick="switchModule('autonomous', event); toggleAutonomousMode();">
+          <i class="fa-solid fa-microchip"></i> Autonomous Core
+        </button>
+
         <button class="jarv-nav-item" onclick="switchModule('gmail', event)"><i class="fa-solid fa-envelope"></i> Gmail Agent</button>
         <button class="jarv-nav-item" onclick="switchModule('calendar', event)"><i class="fa-solid fa-calendar-days"></i> Calendar Agent</button>
         <button class="jarv-nav-item" onclick="switchModule('airtable', event)"><i class="fa-solid fa-database"></i> Airtable CRM</button>
@@ -64,11 +70,11 @@
       </nav>
     </aside>
 
-    <!-- PAINEL CENTRAL DE CHAT / CONHECIMENTO -->
+    <!-- PAINEL CENTRAL DE CHAT / CONHECIMENTO / AUTONOMOUS FEED -->
     <main class="jarv-main">
       <div class="watermark-bg"></div>
 
-      <!-- ÁREA DE MENSAGENS -->
+      <!-- ÁREA DE MENSAGENS (Master Agent) -->
       <div class="msg-container" id="msgArea"></div>
 
       <!-- PAINEL SECUNDÁRIO DO SEGUNDO CÉREBRO -->
@@ -79,6 +85,17 @@
         </div>
         <div id="brainNotesList" style="display: flex; flex-direction: column; gap: 10px;">
           <!-- Notas injetadas dinamicamente -->
+        </div>
+      </div>
+
+      <!-- PAINEL DO NÚCLEO AUTÔNOMO (TERMINAL FEED) -->
+      <div id="autonomousModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+          <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-microchip"></i> Autonomous Execution Feed</h3>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoramento em tempo real do banco de dados via Firebase onSnapshot.</p>
+        </div>
+        <div id="terminal-feed" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Relatórios autônomos injetados dinamicamente com animação cyberpunk -->
         </div>
       </div>
 
@@ -137,3 +154,4 @@
   <script src="js/app.js" defer></script>
 </body>
 </html>
+ 
