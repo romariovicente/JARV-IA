@@ -1,5 +1,5 @@
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado)
+// J.A.R.V.I.S. - Core Application Script v5.9 (Contínuo & TTS Refinado + Visão Computacional)
 // ==========================================================
 
 // Configuração Firebase  
@@ -58,8 +58,12 @@ let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;
 let recognition = null;  
 let isContinuousActive = false;  
 let isJarvisSpeaking = false;  
-let userRequestedMicStop = true; // Mic inicia pausado por padrão
-let speechQueue = []; // Fila de falas para não travar o mobile
+let userRequestedMicStop = true; 
+let speechQueue = []; 
+
+// Variáveis de Visão Computacional
+let jarvisVisionActive = false;
+let isPinching = false;
 
 document.addEventListener("DOMContentLoaded", () => {  
   msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
@@ -140,7 +144,7 @@ function setupVoiceRecognition() {
 
   recognition = new SpeechRecognition();
   recognition.lang = currentLang;
-  recognition.continuous = true; // Mantém ouvindo
+  recognition.continuous = true; 
   recognition.interimResults = false;
 
   recognition.onstart = () => {
@@ -152,7 +156,6 @@ function setupVoiceRecognition() {
   recognition.onresult = (event) => {
     let transcript = event.results[event.results.length - 1][0].transcript.trim();
     if (transcript) {
-      // Pausa o mic temporariamente para processar e responder sem ouvir a si mesmo
       try { recognition.stop(); } catch (e) {} 
       processQueryText(transcript);
     }
@@ -170,7 +173,6 @@ function setupVoiceRecognition() {
     setOrbState(false);
     updateMicUI();
 
-    // Reinício Automático: A mágica da escuta contínua no Android/Web
     if (!userRequestedMicStop && !isJarvisSpeaking) {
       setTimeout(() => {
         if (!isJarvisSpeaking && !userRequestedMicStop) {
@@ -256,6 +258,9 @@ function injectControlPanel() {
       <label style="font-size:0.65rem; color:#00ffcc; display:block; margin-bottom:2px;">📁 Anexar Arquivo / Slide:</label>
       <input type="file" id="jarvFileUpload" accept=".txt,.pdf,.docx,.md,.json,.csv,image/*" style="font-size:0.65rem; color:#c9d1d9; width:100%;">
     </div>
+    <button onclick="initJarvisVision()" style="background:#161b22; color:#00ffcc; border:1px solid #00ffcc; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; font-weight:bold; margin-top:6px; width: 100%;">
+      👁️ Ativar Visão Computacional
+    </button>
   `;
   sidebar.appendChild(panel);
   updateMicUI();
@@ -291,14 +296,12 @@ function speakJARVIS(text) {
   speechQueue = [];
   isJarvisSpeaking = true;  
   
-  // Limpeza profunda para evitar que caracteres de markdown e emojis travem o leitor mobile
   let cleanText = text.replace(/[-|_|=]{2,}/g, ' ') 
                       .replace(/[#*`~\[\]>]/g, '')
                       .replace(/(https?:\/\/[^\s]+)/g, "link oculto")
                       .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') 
                       .replace(/\s+/g, ' ').trim();
 
-  // Divide o texto longo em sentenças menores usando pontuação para o Android não mutar
   let chunks = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
   
   let finalChunks = [];
@@ -319,7 +322,6 @@ function playNextSpeechChunk() {
   if (speechQueue.length === 0) {
     isJarvisSpeaking = false;
     setOrbState(false);
-    // Retoma o microfone se a escuta contínua estiver ativada
     if (recognition && !userRequestedMicStop) {
       setTimeout(() => { try { recognition.start(); } catch(e){} }, 400);
     }
@@ -339,7 +341,7 @@ function playNextSpeechChunk() {
   utterance.onstart = () => { 
     setOrbState(true); 
     if (recognition && !userRequestedMicStop) {
-      try { recognition.stop(); } catch(e){} // Garante que a IA não ouça a si mesma
+      try { recognition.stop(); } catch(e){} 
     }
   };  
   utterance.onend = () => { playNextSpeechChunk(); };  
@@ -353,7 +355,6 @@ function stopJarvisVoice() {
   speechQueue = [];
   isJarvisSpeaking = false;
   setOrbState(false);
-  // Retoma escuta se necessário
   if (recognition && !userRequestedMicStop) {
     setTimeout(() => { try { recognition.start(); } catch(e){} }, 400);
   }
@@ -767,4 +768,141 @@ function formatMarkdown(text) {
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code style="background:#0d1117; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>')
     .replace(/\n/g, '<br>');
+}
+
+// ==========================================================
+// MÓDULO DE VISÃO COMPUTACIONAL & RECONHECIMENTO DE GESTOS
+// ==========================================================
+
+function injectVisionUI() {
+  if (document.getElementById('jarvisVisionWidget')) return;
+  const widget = document.createElement('div');
+  widget.id = 'jarvisVisionWidget';
+  widget.style.cssText = `
+    position: fixed; bottom: 20px; right: 20px; width: 200px; height: 150px;
+    background: #000; border: 2px solid #00ffcc; border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.4); z-index: 9999; display: none;
+    overflow: hidden; font-family: monospace;
+  `;
+  
+  widget.innerHTML = `
+    <div style="position:absolute; top:0; left:0; width:100%; background:rgba(0,255,204,0.2); color:#00ffcc; font-size:0.6rem; padding:2px 5px; text-align:center; font-weight:bold; z-index:2;">
+      VISÃO ÓPTICA ONLINE
+    </div>
+    <video id="visionVideo" style="display:none;"></video>
+    <canvas id="visionCanvas" width="200" height="150" style="width:100%; height:100%; object-fit:cover;"></canvas>
+  `;
+  document.body.appendChild(widget);
+}
+
+function initJarvisVision() {
+  if (jarvisVisionActive) return;
+  
+  injectVisionUI();
+  
+  speakJARVIS("Sir Romário, para habilitar a manipulação por gestos e uma experiência visual completa, recomendo ativar a interface óptica. Por favor, libere o acesso à câmera no seu navegador.");
+  
+  appendMessage("[SISTEMA]: Inicializando protocolo de visão computacional. Aguardando permissão da câmera...", 'system', false);
+
+  setTimeout(() => {
+    startMediaPipe();
+  }, 6000); 
+}
+
+function startMediaPipe() {
+  const videoElement = document.getElementById('visionVideo');
+  const canvasElement = document.getElementById('visionCanvas');
+  const canvasCtx = canvasElement.getContext('2d');
+  const widget = document.getElementById('jarvisVisionWidget');
+
+  if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+     appendMessage("[ERRO]: Bibliotecas MediaPipe não foram carregadas. Verifique o arquivo index.html.", 'system', false);
+     return;
+  }
+
+  const hands = new Hands({locateFile: (file) => {
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+  }});
+
+  hands.setOptions({
+    maxNumHands: 1, 
+    modelComplexity: 1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.7
+  });
+
+  hands.onResults((results) => {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+    
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      const landmarks = results.multiHandLandmarks[0];
+      
+      for (let i = 0; i < landmarks.length; i++) {
+        const x = landmarks[i].x * canvasElement.width;
+        const y = landmarks[i].y * canvasElement.height;
+        canvasCtx.fillStyle = '#00ffcc';
+        canvasCtx.fillRect(x - 2, y - 2, 4, 4);
+      }
+
+      const thumb = landmarks[4];
+      const index = landmarks[8];
+      
+      const distance = Math.sqrt(Math.pow(thumb.x - index.x, 2) + Math.pow(thumb.y - index.y, 2));
+      
+      if (distance < 0.05 && !isPinching) {
+        isPinching = true;
+        handlePinchGesture(); 
+        canvasCtx.fillStyle = '#ff0077'; 
+        canvasCtx.beginPath();
+        canvasCtx.arc(index.x * canvasElement.width, index.y * canvasElement.height, 10, 0, 2 * Math.PI);
+        canvasCtx.fill();
+      } else if (distance > 0.08) {
+        isPinching = false;
+      }
+    }
+    canvasCtx.restore();
+  });
+
+  const camera = new Camera(videoElement, {
+    onFrame: async () => {
+      await hands.send({image: videoElement});
+    },
+    width: 640,
+    height: 480
+  });
+
+  camera.start().then(() => {
+    jarvisVisionActive = true;
+    widget.style.display = 'block';
+    appendMessage("[VISÃO ÓPTICA]: Câmera conectada. Rastreamento de gestos ativado.", 'system', false);
+    speakJARVIS("Interface óptica online. Rastreamento de gestos calibrado.");
+  }).catch((err) => {
+    appendMessage(`[ERRO DE CÂMERA]: Acesso negado ou dispositivo indisponível. (${err})`, 'system', false);
+    speakJARVIS("Houve uma falha ao tentar acessar os sensores ópticos.");
+  });
+}
+
+function handlePinchGesture() {
+  console.log("Gesto de PINÇA detectado!");
+  
+  setOrbState(true);
+  setTimeout(() => setOrbState(false), 500);
+
+  const chatImages = document.querySelectorAll('.jarv-chat-area img, .jarv-chat-area video, #msgArea img, #msgArea video');
+  if (chatImages.length > 0) {
+    const lastMedia = chatImages[chatImages.length - 1];
+    
+    if (lastMedia.style.transform === 'scale(1.5)') {
+      lastMedia.style.transform = 'scale(1)';
+      lastMedia.style.transition = 'transform 0.3s ease';
+      speakJARVIS("Zoom desativado.");
+    } else {
+      lastMedia.style.transform = 'scale(1.5)';
+      lastMedia.style.transition = 'transform 0.3s ease';
+      lastMedia.style.zIndex = '10';
+      speakJARVIS("Ampliando visualização.");
+    }
+  }
 }
