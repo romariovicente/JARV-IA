@@ -469,7 +469,6 @@ function openLifeDashboard() {
   `, 'bot-html', true);
   speakJARVIS("Acessando painel de gamificação da vida real, aguarde a sincronização de métricas.");
   
-  // Simulação de carregamento do Dashboard
   setTimeout(() => {
     appendMessage(`
       <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,204,0.2);">
@@ -505,7 +504,6 @@ function toggleAutonomousMode() {
       btn.innerHTML = '🧠 Suspensão Autônoma';
     }
     
-    // Cria ou foca num chat isolado imutável
     const id = 'chat_auto_core';
     if(!chatsStore[id]) {
       chatsStore[id] = { title: `🧠 Registro Autônomo`, timestamp: Date.now(), messages: [], is_readonly: true };
@@ -516,7 +514,6 @@ function toggleAutonomousMode() {
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);
     speakJARVIS("Iniciando loop de conhecimento autônomo. Efetuando varredura nos bancos de dados globais.");
 
-    // Loop de requisição assíncrona (A cada 30 segundos para demonstração, ideal: 1h)
     autonomousInterval = setInterval(async () => {
       const areas = ["Mecânica Quântica e Vetores", "Reparo Avançado de Software Xiaomi MIUI 15", "Biologia Molecular", "Engenharia de Prompt", "Mercado Financeiro e Fintechs"];
       const area = areas[Math.floor(Math.random() * areas.length)];
@@ -759,7 +756,6 @@ function startFrequencyLoop() {
   updateLoop();  
 }  
 
-// Adicionado Try/Catch no Envio
 function setupExecutionButtonListener() {
   const execBtn = document.getElementById('executeBtn') || document.querySelector('button.exec-btn') || document.querySelector('button[onclick*="send"]');
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
@@ -830,7 +826,6 @@ function applyDynamicTheme(queryText) {
   terminalContainer.style.backgroundPosition = "center";
 }
 
-// Fluxo de envio robusto
 async function sendMsg() {  
   const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
   const text = inputEl ? inputEl.value.trim() : '';  
@@ -886,7 +881,6 @@ async function processQueryText(text) {
     activeModule = null; updateModuleButtonStyles(); return;
   }
 
-  // Busca dados do Firebase Firestore para injetar no System Prompt dinamicamente
   let firebaseContext = "";
   if (db && auth && auth.currentUser) {
     try {
