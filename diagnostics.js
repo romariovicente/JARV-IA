@@ -3,28 +3,36 @@ class SiteDiagnostics {
     this.errors = [];
     this.maxLogs = options.maxLogs || 50;
     this.isMinimized = true;
+    this.uiCreated = false;
 
     this.init();
   }
 
   init() {
+    // Captura os erros imediatamente no carregamento inicial
     this.catchErrors();
-    this.createDiagnosticUI();
+
+    // Aguarda o body existir para criar a interface visual
+    if (document.body) {
+      this.createDiagnosticUI();
+    } else {
+      window.addEventListener('DOMContentLoaded', () => this.createDiagnosticUI());
+    }
   }
 
   catchErrors() {
-    // Erros de execução JS e recursos
+    // Erros de execução JS e carregamento de recursos (imagens, scripts, CSS)
     window.addEventListener('error', (event) => {
       this.addError({
         type: 'Runtime Error',
         message: event.message || 'Erro ao carregar recurso',
-        source: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : event.target?.src || 'Desconhecido',
+        source: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : (event.target?.src || event.target?.href || 'Desconhecido'),
         stack: event.error?.stack || 'Sem stack trace disponível',
         time: new Date().toLocaleTimeString()
       });
     }, true);
 
-    // Promises não tratadas (ex: falhas de API/Fetch)
+    // Promises não tratadas (Falhas de Fetch, APIs e código Async)
     window.addEventListener('unhandledrejection', (event) => {
       this.addError({
         type: 'Unhandled Rejection',
@@ -39,10 +47,12 @@ class SiteDiagnostics {
   addError(errorData) {
     this.errors.unshift(errorData);
     if (this.errors.length > this.maxLogs) this.errors.pop();
-    this.render();
+    if (this.uiCreated) this.render();
   }
 
   createDiagnosticUI() {
+    if (this.uiCreated || !document.body) return;
+
     const container = document.createElement('div');
     container.id = 'site-diagnostics-panel';
     container.style.cssText = `
@@ -78,6 +88,7 @@ class SiteDiagnostics {
     `;
 
     document.body.appendChild(container);
+    this.uiCreated = true;
 
     // Eventos do Painel
     document.getElementById('diag-header').addEventListener('click', (e) => {
@@ -91,9 +102,20 @@ class SiteDiagnostics {
       this.errors = [];
       this.render();
     });
+
+    // Renderiza erros ocorridos antes do DOM terminar de carregar
+    this.render();
+  }
+
+  escapeHTML(str) {
+    return String(str || '').replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag] || tag));
   }
 
   render() {
+    if (!this.uiCreated) return;
+
     const countEl = document.getElementById('diag-count');
     const bodyEl = document.getElementById('diag-body');
 
@@ -108,21 +130,19 @@ class SiteDiagnostics {
     bodyEl.innerHTML = this.errors.map(err => `
       <div style="background: #313244; border-left: 4px solid #f38ba8; padding: 8px; border-radius: 4px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <strong style="color: #f38ba8;">${err.type}</strong>
-          <span style="color: #6c7086;">${err.time}</span>
+          <strong style="color: #f38ba8;">${this.escapeHTML(err.type)}</strong>
+          <span style="color: #6c7086;">${this.escapeHTML(err.time)}</span>
         </div>
-        <div style="color: #cdd6f4; margin-bottom: 4px; word-break: break-word;">${err.message}</div>
-        <div style="color: #a6adc8; font-size: 10px; word-break: break-all;"><strong>Origem:</strong> ${err.source}</div>
+        <div style="color: #cdd6f4; margin-bottom: 4px; word-break: break-word;">${this.escapeHTML(err.message)}</div>
+        <div style="color: #a6adc8; font-size: 10px; word-break: break-all;"><strong>Origem:</strong> ${this.escapeHTML(err.source)}</div>
         <details style="margin-top: 4px; color: #89b4fa; cursor: pointer;">
           <summary>Stack Trace</summary>
-          <pre style="margin: 4px 0 0 0; white-space: pre-wrap; font-size: 10px; color: #bac2de; background: #181825; padding: 6px; border-radius: 4px;">${err.stack}</pre>
+          <pre style="margin: 4px 0 0 0; white-space: pre-wrap; font-size: 10px; color: #bac2de; background: #181825; padding: 6px; border-radius: 4px;">${this.escapeHTML(err.stack)}</pre>
         </details>
       </div>
     `).join('');
   }
 }
 
-// Inicialização automática
-window.addEventListener('DOMContentLoaded', () => {
-  window.siteDiagnostics = new SiteDiagnostics();
-});
+// Inicialização síncrona imediata no <head>
+window.siteDiagnostics = new SiteDiagnostics();
