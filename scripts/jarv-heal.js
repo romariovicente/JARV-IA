@@ -60,8 +60,8 @@ async function runAutoHeal() {
     process.exit(1);  
   }  
   
-  // Verificação e leitura do arquivo principal do projeto
-  const targetFile = 'js/app.js';  
+  // Garante a localização exata do arquivo js/app.js a partir da raiz da execução
+  const targetFile = path.resolve(process.cwd(), 'js/app.js');  
   if (!fs.existsSync(targetFile)) {  
     console.error(`[ERRO] Arquivo alvo ${targetFile} não encontrado.`);  
     process.exit(1);  
@@ -73,7 +73,7 @@ async function runAutoHeal() {
   // Prompt estruturado para o J.A.R.V.I.S. diagnosticar e corrigir o código
   const prompt = `
 Você é o J.A.R.V.I.S., uma Inteligência Artificial avançada de engenharia de software e arquitetura frontend.
-Analise o código abaixo do arquivo ${targetFile} em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
+Analise o código abaixo do arquivo js/app.js em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
 
 Código atual:
 \`\`\`javascript
@@ -95,8 +95,10 @@ Se o código estiver perfeitamente íntegro e sem falhas, defina "hasError" como
     
     const textResponse = await callGroqWithAutoModel(apiKey, prompt);
 
-    // Extrai o JSON limpo da resposta da IA escolhida
-    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+    // Sanitiza a resposta para remover delimitadores Markdown de bloco JSON
+    const cleanedText = textResponse.replace(/```json\s*|\s*```/gi, '').trim();
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    
     if (!jsonMatch) {
       throw new Error('A IA não retornou um formato JSON válido.');
     }
@@ -106,7 +108,7 @@ Se o código estiver perfeitamente íntegro e sem falhas, defina "hasError" como
     if (result.hasError && result.newContent) {
       console.log(`[JARV-HEAL] ⚠️ Correção necessária detectada: ${result.explanation}`);
       fs.writeFileSync(targetFile, result.newContent, 'utf8');
-      console.log(`[JARV-HEAL] ✅ Arquivo ${targetFile} corrigido e atualizado com sucesso pelo J.A.R.V.I.S.!`);
+      console.log(`[JARV-HEAL] ✅ Arquivo js/app.js corrigido e atualizado com sucesso pelo J.A.R.V.I.S.!`);
     } else {
       console.log("[JARV-HEAL] ✨ Sistema em modo de escuta. Nenhum erro crítico detectado no momento.");
     }
