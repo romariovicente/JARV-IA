@@ -83,7 +83,7 @@ let activeChatId = localStorage.getItem('jarv_active_chat') || null;
 let activeModule = null; 
 let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
-let audioCtx = null, analyser = null, dataArray = null, animFrameId = null;  
+let audioCtx = null, analyser = null, dataArray = null;  
   
 let recognition = null;  
 let isContinuousActive = false;  
@@ -93,7 +93,6 @@ let speechQueue = [];
 
 // Variáveis de Visão Computacional e Sistema Autônomo
 let jarvisVisionActive = false;
-let isPinching = false;
 let autonomousInterval = null;
 
 document.addEventListener("DOMContentLoaded", () => {  
@@ -339,7 +338,7 @@ function toggleTtsMaster() {
 }
 
 // ----------------------------------------------------
-// SISTEMA DE LEITURA EM VOZ (CHUNKED TTS) - EVITA CORTES
+// SISTEMA DE LEITURA EM VOZ (CHUNKED TTS)
 // ----------------------------------------------------
 function speakJARVIS(text) {  
   if (!ttsEnabled || !('speechSynthesis' in window)) return;  
@@ -683,7 +682,7 @@ function updateModuleButtonStyles() {
     }
   }
 }
-  
+
 function injectJarvisOrbStyles() {  
   if (document.getElementById('jarvisOrbStyle')) return;  
   const style = document.createElement('style');  
@@ -698,23 +697,18 @@ function injectJarvisOrbStyles() {
     .ring-wave:nth-child(3) { width: 80px; height: 80px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
     .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 35px #00ffcc, 0 0 15px #ff0077, inset 0 0 20px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
     @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 15px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 25px #00d2ff; } }  
+    @keyframes orb-frequency-react { 0% { transform: scale(1.0); } 100% { transform: scale(1.12); } }
     @keyframes ring-expand { 
-      0% { width: 50px; height: 50px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 
-      100% { width: 120px; height: 120px; opacity: 0; transform: translate(-50%, -50%) scale(1.5); } 
+      0% { width: 50px; height: 50px; opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
+      100% { width: 110px; height: 110px; opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
     }
-    .message { margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.4; word-wrap: break-word; }
-    .message.user { background: #1f2937; color: #c9d1d9; border-left: 3px solid #005cc5; }
-    .message.bot, .message.bot-html { background: #0d1117; color: #00ffcc; border-left: 3px solid #00ffcc; }
-    .message.system { background: #161b22; color: #8b949e; border-left: 3px solid #ff7b72; font-style: italic; }
   `;
   document.head.appendChild(style);
 }
 
-// ----------------------------------------------------
-// IMPLEMENTAÇÃO DAS FUNÇÕES COMPLEMENTARES
-// ----------------------------------------------------
 function createJarvisOrbElement() {
   if (document.getElementById('jarvisOrbContainer')) return;
+  const targetArea = document.querySelector('header') || document.querySelector('.subsystem-list') || document.body;
   const container = document.createElement('div');
   container.id = 'jarvisOrbContainer';
   container.className = 'jarvis-orb-container';
@@ -723,41 +717,51 @@ function createJarvisOrbElement() {
       <div class="ring-wave"></div>
       <div class="ring-wave"></div>
       <div class="ring-wave"></div>
-      <div id="jarvisOrb" class="jarvis-orb"></div>
+      <div id="jarvisOrb" class="jarvis-orb" title="J.A.R.V.I.S. Visual Core"></div>
     </div>
   `;
-  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside');
-  if (sidebar) sidebar.insertBefore(container, sidebar.firstChild);
+  targetArea.prepend(container);
   jarvisOrb = document.getElementById('jarvisOrb');
 }
 
-function setOrbState(isActive) {
-  if (!jarvisOrb) return;
-  if (isActive) jarvisOrb.classList.add('active-speaking');
-  else jarvisOrb.classList.remove('active-speaking');
+function setOrbState(active) {
+  if (!jarvisOrb) jarvisOrb = document.getElementById('jarvisOrb');
+  if (jarvisOrb) {
+    if (active) {
+      jarvisOrb.classList.add('active-speaking');
+    } else {
+      jarvisOrb.classList.remove('active-speaking');
+    }
+  }
+}
+
+function initAudioAnalyzer() {
+  try {
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (window.AudioContext) {
+      audioCtx = new AudioContext();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+    }
+  } catch (e) {
+    console.warn("AudioContext não inicializado.", e);
+  }
 }
 
 function initChatStore() {
-  if (Object.keys(chatsStore).length === 0) {
-    createNewChat(false);
-  } else {
-    if (!activeChatId || !chatsStore[activeChatId]) {
-      activeChatId = Object.keys(chatsStore)[0];
-    }
-    loadChatMessages(activeChatId);
+  if (!activeChatId || !chatsStore[activeChatId]) {
+    const defaultId = 'chat_' + Date.now();
+    chatsStore[defaultId] = {
+      title: 'Sessão Principal',
+      timestamp: Date.now(),
+      messages: []
+    };
+    activeChatId = defaultId;
+    saveStore();
   }
-}
-
-function createNewChat(manual = false) {
-  const id = 'chat_' + Date.now();
-  chatsStore[id] = { title: `Sessão ${new Date().toLocaleDateString()}`, timestamp: Date.now(), messages: [] };
-  activeChatId = id;
-  saveStore();
-  if (manual) {
-    loadChatMessages(id);
-    renderChatHistoryList();
-    appendMessage("[SISTEMA]: Nova sessão iniciada.", 'system', false);
-  }
+  loadChatMessages(activeChatId);
+  renderChatHistoryList();
 }
 
 function saveStore() {
@@ -765,129 +769,269 @@ function saveStore() {
   localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-function loadChatMessages(chatId) {
-  if (msgArea) msgArea.innerHTML = '';
-  const chat = chatsStore[chatId];
-  if (chat && chat.messages) {
-    chat.messages.forEach(m => appendMessage(m.content, m.sender, m.isHtml, false));
+function createNewChat(isUserAction = true) {
+  const newId = 'chat_' + Date.now();
+  chatsStore[newId] = {
+    title: `Sessão ${Object.keys(chatsStore).length + 1}`,
+    timestamp: Date.now(),
+    messages: []
+  };
+  activeChatId = newId;
+  saveStore();
+  loadChatMessages(activeChatId);
+  renderChatHistoryList();
+  if (isUserAction) {
+    appendMessage("[SISTEMA]: Nova sessão de chat inicializada.", 'system', false);
   }
 }
 
-function appendMessage(content, sender, isHtml = false, save = true) {
-  if (!msgArea) return;
-  const div = document.createElement('div');
-  div.className = `message ${sender}`;
-  
-  if (isHtml) { div.innerHTML = content; } 
-  else { div.innerText = content; }
-  
-  msgArea.appendChild(div);
-  msgArea.scrollTop = msgArea.scrollHeight;
-
-  if (save && activeChatId && chatsStore[activeChatId]) {
-    chatsStore[activeChatId].messages.push({ content, sender, isHtml });
-    saveStore();
+function loadChatMessages(chatId) {
+  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
+  msgArea.innerHTML = '';
+  const chat = chatsStore[chatId];
+  if (chat && chat.messages) {
+    chat.messages.forEach(msg => {
+      appendMessageToDOM(msg.content, msg.type);
+    });
   }
 }
 
 function setupExecutionButtonListener() {
-  const btn = document.getElementById('btnSend') || document.querySelector('.send-button');
-  if (btn) {
-    btn.onclick = () => {
-      if (chatInput && chatInput.value.trim()) {
-        processQueryText(chatInput.value.trim());
-        chatInput.value = '';
-      }
-    };
-  }
+  if (!chatInput) chatInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
+  const sendBtn = document.getElementById('btnSend') || document.querySelector('button[type="submit"]') || document.querySelector('.send-btn');
+
   if (chatInput) {
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        processQueryText(chatInput.value.trim());
-        chatInput.value = '';
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitUserQuery();
       }
     });
   }
+  if (sendBtn) {
+    sendBtn.onclick = (e) => {
+      e.preventDefault();
+      submitUserQuery();
+    };
+  }
+}
+
+function submitUserQuery() {
+  if (!chatInput) return;
+  const text = chatInput.value.trim();
+  if (!text && !attachedFileContent) return;
+  chatInput.value = '';
+  processQueryText(text);
 }
 
 async function processQueryText(text) {
-  appendMessage(text, 'user', false);
-  setOrbState(true);
-
-  // Adaptação de Contexto (Personalização p/ Fintech, Xiaomi, Mecânica)
-  let context = `Você é o J.A.R.V.I.S., assistente pessoal avançado do Romário. Responda de forma direta e técnica.`;
+  let fullPrompt = text;
   if (attachedFileContent) {
-    context += `\nContexto de arquivo anexado: ${attachedFileContent.substring(0, 1500)}`;
+    fullPrompt += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`;
+    attachedFileContent = null;
   }
+
+  if (text) {
+    appendMessage(text, 'user', false);
+  } else {
+    appendMessage("[Arquivo Anexado Enviado]", 'user', false);
+  }
+
+  setOrbState(true);
+  const loadingId = appendMessage(`<div class="skeleton-shimmer" style="height: 20px; border-radius: 4px; width: 60%;"></div>`, 'bot-html', false);
 
   try {
+    const historyMessages = getChatHistoryForAPI();
+    historyMessages.push({ role: "user", content: fullPrompt });
+
     const response = await fetch(WORKER_URL, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
-        messages: [ { role: "system", content: context }, { role: "user", content: text } ]
+        messages: historyMessages
       })
     });
+
     const data = await response.json();
-    let botReply = data.choices?.[0]?.message?.content || data.response || "Falha na comunicação com o servidor principal.";
-    appendMessage(formatMarkdown(botReply), 'bot-html', true);
-    speakJARVIS(botReply);
+    let reply = "Sem resposta do servidor.";
+    if (data && !data.error) {
+      reply = data.choices?.[0]?.message?.content || data.response || JSON.stringify(data);
+    } else if (data && data.error) {
+      reply = `Erro na API: ${data.error}`;
+    }
+
+    removeMessageElement(loadingId);
+    appendMessage(reply, 'bot', true);
   } catch (err) {
-    console.error(err);
-    appendMessage("[ERRO]: Falha de conexão com a API neural.", 'system', false);
-    speakJARVIS("Aviso: Falha de conexão com a API neural.");
+    console.error("Erro no envio:", err);
+    removeMessageElement(loadingId);
+    appendMessage(`[ERRO]: Falha na comunicação com o servidor worker. ${err.message}`, 'system', false);
+  } finally {
+    setOrbState(false);
   }
-  setOrbState(false);
 }
 
-function escapeHTML(str) { 
-  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); 
+function getChatHistoryForAPI() {
+  const history = [];
+  if (activeChatId && chatsStore[activeChatId]) {
+    const msgs = chatsStore[activeChatId].messages || [];
+    msgs.slice(-6).forEach(m => {
+      if (m.type === 'user') history.push({ role: "user", content: m.content });
+      else if (m.type === 'bot') history.push({ role: "assistant", content: m.content });
+    });
+  }
+  return history;
 }
 
-function formatMarkdown(text) {
-  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-             .replace(/\*(.*?)\*/g, '<em>$1</em>')
-             .replace(/`(.*?)`/g, '<code style="background:#21262d;padding:2px 4px;border-radius:4px;color:#ff7b72;">$1</code>')
-             .replace(/\n/g, '<br>');
+function appendMessage(content, type, speak = false) {
+  const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+  
+  if (type !== 'bot-html' && activeChatId && chatsStore[activeChatId]) {
+    chatsStore[activeChatId].messages.push({ id: msgId, content, type });
+    saveStore();
+  }
+
+  appendMessageToDOM(content, type, msgId);
+
+  if (speak && ttsEnabled && type === 'bot') {
+    speakJARVIS(content);
+  }
+  return msgId;
 }
 
-function initAudioAnalyzer() {
-  // Placeholder para futuras integrações de equalizador visual 3D
-  console.log("Audio Analyzer v6.0 aguardando stream local...");
+function appendMessageToDOM(content, type, msgId = null) {
+  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
+  const div = document.createElement('div');
+  div.className = `jarv-message jarv-message-${type}`;
+  if (msgId) div.id = msgId;
+
+  div.style.cssText = `margin: 8px 0; padding: 10px 14px; border-radius: 8px; font-family: sans-serif; max-width: 85%; word-break: break-word; line-height: 1.4; font-size: 0.85rem;`;
+
+  if (type === 'user') {
+    div.style.background = '#1f2937';
+    div.style.color = '#ffffff';
+    div.style.marginLeft = 'auto';
+    div.style.border = '1px solid #374151';
+    div.innerText = content;
+  } else if (type === 'bot') {
+    div.style.background = '#0d1117';
+    div.style.color = '#c9d1d9';
+    div.style.border = '1px solid #00ffcc';
+    div.style.boxShadow = '0 0 10px rgba(0,255,204,0.1)';
+    div.innerHTML = formatMarkdown(content);
+  } else if (type === 'bot-html') {
+    div.style.background = 'transparent';
+    div.style.padding = '0';
+    div.style.maxWidth = '100%';
+    div.innerHTML = content;
+  } else if (type === 'system') {
+    div.style.background = 'rgba(255, 123, 114, 0.1)';
+    div.style.color = '#ff7b72';
+    div.style.border = '1px solid #ff7b72';
+    div.style.fontSize = '0.75rem';
+    div.innerText = content;
+  }
+
+  msgArea.appendChild(div);
+  msgArea.scrollTop = msgArea.scrollHeight;
+}
+
+function removeMessageElement(msgId) {
+  if (!msgId) return;
+  const el = document.getElementById(msgId);
+  if (el) el.remove();
 }
 
 function initJarvisVision() {
-  jarvisVisionActive = !jarvisVisionActive;
   if (jarvisVisionActive) {
-    appendMessage(`
-      <div style="border: 1px solid #00ffcc; padding: 10px; background: rgba(13,17,23,0.95); border-radius: 6px;">
-        <span style="color:#00ffcc; font-weight:bold;">[VISÃO COMPUTACIONAL]:</span> Módulo Ativado. Conectando aos drivers de câmera primários...
-      </div>
-    `, 'bot-html', true);
-    speakJARVIS("Módulo de Visão Computacional ativado. Monitoramento ocular iniciado.");
-  } else {
-    appendMessage("[VISÃO COMPUTACIONAL]: Desativado pelo operador.", 'system', false);
+    jarvisVisionActive = false;
+    appendMessage("[VISÃO COMPUTACIONAL]: Módulo de visão desativado.", 'system', true);
     speakJARVIS("Módulo de visão desativado.");
+    return;
+  }
+  jarvisVisionActive = true;
+  appendMessage("[VISÃO COMPUTACIONAL]: Inicializando rastreamento óptico...", 'system', true);
+  speakJARVIS("Inicializando módulo de visão computacional.");
+
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        appendMessage("[VISÃO COMPUTACIONAL]: Câmera conectada com sucesso. Rastreamento ativo.", 'system', true);
+        speakJARVIS("Câmera conectada com sucesso.");
+      })
+      .catch((err) => {
+        console.error("Erro na câmera:", err);
+        appendMessage("[VISÃO COMPUTACIONAL]: Acesso à câmera negado ou indisponível.", 'system', true);
+        speakJARVIS("Acesso à câmera indisponível.");
+        jarvisVisionActive = false;
+      });
+  } else {
+    appendMessage("[VISÃO COMPUTACIONAL]: Dispositivo não suporta captura de vídeo.", 'system', true);
   }
 }
 
 function startKnowledgeQuiz() {
-  appendMessage(`
-    <div style="border: 1px solid #ffcc00; padding: 12px; border-radius: 8px; background: rgba(13,17,23,0.95); font-family: monospace;">
-      <h4 style="color:#ffcc00; margin:0 0 8px 0;">❓ QUIZ: ARQUITETURA MIUI 15 & MTP</h4>
-      <p style="color:#c9d1d9; font-size: 0.8rem;">Avaliação de Suporte e Reparo de Software.</p>
-      <p style="color:#c9d1d9; font-size: 0.8rem; margin-top: 5px; font-weight: bold;">Pergunta 1: Qual a flag utilizada via fastboot para iniciar o processo de unlock do bootloader em dispositivos recentes da Xiaomi?</p>
-      <button onclick="submitQuizAnswer('fastboot oem unlock')" style="margin-top: 10px; background:#161b22; color:#ffcc00; border:1px solid #ffcc00; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; width: 100%;">
-        Responder: fastboot oem unlock
-      </button>
-      <button onclick="submitQuizAnswer('fastboot flashing unlock')" style="margin-top: 5px; background:#161b22; color:#ffcc00; border:1px solid #ffcc00; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; width: 100%;">
-        Responder: fastboot flashing unlock
-      </button>
+  const quizHtml = `
+    <div style="border: 1px solid #00ffcc; padding: 14px; background: rgba(13,17,23,0.95); border-radius: 8px; font-family: monospace;">
+      <h3 style="color:#00ffcc; margin:0 0 10px 0; font-size:0.85rem;">🎯 QUIZ DE AVALIAÇÃO HACKER & DEV</h3>
+      <p style="color:#c9d1d9; font-size:0.75rem;"><strong>Pergunta 1:</strong> Qual o comando MTP/ADB utilizado para listar dispositivos conectados via Terminal?</p>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+        <button onclick="checkQuizAnswer(this, true)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">A) adb devices</button>
+        <button onclick="checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">B) fastboot reboot</button>
+        <button onclick="checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">C) adb push --all</button>
+      </div>
     </div>
-  `, 'bot-html', true);
-  speakJARVIS("Iniciando Quiz Técnico. Primeira pergunta carregada sobre reparo de bootloader em dispositivos Xiaomi.");
+  `;
+  appendMessage(quizHtml, 'bot-html', true);
+  speakJARVIS("Iniciando avaliação de conhecimentos.");
 }
 
-window.submitQuizAnswer = function(answer) {
-  processQueryText(`Minha resposta para a pergunta de desbloqueio do Xiaomi é: ${answer}. Esta resposta está correta no contexto moderno da MIUI 15?`);
+window.checkQuizAnswer = function(btn, isCorrect) {
+  if (isCorrect) {
+    btn.style.background = '#238636';
+    btn.style.color = '#fff';
+    btn.innerHTML += ' ✅ (CORRETO!)';
+    speakJARVIS("Resposta correta! Excelente raciocínio.");
+  } else {
+    btn.style.background = '#da3633';
+    btn.style.color = '#fff';
+    btn.innerHTML += ' ❌ (INCORRETO)';
+    speakJARVIS("Resposta incorreta. Tente novamente.");
+  }
 };
+
+function formatMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code style="background:#21262d; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
+}
+
+// Vinculação global das funções para acionamento via handlers inline
+window.loginWithGoogle = loginWithGoogle;
+window.toggleTtsMaster = toggleTtsMaster;
+window.stopJarvisVoice = stopJarvisVoice;
+window.startContinuousMic = startContinuousMic;
+window.pauseContinuousMic = pauseContinuousMic;
+window.initJarvisVision = initJarvisVision;
+window.openLifeDashboard = openLifeDashboard;
+window.toggleAutonomousMode = toggleAutonomousMode;
+window.setModule = setModule;
+window.createNewChat = createNewChat;
+window.switchChat = switchChat;
+window.renameChatPrompt = renameChatPrompt;
+window.deleteChat = deleteChat;
+window.startKnowledgeQuiz = startKnowledgeQuiz;
