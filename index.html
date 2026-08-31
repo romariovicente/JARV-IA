@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <!-- Módulo de Diagnóstico de Erros -->
   <script src="diagnostics.js"></script>
 
   <meta charset="UTF-8">
@@ -12,7 +11,6 @@
   
   <link rel="manifest" href="manifest.json">
   
-  <!-- Bloco de Service Worker e Utilitários Globais -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations()
@@ -47,14 +45,12 @@
     };
   </script>
 
-  <!-- Módulo de Visão Computacional (MediaPipe) -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body class="kali-theme">
 
-  <!-- BARRA SUPERIOR (HEADER) -->
   <header class="jarv-header">
     <div class="header-left">
       <i class="fa-solid fa-terminal logo-icon"></i>
@@ -73,27 +69,24 @@
     </div>
   </header>
 
-  <!-- LAYOUT PRINCIPAL -->
   <div class="jarv-container">
     
-    <!-- SIDEBAR DE AGENTES E MÓDULOS -->
-    <aside class="jarv-sidebar">
+    <aside class="jarv-sidebar" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px; max-height: calc(100vh - 60px);">
       
-      <!-- GLOBO DO JARV.I.S. NO TOPO DA LATERAL -->
-      <div class="jarvis-globe-container" style="display: flex; flex-direction: column; align-items: center; padding: 12px 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;">
-        <div class="jarvis-orb" id="jarvisOrb" style="width: 65px; height: 65px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0077ff 70%, #001133 100%); box-shadow: 0 0 20px #00ffff, inset 0 0 15px #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="safeCall('startContinuousMic')">
-          <i class="fa-solid fa-atom" style="font-size: 22px; color: #fff; text-shadow: 0 0 10px #00ffff;"></i>
+      <div class="jarvis-globe-container" style="display: flex; flex-direction: column; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); background: rgba(0, 255, 255, 0.03); border-radius: 6px; flex-shrink: 0;">
+        <div class="jarvis-orb" id="jarvisOrb" style="width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0077ff 70%, #001133 100%); box-shadow: 0 0 15px #00ffff, inset 0 0 10px #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="safeCall('startContinuousMic')" title="Ativar Escuta Contínua">
+          <i class="fa-solid fa-atom" style="font-size: 18px; color: #fff; text-shadow: 0 0 10px #00ffff;"></i>
         </div>
-        <span style="font-size: 0.7rem; color: var(--accent-cyan); margin-top: 6px; font-weight: bold; letter-spacing: 1px;">CORE V6.0 ACTIVE</span>
+        <span style="font-size: 0.6rem; color: var(--accent-cyan); margin-top: 4px; font-weight: bold; letter-spacing: 1px;">CORE V6.0 ACTIVE</span>
       </div>
 
-      <!-- SELO ANONYMOUS LATERAL -->
-      <div class="anonymous-card" title="Anonymous Legion" style="padding: 0 10px 10px 10px; text-align: center;">
-        <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Legion" style="width: 100%; border-radius: 6px;">
+      <div class="anonymous-card" title="Anonymous Legion" style="text-align: center; flex-shrink: 0;">
+        <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Legion" style="width: 100%; max-height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color);">
       </div>
 
-      <div class="history-label">SUBSISTEMAS CORE v6.0</div>
-      <nav class="sidebar-nav">
+      <div class="history-label" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; flex-shrink: 0;">SUBSISTEMAS CORE v6.0</div>
+      
+      <nav class="sidebar-nav" style="display: flex; flex-direction: column; gap: 4px;">
         <button class="jarv-nav-item active" onclick="safeCall('switchModule', 'master', event)">
           <i class="fa-solid fa-brain"></i> Master Agent
         </button>
@@ -101,17 +94,14 @@
           <i class="fa-solid fa-network-wired"></i> Segundo Cérebro
         </button>
         
-        <!-- MÓDULO AUTÔNOMO INTEGRADO -->
         <button class="jarv-nav-item" id="btn_mod_autonomous" onclick="safeCall('switchModule', 'autonomous', event); safeCall('toggleAutonomousMode');">
           <i class="fa-solid fa-microchip"></i> Autonomous Core
         </button>
 
-        <!-- MÓDULO QUIZ & DIAGNÓSTICO TÉCNICO -->
         <button class="jarv-nav-item" id="btn_mod_quiz" onclick="safeCall('switchModule', 'quiz', event)">
           <i class="fa-solid fa-wrench"></i> Suporte Técnico & Quiz
         </button>
 
-        <!-- MÓDULO DE DIAGNÓSTICO DE SISTEMA -->
         <button class="jarv-nav-item" id="btn_mod_diagnostics" onclick="if(window.siteDiagnostics) window.siteDiagnostics.togglePanel(); else console.warn('siteDiagnostics indisponível');">
           <i class="fa-solid fa-bug"></i> Diagnóstico
         </button>
@@ -131,14 +121,11 @@
       </nav>
     </aside>
 
-    <!-- PAINEL CENTRAL DE CHAT / CONHECIMENTO / AUTONOMOUS FEED -->
     <main class="jarv-main">
       <div class="watermark-bg"></div>
 
-      <!-- ÁREA DE MENSAGENS (Master Agent) -->
       <div class="msg-container" id="msgArea"></div>
 
-      <!-- PAINEL SECUNDÁRIO DO SEGUNDO CÉREBRO -->
       <div id="brainModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
           <h3 style="color: var(--accent-cyan); margin-bottom: 10px;"><i class="fa-solid fa-book-bookmark"></i> Base de Conhecimento - Segundo Cérebro</h3>
@@ -147,7 +134,6 @@
         <div id="brainNotesList" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
-      <!-- PAINEL DO NÚCLEO AUTÔNOMO -->
       <div id="autonomousModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
           <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-microchip"></i> Autonomous Execution Feed</h3>
@@ -156,7 +142,6 @@
         <div id="terminal-feed" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
-      <!-- PAINEL DE QUIZ / SUPORTE TÉCNICO -->
       <div id="quizModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
           <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-vial-circle-check"></i> Diagnóstico Técnico & Quiz Xiaomi/MIUI 15</h3>
@@ -165,11 +150,9 @@
         <div id="quizContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
-      <!-- VISÃO COMPUTACIONAL -->
       <video id="webcam" autoplay playsinline style="display: none;"></video>
       <canvas id="output_canvas" style="display: none;"></canvas>
 
-      <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO -->
       <div class="input-section" id="chatInputSection">
         <div class="action-toolbar" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
           <button class="tool-btn" id="btnMicGlobal" title="Ativar Atalho de Voz (Espaço)" onclick="safeCall('startContinuousMic')" style="background: #222; border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
@@ -192,7 +175,6 @@
     </main>
   </div>
 
-  <!-- MODAL DE AUTENTICAÇÃO -->
   <div class="modal-overlay auth-modal" id="loginModal" style="display: flex;">
     <div class="modal-card" style="text-align: center;">
       <div class="modal-logo" style="margin-bottom: 15px;">
@@ -211,12 +193,10 @@
     </div>
   </div>
 
-  <!-- SCRIPTS DO FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-  <!-- SCRIPT EXTERNO MODULARIZADO (PASTA JS) -->
   <script src="js/app.js" defer></script>
 </body>
 </html>
