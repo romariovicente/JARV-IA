@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <!-- Módulo de Diagnóstico de Erros (Deve ser o primeiro script) -->
+  <!-- Módulo de Diagnóstico de Erros -->
   <script src="diagnostics.js"></script>
 
   <meta charset="UTF-8">
@@ -12,66 +12,39 @@
   
   <link rel="manifest" href="manifest.json">
   
-  <!-- Bloco de Service Worker com tratamento de erro robusto e Promise.all -->
+  <!-- Bloco de Service Worker e Utilitários Globais -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations()
         .then(registrations => {
-          // Aguarda a desinstalação completa de TODOS os service workers legados
           return Promise.all(registrations.map(registration => registration.unregister()));
         })
         .then(() => {
           window.addEventListener('load', () => {
             navigator.serviceWorker.register('service-worker.js?v=6.0')
-              .then(reg => {
-                console.log('Service Worker v6.0 registrado com sucesso:', reg.scope);
-              })
-              .catch(error => {
-                console.error('Falha ao registrar o Service Worker:', error);
-              });
+              .then(reg => console.log('Service Worker registrado:', reg.scope))
+              .catch(err => console.error('Erro SW:', err));
           });
-        })
-        .catch(error => {
-          console.error('Erro ao gerenciar o desregistro de Service Workers legados:', error);
         });
     }
 
-    // ------------------------------------------------------------
-    // UTILITÁRIO DE SEGURANÇA PARA CHAMADAS A FUNÇÕES GLOBAIS
-    // ------------------------------------------------------------
+    // Utilitário de segurança global para chamadas
     window.safeCall = function(fnName, ...args) {
       if (typeof window[fnName] === 'function') {
         try {
           return window[fnName](...args);
         } catch (e) {
-          console.error(`Erro ao executar função "${fnName}":`, e);
+          console.error(`Erro na execução de "${fnName}":`, e);
         }
       } else {
-        console.warn(`Função "${fnName}" não está definida globalmente.`);
+        console.warn(`Função "${fnName}" ainda não carregada. Tentando fallback...`);
       }
     };
 
-    // Captura global de erros não tratados
     window.onerror = function(message, source, lineno, colno, error) {
       console.error('Erro global capturado:', { message, source, lineno, colno, error });
-      return false; // Permite que o erro continue propagando (não suprime)
+      return false;
     };
-
-    // Fallback para funções críticas (evita que a interface quebre)
-    window.addEventListener('DOMContentLoaded', function() {
-      const funcoesEsperadas = [
-        'switchModule', 'toggleAutonomousMode', 'filterBrainNotes',
-        'sendMsg', 'loginWithGoogle', 'stopJarvisVoice', 'initJarvisSession'
-      ];
-      funcoesEsperadas.forEach(fn => {
-        if (typeof window[fn] !== 'function') {
-          window[fn] = function(...args) {
-            console.warn(`[STUB] ${fn} chamado, mas a função real não foi carregada.`);
-            alert(`A função "${fn}" não está disponível. Verifique o carregamento dos scripts.`);
-          };
-        }
-      });
-    });
   </script>
 
   <!-- Módulo de Visão Computacional (MediaPipe) -->
@@ -106,9 +79,17 @@
     <!-- SIDEBAR DE AGENTES E MÓDULOS -->
     <aside class="jarv-sidebar">
       
+      <!-- GLOBO DO JARV.I.S. NO TOPO DA LATERAL -->
+      <div class="jarvis-globe-container" style="display: flex; flex-direction: column; align-items: center; padding: 12px 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;">
+        <div class="jarvis-orb" id="jarvisOrb" style="width: 65px; height: 65px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0077ff 70%, #001133 100%); box-shadow: 0 0 20px #00ffff, inset 0 0 15px #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="safeCall('startContinuousMic')">
+          <i class="fa-solid fa-atom" style="font-size: 22px; color: #fff; text-shadow: 0 0 10px #00ffff;"></i>
+        </div>
+        <span style="font-size: 0.7rem; color: var(--accent-cyan); margin-top: 6px; font-weight: bold; letter-spacing: 1px;">CORE V6.0 ACTIVE</span>
+      </div>
+
       <!-- SELO ANONYMOUS LATERAL -->
-      <div class="anonymous-card" title="Anonymous Legion">
-        <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Legion">
+      <div class="anonymous-card" title="Anonymous Legion" style="padding: 0 10px 10px 10px; text-align: center;">
+        <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Legion" style="width: 100%; border-radius: 6px;">
       </div>
 
       <div class="history-label">SUBSISTEMAS CORE v6.0</div>
@@ -131,7 +112,7 @@
         </button>
 
         <!-- MÓDULO DE DIAGNÓSTICO DE SISTEMA -->
-        <button class="jarv-nav-item" id="btn_mod_diagnostics" onclick="if(window.siteDiagnostics) window.siteDiagnostics.togglePanel(); else console.warn('siteDiagnostics não disponível');">
+        <button class="jarv-nav-item" id="btn_mod_diagnostics" onclick="if(window.siteDiagnostics) window.siteDiagnostics.togglePanel(); else console.warn('siteDiagnostics indisponível');">
           <i class="fa-solid fa-bug"></i> Diagnóstico
         </button>
 
@@ -163,41 +144,35 @@
           <h3 style="color: var(--accent-cyan); margin-bottom: 10px;"><i class="fa-solid fa-book-bookmark"></i> Base de Conhecimento - Segundo Cérebro</h3>
           <input type="text" id="brainSearchInput" placeholder="Pesquisar notas, marcações ou documentações..." style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; outline: none;" oninput="safeCall('filterBrainNotes')">
         </div>
-        <div id="brainNotesList" style="display: flex; flex-direction: column; gap: 10px;">
-          <!-- Notas injetadas dinamicamente -->
-        </div>
+        <div id="brainNotesList" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
-      <!-- PAINEL DO NÚCLEO AUTÔNOMO (TERMINAL FEED) -->
+      <!-- PAINEL DO NÚCLEO AUTÔNOMO -->
       <div id="autonomousModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
           <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-microchip"></i> Autonomous Execution Feed</h3>
-          <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoramento em tempo real do banco de dados via Firebase onSnapshot.</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoramento em tempo real via Firebase.</p>
         </div>
-        <div id="terminal-feed" style="display: flex; flex-direction: column; gap: 10px;">
-          <!-- Relatórios autônomos injetados dinamicamente -->
-        </div>
+        <div id="terminal-feed" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
-      <!-- PAINEL DE QUIZ / SUPORTE TÉCNICO (MIUI 15 & REPAROS) -->
+      <!-- PAINEL DE QUIZ / SUPORTE TÉCNICO -->
       <div id="quizModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
           <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-vial-circle-check"></i> Diagnóstico Técnico & Quiz Xiaomi/MIUI 15</h3>
-          <p style="color: var(--text-muted); font-size: 0.85rem;">Módulo interativo para testes de bancada, comandos MTP e Unlock Tools.</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Módulo interativo para testes de bancada e comandos MTP.</p>
         </div>
-        <div id="quizContainer" style="display: flex; flex-direction: column; gap: 10px;">
-          <!-- Perguntas e Diagnósticos injetados pelo JS v6.0 -->
-        </div>
+        <div id="quizContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
 
-      <!-- ELEMENTOS DA VISÃO COMPUTACIONAL (MEDIAPIPE) -->
+      <!-- VISÃO COMPUTACIONAL -->
       <video id="webcam" autoplay playsinline style="display: none;"></video>
       <canvas id="output_canvas" style="display: none;"></canvas>
 
       <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO -->
       <div class="input-section" id="chatInputSection">
         <div class="action-toolbar" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-          <button class="tool-btn" id="btnMicGlobal" title="Ativar Atalho de Voz (Espaço)" style="background: #222; border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+          <button class="tool-btn" id="btnMicGlobal" title="Ativar Atalho de Voz (Espaço)" onclick="safeCall('startContinuousMic')" style="background: #222; border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-microphone"></i> Pressione [ESPAÇO] para falar
           </button>
           
@@ -210,10 +185,8 @@
         </div>
 
         <div class="input-wrapper">
-          <input type="text" id="chatInput" placeholder="Insira suas diretrizes para o Master Agent..." autocomplete="off" onkeydown="if(event.key==='Enter') safeCall('sendMsg')">
+          <input type="text" id="chatInput" placeholder="Insira suas diretrizes para o Master Agent..." autocomplete="off" onkeydown="if(event.key==='Enter') { safeCall('sendMsg'); event.preventDefault(); }">
           <button class="btn-send" id="executeBtn" onclick="safeCall('sendMsg')">EXECUTAR</button>
-          <!-- Aliases de botão para compatibilidade técnica -->
-          <button id="btnSend" onclick="safeCall('sendMsg')" style="display: none;"></button>
         </div>
       </div>
     </main>
@@ -228,24 +201,22 @@
       <h2 style="color: #fff; margin-bottom: 5px; letter-spacing: 2px;">J.A.R.V.I.S. SYSTEM v6.0</h2>
       <p class="subtitle" style="color: #8b949e; font-size: 0.85rem; margin-bottom: 25px;">Autenticação de Segurança Necessária</p>
       
-      <!-- BOTÃO DE LOGIN GOOGLE CONECTADO AO APP.JS -->
       <button onclick="safeCall('loginWithGoogle')" class="btn-send" style="width: 100%; padding: 14px; justify-content: center; background: #4285F4; border: none; color: #fff; font-weight: bold; border-radius: 6px; box-shadow: 0 0 15px rgba(66, 133, 244, 0.4); cursor: pointer; display: flex; align-items: center; gap: 10px;">
         <i class="fa-brands fa-google"></i> Entrar com Google
       </button>
 
-      <!-- BOTÃO DE FALLBACK / OFFLINE -->
       <button onclick="safeCall('initJarvisSession')" style="width: 100%; padding: 10px; margin-top: 15px; background: transparent; border: 1px solid #30363d; color: #8b949e; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">
         Modo Offline Temporário
       </button>
     </div>
   </div>
 
-  <!-- SCRIPTS DO FIREBASE (OBRIGATÓRIOS PARA AUTENTICAÇÃO E SNAPSHOTS) -->
+  <!-- SCRIPTS DO FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-  <!-- SCRIPT EXTERNO MODULARIZADO v6.0 (DENTRO DA PASTA JS) -->
+  <!-- SCRIPT EXTERNO MODULARIZADO (PASTA JS) -->
   <script src="js/app.js" defer></script>
 </body>
 </html>
