@@ -13,17 +13,28 @@
   <link rel="manifest" href="manifest.json">
   <script>
     if ('serviceWorker' in navigator) {
-      // 1. Desregistra Service Workers legados presos em cache
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let registration of registrations) {
-          registration.unregister();
-        }
-      }).then(() => {
-        // 2. Registra forçando o escopo v6.0
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('service-worker.js?v=6.0');
+      // 1. Desregistra Service Workers legados presos em cache com tratamento de erro
+      navigator.serviceWorker.getRegistrations()
+        .then(registrations => {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        })
+        .then(() => {
+          // 2. Registra forçando o escopo v6.0
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('service-worker.js?v=6.0')
+              .then(reg => {
+                console.log('Service Worker v6.0 registrado com sucesso:', reg.scope);
+              })
+              .catch(error => {
+                console.error('Falha ao registrar o Service Worker:', error);
+              });
+          });
+        })
+        .catch(error => {
+          console.error('Erro ao gerenciar o desregistro de Service Workers legados:', error);
         });
-      });
     }
   </script>
 
