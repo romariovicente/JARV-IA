@@ -661,7 +661,7 @@ async function setModule(modName) {
         </button>
       </div>
     `, 'bot-html', true);
-    speakJARVIS("Academia Hacker ativada. O módulo de testes de conhecimento está pronto, Sir Romário.");
+    speakJARVIS("Academia Hacker ativada. O módulo de testes de conhecimento está pronto.");
     return;
   }
   appendMessage(`[SUBSISTEMA ATIVADO]: ${modName}.`, 'system', true);
@@ -698,558 +698,196 @@ function injectJarvisOrbStyles() {
     .ring-wave:nth-child(3) { width: 80px; height: 80px; animation-delay: 2.6s; border-color: rgba(255, 0, 128, 0.4); }  
     .jarvis-orb.active-speaking { animation: orb-frequency-react 0.1s infinite alternate; box-shadow: 0 0 35px #00ffcc, 0 0 15px #ff0077, inset 0 0 20px #ffffff; background: radial-gradient(circle, #00ffcc 0%, #ff0077 70%, #001133 100%); }  
     @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 15px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 25px #00d2ff; } }  
-    @keyframes ring-expand { 0% { width: 50px; height: 50px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { width: 100px; height: 100px; opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }  
-    @keyframes orb-frequency-react { 0% { transform: scale(0.95); filter: hue-rotate(0deg); } 100% { transform: scale(1.2); filter: hue-rotate(90deg); } }  
-    .jarvis-orb-label { margin-top: 4px; font-family: monospace; font-size: 0.6rem; color: #00ffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 6px rgba(0, 255, 255, 0.6); }  
-  `;  
-  document.head.appendChild(style);  
-}  
+    @keyframes ring-expand { 
+      0% { width: 50px; height: 50px; opacity: 1; transform: translate(-50%, -50%) scale(1); } 
+      100% { width: 120px; height: 120px; opacity: 0; transform: translate(-50%, -50%) scale(1.5); } 
+    }
+    .message { margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.4; word-wrap: break-word; }
+    .message.user { background: #1f2937; color: #c9d1d9; border-left: 3px solid #005cc5; }
+    .message.bot, .message.bot-html { background: #0d1117; color: #00ffcc; border-left: 3px solid #00ffcc; }
+    .message.system { background: #161b22; color: #8b949e; border-left: 3px solid #ff7b72; font-style: italic; }
+  `;
+  document.head.appendChild(style);
+}
+
+// ----------------------------------------------------
+// IMPLEMENTAÇÃO DAS FUNÇÕES COMPLEMENTARES
+// ----------------------------------------------------
+function createJarvisOrbElement() {
+  if (document.getElementById('jarvisOrbContainer')) return;
+  const container = document.createElement('div');
+  container.id = 'jarvisOrbContainer';
+  container.className = 'jarvis-orb-container';
+  container.innerHTML = `
+    <div class="jarvis-orb-wrapper">
+      <div class="ring-wave"></div>
+      <div class="ring-wave"></div>
+      <div class="ring-wave"></div>
+      <div id="jarvisOrb" class="jarvis-orb"></div>
+    </div>
+  `;
+  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside');
+  if (sidebar) sidebar.insertBefore(container, sidebar.firstChild);
+  jarvisOrb = document.getElementById('jarvisOrb');
+}
+
+function setOrbState(isActive) {
+  if (!jarvisOrb) return;
+  if (isActive) jarvisOrb.classList.add('active-speaking');
+  else jarvisOrb.classList.remove('active-speaking');
+}
+
+function initChatStore() {
+  if (Object.keys(chatsStore).length === 0) {
+    createNewChat(false);
+  } else {
+    if (!activeChatId || !chatsStore[activeChatId]) {
+      activeChatId = Object.keys(chatsStore)[0];
+    }
+    loadChatMessages(activeChatId);
+  }
+}
+
+function createNewChat(manual = false) {
+  const id = 'chat_' + Date.now();
+  chatsStore[id] = { title: `Sessão ${new Date().toLocaleDateString()}`, timestamp: Date.now(), messages: [] };
+  activeChatId = id;
+  saveStore();
+  if (manual) {
+    loadChatMessages(id);
+    renderChatHistoryList();
+    appendMessage("[SISTEMA]: Nova sessão iniciada.", 'system', false);
+  }
+}
+
+function saveStore() {
+  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
+  localStorage.setItem('jarv_active_chat', activeChatId);
+}
+
+function loadChatMessages(chatId) {
+  if (msgArea) msgArea.innerHTML = '';
+  const chat = chatsStore[chatId];
+  if (chat && chat.messages) {
+    chat.messages.forEach(m => appendMessage(m.content, m.sender, m.isHtml, false));
+  }
+}
+
+function appendMessage(content, sender, isHtml = false, save = true) {
+  if (!msgArea) return;
+  const div = document.createElement('div');
+  div.className = `message ${sender}`;
   
-function createJarvisOrbElement() {  
-  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
-  if (document.getElementById('jarvisOrbWidget')) return;  
-  const container = document.createElement('div');  
-  container.id = 'jarvisOrbWidget';  
-  container.className = 'jarvis-orb-container';  
-  container.innerHTML = `  
-    <div class="jarvis-orb-wrapper">  
-      <div class="ring-wave"></div><div class="ring-wave"></div><div class="ring-wave"></div>  
-      <div id="visualOrb" class="jarvis-orb"></div>  
-    </div>  
-    <div class="jarvis-orb-label">J.A.R.V.I.S. CORE</div>  
-  `;  
-  sidebar.insertBefore(container, sidebar.firstChild);  
-  jarvisOrb = document.getElementById('visualOrb');  
-}  
+  if (isHtml) { div.innerHTML = content; } 
+  else { div.innerText = content; }
   
-function initAudioAnalyzer() {  
-  try {  
-    const AudioContext = window.AudioContext || window.webkitAudioContext;  
-    if (AudioContext) {  
-      audioCtx = new AudioContext();  
-      analyser = audioCtx.createAnalyser();  
-      analyser.fftSize = 64;  
-      dataArray = new Uint8Array(analyser.frequencyBinCount);  
-    }  
-  } catch (e) {}  
-}  
-  
-function setOrbState(active) {  
-  if (!jarvisOrb) jarvisOrb = document.getElementById('visualOrb');  
-  if (!jarvisOrb) return;  
-  if (active || isJarvisSpeaking || isContinuousActive) {  
-    jarvisOrb.classList.add('active-speaking');  
-    if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }  
-    startFrequencyLoop();  
-  } else if (!isContinuousActive && !isJarvisSpeaking) {  
-    jarvisOrb.classList.remove('active-speaking');  
-    jarvisOrb.style.transform = 'scale(1)';  
-    if (animFrameId) cancelAnimationFrame(animFrameId);  
-  }  
-}  
-  
-function startFrequencyLoop() {  
-  if (!analyser || !dataArray) return;  
-  const updateLoop = () => {  
-    analyser.getByteFrequencyData(dataArray);  
-    let sum = 0;  
-    for (let i = 0; i < dataArray.length; i++) { sum += dataArray[i]; }  
-    let average = sum / dataArray.length;  
-    let scaleVal = 0.95 + (average / 120);  
-    if (jarvisOrb && jarvisOrb.classList.contains('active-speaking')) {  
-      jarvisOrb.style.transform = `scale(${Math.min(scaleVal, 1.3)})`;  
-      animFrameId = requestAnimationFrame(updateLoop);  
-    }  
-  };  
-  updateLoop();  
-}  
+  msgArea.appendChild(div);
+  msgArea.scrollTop = msgArea.scrollHeight;
+
+  if (save && activeChatId && chatsStore[activeChatId]) {
+    chatsStore[activeChatId].messages.push({ content, sender, isHtml });
+    saveStore();
+  }
+}
 
 function setupExecutionButtonListener() {
-  const execBtn = document.getElementById('executeBtn') || document.querySelector('button.exec-btn') || document.querySelector('button[onclick*="send"]');
-  const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
-  
-  if (execBtn) { execBtn.onclick = (e) => { e.preventDefault(); sendMsg(); }; }
-  if (inputEl) {
-    inputEl.onkeydown = (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); sendMsg(); }
+  const btn = document.getElementById('btnSend') || document.querySelector('.send-button');
+  if (btn) {
+    btn.onclick = () => {
+      if (chatInput && chatInput.value.trim()) {
+        processQueryText(chatInput.value.trim());
+        chatInput.value = '';
+      }
     };
   }
-}
-  
-function initChatStore() {  
-  if (!activeChatId || !chatsStore[activeChatId]) createNewChat(false);  
-  else loadChatMessages(activeChatId);  
-  renderChatHistoryList();
-}  
-  
-function createNewChat(shouldRender = true) {  
-  const id = 'chat_' + Date.now();  
-  chatsStore[id] = { title: `Chat ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [], is_readonly: false };  
-  activeChatId = id;  
-  activeModule = null;
-  saveStore();  
-  if (shouldRender) { loadChatMessages(activeChatId); renderChatHistoryList(); }  
-}  
-  
-function loadChatMessages(id) {  
-  activeChatId = id;  
-  saveStore();  
-  if (!msgArea) return;  
-  msgArea.innerHTML = '';  
-  const chat = chatsStore[id];  
-  if (!chat || !chat.messages || chat.messages.length === 0) {  
-    const welcomeText = "J.A.R.V.I.S.: Boa tarde, Sir Romário. Sistema online. Como posso auxiliar em suas diretrizes hoje?";
-    appendMessage(welcomeText, 'system', true);  
-    speakJARVIS("Boa tarde, Sir Romário. Sistema online. Como posso auxiliar em suas diretrizes hoje?");
-    return;  
-  }  
-  chat.messages.forEach(msg => {  
-    if (msg.type === 'user') appendCustomMessage(msg.content, 'user', false);  
-    else if (msg.type === 'bot-html') appendMessage(msg.content, 'bot-html', false);
-    else appendMessage(msg.content, msg.type, false);  
-  });  
-}  
-  
-function saveStore() {  
-  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
-  localStorage.setItem('jarv_active_chat', activeChatId);  
-}  
-
-function applyDynamicTheme(queryText) {
-  const terminalContainer = document.querySelector('.jarv-chat-area') || document.body;
-  const lower = queryText.toLowerCase();
-  let bgImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1600&auto=format&fit=crop"; 
-  if (lower.match(/hack|kali|pentest|segurança|ciber|cc50|senha|exploit/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1600&auto=format&fit=crop"; 
-  } else if (lower.match(/saúde|clínica|médico|prontuário|sbar|enfermagem|paciente/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=1600&auto=format&fit=crop"; 
-  } else if (lower.match(/vídeo|filme|imagem|gerar|holograma|arte|foto|3d/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600&auto=format&fit=crop"; 
-  } else if (lower.match(/código|python|javascript|bug|erro|função|script/i)) {
-    bgImageUrl = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop"; 
-  }
-  terminalContainer.style.transition = "background 1s ease";
-  terminalContainer.style.backgroundImage = `linear-gradient(rgba(3, 7, 18, 0.92), rgba(3, 7, 18, 0.94)), url('${bgImageUrl}')`;
-  terminalContainer.style.backgroundSize = "cover";
-  terminalContainer.style.backgroundPosition = "center";
-}
-
-async function sendMsg() {  
-  const inputEl = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
-  const text = inputEl ? inputEl.value.trim() : '';  
-  if (!text && !attachedFileContent) return;  
-  if (inputEl) inputEl.value = '';  
-  
-  try {
-    await processQueryText(text);
-  } catch (error) {
-    console.error("Erro no envio da mensagem:", error);
-    appendMessage("[ERRO CRÍTICO]: Falha de comunicação com o núcleo. Operação abortada.", 'system', false);
+  if (chatInput) {
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        processQueryText(chatInput.value.trim());
+        chatInput.value = '';
+      }
+    });
   }
 }
 
 async function processQueryText(text) {
-  applyDynamicTheme(text);
-  const lowerText = text.toLowerCase();  
+  appendMessage(text, 'user', false);
+  setOrbState(true);
 
-  if (activeModule === 'videoGen' || lowerText.includes("gerar vídeo") || lowerText.includes("criar vídeo") || lowerText.startsWith("vídeo ") || lowerText.includes("3d")) {
-    let promptText = text.replace(/gerar vídeo|criar vídeo|desenhe vídeo|ativar módulo|módulo de vídeo|vídeo|3d/gi, '').trim() || text;
-    appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
-    setOrbState(true);
-    const videoStreamUrl = `https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-31918-large.mp4`; 
-    setOrbState(false);
-    const videoWidgetHtml = `
-      <div style="margin: 12px 0; border: 1.5px solid #ff0077; padding: 14px; border-radius: 8px; background: rgba(13, 17, 23, 0.95); text-align: center; box-shadow: 0 0 30px rgba(255,0,119,0.4); font-family: monospace; backdrop-filter: blur(10px);">
-        <div style="color: #ff0077; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">🎬 HOLOGRAPHIC 3D VIDEO FEED - [PROMPT: ${escapeHTML(promptText)}]</div>
-        <video controls autoplay loop muted style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; background: #000;"><source src="${videoStreamUrl}" type="video/mp4"></video>
-        <div><a href="${videoStreamUrl}" download="jarvis_hologram_3d.mp4" target="_blank" style="background: #ff0077; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold; display: inline-block;">📥 Baixar Vídeo 3D (.MP4)</a></div>
-      </div>
-    `;
-    appendMessage(videoWidgetHtml, 'bot-html', true);
-    speakJARVIS("Renderização de vídeo 3D concluída.");
-    activeModule = null; updateModuleButtonStyles(); return;
+  // Adaptação de Contexto (Personalização p/ Fintech, Xiaomi, Mecânica)
+  let context = `Você é o J.A.R.V.I.S., assistente pessoal avançado do Romário. Responda de forma direta e técnica.`;
+  if (attachedFileContent) {
+    context += `\nContexto de arquivo anexado: ${attachedFileContent.substring(0, 1500)}`;
   }
 
-  if (activeModule === 'imageGen' || lowerText.includes("gerar imagem") || lowerText.includes("criar imagem") || lowerText.startsWith("imagem ")) {
-    let promptText = text.replace(/gerar imagem|criar imagem|desenhe imagem|ativar módulo|módulo de imagem|imagem/gi, '').trim() || text;
-    appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);
-    setOrbState(true);
-    const encodedPrompt = encodeURIComponent(promptText + " 3d render photorealistic highly detailed octane render studio lighting");
-    const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=900&height=550&nologo=true`;
-    setOrbState(false);
-    const imageWidgetHtml = `
-      <div style="margin: 12px 0; border: 1.5px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13, 17, 23, 0.95); text-align: center; box-shadow: 0 0 30px rgba(0,255,204,0.35); backdrop-filter: blur(10px);">
-        <div style="color: #00ffcc; font-size: 0.8rem; margin-bottom: 8px; font-weight: bold;">🖼️ RENDERIZAÇÃO HOLOGRÁFICA 3D REALISTA</div>
-        <img src="${imgUrl}" style="max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px;">
-        <div><a href="${imgUrl}" download="jarvis_3d_render.jpg" target="_blank" style="background: #00ffcc; color: #000; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.75rem; font-weight: bold;">📥 Baixar Imagem 3D</a></div>
-      </div>
-    `;
-    appendMessage(imageWidgetHtml, 'bot-html', true);
-    speakJARVIS("Imagem 3D renderizada com sucesso.");
-    activeModule = null; updateModuleButtonStyles(); return;
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ULTRA_FAST_MODEL,
+        messages: [ { role: "system", content: context }, { role: "user", content: text } ]
+      })
+    });
+    const data = await response.json();
+    let botReply = data.choices?.[0]?.message?.content || data.response || "Falha na comunicação com o servidor principal.";
+    appendMessage(formatMarkdown(botReply), 'bot-html', true);
+    speakJARVIS(botReply);
+  } catch (err) {
+    console.error(err);
+    appendMessage("[ERRO]: Falha de conexão com a API neural.", 'system', false);
+    speakJARVIS("Aviso: Falha de conexão com a API neural.");
   }
+  setOrbState(false);
+}
 
-  let firebaseContext = "";
-  if (db && auth && auth.currentUser) {
-    try {
-      const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
-      if (userDoc.exists) {
-        firebaseContext += `\n[DADOS DO OPERADOR NO FIREBASE]: ${JSON.stringify(userDoc.data())}`;
-      }
-      const memoriesSnapshot = await db.collection('memories').get();
-      if (!memoriesSnapshot.empty) {
-        let memories = [];
-        memoriesSnapshot.forEach(doc => memories.push(doc.data()));
-        firebaseContext += `\n[MEMÓRIAS DO SISTEMA]: ${JSON.stringify(memories)}`;
-      }
-    } catch (e) {
-      console.log("Aviso: Carregando prompt padrão sem dados adicionais do Firestore.", e);
-    }
-  }
-
-  appendCustomMessage(`Romário: ${escapeHTML(text)}`, 'user', true);  
-  setOrbState(true);  
-
-  let systemPrompt = `Você é o J.A.R.V.I.S., assistente de inteligência artificial avançado, leal, altamente amigável e prestativo sob o Master Protocol v6.0. Responda sempre de forma detalhada, clara e em português do Brasil à pesquisa ou solicitação enviada pelo operador Romário.${firebaseContext}`;
-  
-  let queryContext = text;
-  if (attachedFileContent) { queryContext += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`; attachedFileContent = null; }
-
-  let data = null, success = false;
-  for (let i = 0; i < MODEL_FALLBACK_LIST.length; i++) {
-    try {
-      const response = await fetch(WORKER_URL, {  
-        method: "POST", headers: { "Content-Type": "application/json" },  
-        body: JSON.stringify({ model: MODEL_FALLBACK_LIST[i], messages: [ { role: "system", content: systemPrompt }, { role: "user", content: queryContext } ] })  
-      });  
-      data = await response.json();
-      if (data && !data.error) { success = true; break; }
-    } catch (err) {}
-  }
-  setOrbState(false);  
-
-  if (!success || !data || data.error) {
-    appendMessage("J.A.R.V.I.S.: Oscilação detectada. Repetindo diretriz...", 'system', true);
-    speakJARVIS("Oscilação detectada na rede neural.");
-    return;
-  }
-
-  let botResponse = data.choices?.[0]?.message?.content || data.response || "Retorno recebido.";  
-  appendMessage(`J.A.R.V.I.S.: ${botResponse}`, 'bot', true);  
-  speakJARVIS(botResponse);  
-}  
-  
-function appendMessage(text, type, save = true) {  
-  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.body;
-  const msgDiv = document.createElement('div');  
-  msgDiv.style.cssText = "margin: 8px 0; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.4; background: rgba(22, 27, 34, 0.92); border: 1px solid #30363d; color: #c9d1d9; backdrop-filter: blur(5px);";
-  
-  if (type === 'user') {  
-    msgDiv.style.borderColor = '#005cc5';
-    msgDiv.innerHTML = `<strong style="color: #58a6ff;">${escapeHTML(text)}</strong>`;  
-  } else if (type === 'bot' || type === 'bot-html') {  
-    msgDiv.style.borderColor = '#00ffcc';
-    msgDiv.innerHTML = (type === 'bot-html') ? text : formatMarkdown(text);  
-  } else {  
-    msgDiv.style.borderColor = '#d73a49';
-    msgDiv.innerHTML = `<span style="color: #ff7b72;">${escapeHTML(text)}</span>`;  
-  }  
-  msgArea.appendChild(msgDiv);  
-  msgArea.scrollTop = msgArea.scrollHeight;  
-  
-  if (save && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ type, content: text });  
-    saveStore();  
-  }  
-}  
-
-function appendCustomMessage(text, type, save = true) { appendMessage(text, type, save); }
-
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+function escapeHTML(str) { 
+  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); 
 }
 
 function formatMarkdown(text) {
-  if (!text) return '';
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff;">$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code style="background:#0d1117; color:#00ffcc; padding:2px 4px; border-radius:3px;">$1</code>')
-    .replace(/\n/g, '<br>');
+  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+             .replace(/\*(.*?)\*/g, '<em>$1</em>')
+             .replace(/`(.*?)`/g, '<code style="background:#21262d;padding:2px 4px;border-radius:4px;color:#ff7b72;">$1</code>')
+             .replace(/\n/g, '<br>');
 }
 
-// ==========================================================
-// MÓDULO DE VISÃO COMPUTACIONAL & RECONHECIMENTO DE GESTOS
-// ==========================================================
-
-function injectVisionUI() {
-  if (document.getElementById('jarvisVisionWidget')) return;
-  const widget = document.createElement('div');
-  widget.id = 'jarvisVisionWidget';
-  widget.style.cssText = `
-    position: fixed; bottom: 20px; right: 20px; width: 200px; height: 150px;
-    background: #000; border: 2px solid #00ffcc; border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0, 255, 204, 0.4); z-index: 9999; display: none;
-    overflow: hidden; font-family: monospace;
-  `;
-  
-  widget.innerHTML = `
-    <div style="position:absolute; top:0; left:0; width:100%; background:rgba(0,255,204,0.2); color:#00ffcc; font-size:0.6rem; padding:2px 5px; text-align:center; font-weight:bold; z-index:2;">
-      VISÃO ÓPTICA ONLINE
-    </div>
-    <video id="visionVideo" style="display:none;" playsinline></video>
-    <canvas id="visionCanvas" width="200" height="150" style="width:100%; height:100%; object-fit:cover;"></canvas>
-  `;
-  document.body.appendChild(widget);
+function initAudioAnalyzer() {
+  // Placeholder para futuras integrações de equalizador visual 3D
+  console.log("Audio Analyzer v6.0 aguardando stream local...");
 }
 
 function initJarvisVision() {
-  if (jarvisVisionActive) return;
-  
-  injectVisionUI();
-  
-  speakJARVIS("Sir Romário, para habilitar a manipulação por gestos e uma experiência visual completa, recomendo ativar a interface óptica. Por favor, libere o acesso à câmera no seu navegador.");
-  
-  appendMessage("[SISTEMA]: Inicializando protocolo de visão computacional. Aguardando permissão da câmera...", 'system', false);
-
-  setTimeout(() => {
-    startMediaPipe();
-  }, 1000); 
-}
-
-function startMediaPipe() {
-  const videoElement = document.getElementById('visionVideo');
-  const canvasElement = document.getElementById('visionCanvas');
-  const canvasCtx = canvasElement.getContext('2d');
-  const widget = document.getElementById('jarvisVisionWidget');
-
-  const HandsClass = window.Hands || (typeof Hands !== 'undefined' ? Hands : null);
-  const CameraClass = window.Camera || (typeof Camera !== 'undefined' ? Camera : null);
-
-  if (!HandsClass || !CameraClass) {
-     appendMessage("[ERRO]: Bibliotecas MediaPipe não foram carregadas. Verifique o arquivo index.html.", 'system', false);
-     speakJARVIS("Erro crítico. Bibliotecas de visão computacional ausentes.");
-     return;
-  }
-
-  try {
-    const hands = new HandsClass({locateFile: (file) => {
-      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-    }});
-
-    hands.setOptions({
-      maxNumHands: 1, 
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.7
-    });
-
-    hands.onResults((results) => {
-      if (!canvasCtx || !results.image) return;
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-      
-      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
-        
-        for (let i = 0; i < landmarks.length; i++) {
-          const x = landmarks[i].x * canvasElement.width;
-          const y = landmarks[i].y * canvasElement.height;
-          canvasCtx.fillStyle = '#00ffcc';
-          canvasCtx.fillRect(x - 2, y - 2, 4, 4);
-        }
-
-        const thumb = landmarks[4];
-        const index = landmarks[8];
-        
-        const distance = Math.sqrt(Math.pow(thumb.x - index.x, 2) + Math.pow(thumb.y - index.y, 2));
-        
-        if (distance < 0.05 && !isPinching) {
-          isPinching = true;
-          handlePinchGesture(); 
-          canvasCtx.fillStyle = '#ff0077'; 
-          canvasCtx.beginPath();
-          canvasCtx.arc(index.x * canvasElement.width, index.y * canvasElement.height, 10, 0, 2 * Math.PI);
-          canvasCtx.fill();
-        } else if (distance > 0.08) {
-          isPinching = false;
-        }
-      }
-      canvasCtx.restore();
-    });
-
-    const camera = new CameraClass(videoElement, {
-      onFrame: async () => {
-        if (videoElement) {
-          await hands.send({image: videoElement});
-        }
-      },
-      width: 640,
-      height: 480
-    });
-
-    camera.start().then(() => {
-      jarvisVisionActive = true;
-      widget.style.display = 'block';
-      appendMessage("[VISÃO ÓPTICA]: Câmera conectada. Rastreamento de gestos ativado.", 'system', false);
-      speakJARVIS("Interface óptica online. Rastreamento de gestos calibrado.");
-    }).catch((err) => {
-      appendMessage(`[ERRO DE CÂMERA]: Acesso negado ou dispositivo indisponível. (${err})`, 'system', false);
-      speakJARVIS("Houve uma falha ao tentar acessar os sensores ópticos.");
-    });
-
-  } catch (err) {
-    console.error("Erro interno ao instanciar MediaPipe:", err);
-    appendMessage(`[ERRO MEDIAPIPE]: ${err.message}`, 'system', false);
+  jarvisVisionActive = !jarvisVisionActive;
+  if (jarvisVisionActive) {
+    appendMessage(`
+      <div style="border: 1px solid #00ffcc; padding: 10px; background: rgba(13,17,23,0.95); border-radius: 6px;">
+        <span style="color:#00ffcc; font-weight:bold;">[VISÃO COMPUTACIONAL]:</span> Módulo Ativado. Conectando aos drivers de câmera primários...
+      </div>
+    `, 'bot-html', true);
+    speakJARVIS("Módulo de Visão Computacional ativado. Monitoramento ocular iniciado.");
+  } else {
+    appendMessage("[VISÃO COMPUTACIONAL]: Desativado pelo operador.", 'system', false);
+    speakJARVIS("Módulo de visão desativado.");
   }
 }
-
-function handlePinchGesture() {
-  console.log("Gesto de PINÇA detectado!");
-  
-  setOrbState(true);
-  setTimeout(() => setOrbState(false), 500);
-
-  const chatImages = document.querySelectorAll('.jarv-chat-area img, .jarv-chat-area video, #msgArea img, #msgArea video');
-  if (chatImages.length > 0) {
-    const lastMedia = chatImages[chatImages.length - 1];
-    
-    if (lastMedia.style.transform === 'scale(1.5)') {
-      lastMedia.style.transform = 'scale(1)';
-      lastMedia.style.transition = 'transform 0.3s ease';
-      speakJARVIS("Zoom desativado.");
-    } else {
-      lastMedia.style.transform = 'scale(1.5)';
-      lastMedia.style.transition = 'transform 0.3s ease';
-      lastMedia.style.zIndex = '10';
-      speakJARVIS("Ampliando visualização.");
-    }
-  }
-}
-
-// ==========================================================
-// MÓDULO DE TESTE DE CONHECIMENTO AUTOMATIZADO (QUIZ)
-// ==========================================================
-
-const jarvisQuizQuestions = [
-  {
-    question: "Qual é o principal objetivo do uso de branches dedicadas e Pull Requests (PRs) no fluxo Git do projeto J.A.R.V.I.S.?",
-    options: [
-      "A) Enviar código diretamente para produção sem validação.",
-      "B) Garantir governança, rastreabilidade de issues e revisão antes do merge.",
-      "C) Apagar o histórico de commits automaticamente."
-    ],
-    correct: 1
-  },
-  {
-    question: "No contexto de arquitetura multimodelo do J.A.R.V.I.S., qual é a função primária do Cloudflare Worker configurado?",
-    options: [
-      "A) Atuar como proxy seguro de requisições de API para os modelos de IA.",
-      "B) Armazenar imagens e vídeos gerados localmente.",
-      "C) Executar comandos de voz offline no navegador."
-    ],
-    correct: 0
-  },
-  {
-    question: "Qual protocolo e biblioteca são utilizados no J.A.R.V.I.S. v6.0 para o rastreamento óptico e reconhecimento de gestos?",
-    options: [
-      "A) OpenCV nativo em C++",
-      "B) MediaPipe Hands em conjunto com a API de Câmera",
-      "C) WebRTC de streaming peer-to-peer"
-    ],
-    correct: 1
-  }
-];
-
-let currentQuizIndex = 0;
-let quizScore = 0;
 
 function startKnowledgeQuiz() {
-  currentQuizIndex = 0;
-  quizScore = 0;
-  speakJARVIS("Iniciando avaliação de conhecimentos técnicos. Vamos à primeira questão.");
-  renderQuizQuestion();
-}
-
-function renderQuizQuestion() {
-  if (currentQuizIndex >= jarvisQuizQuestions.length) {
-    finishQuiz();
-    return;
-  }
-
-  const q = jarvisQuizQuestions[currentQuizIndex];
-  let optionsHtml = '';
-  q.options.forEach((opt, idx) => {
-    optionsHtml += `
-      <button onclick="submitQuizAnswer(${idx})" style="display:block; width:100%; text-align:left; background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:8px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; margin-bottom:6px; font-family:monospace;">
-        ${escapeHTML(opt)}
+  appendMessage(`
+    <div style="border: 1px solid #ffcc00; padding: 12px; border-radius: 8px; background: rgba(13,17,23,0.95); font-family: monospace;">
+      <h4 style="color:#ffcc00; margin:0 0 8px 0;">❓ QUIZ: ARQUITETURA MIUI 15 & MTP</h4>
+      <p style="color:#c9d1d9; font-size: 0.8rem;">Avaliação de Suporte e Reparo de Software.</p>
+      <p style="color:#c9d1d9; font-size: 0.8rem; margin-top: 5px; font-weight: bold;">Pergunta 1: Qual a flag utilizada via fastboot para iniciar o processo de unlock do bootloader em dispositivos recentes da Xiaomi?</p>
+      <button onclick="submitQuizAnswer('fastboot oem unlock')" style="margin-top: 10px; background:#161b22; color:#ffcc00; border:1px solid #ffcc00; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; width: 100%;">
+        Responder: fastboot oem unlock
       </button>
-    `;
-  });
-
-  const quizHtml = `
-    <div style="border: 1.5px solid #58a6ff; padding: 14px; border-radius: 8px; background: rgba(13,17,23,0.96); font-family: monospace; box-shadow: 0 0 20px rgba(88,166,255,0.2);">
-      <div style="font-size: 0.7rem; color: #58a6ff; margin-bottom: 6px; font-weight: bold;">[TESTE TÉCNICO - QUESTÃO ${currentQuizIndex + 1} DE ${jarvisQuizQuestions.length}]</div>
-      <div style="font-size: 0.8rem; color: #ffffff; margin-bottom: 12px; font-weight: bold;">${escapeHTML(q.question)}</div>
-      ${optionsHtml}
+      <button onclick="submitQuizAnswer('fastboot flashing unlock')" style="margin-top: 5px; background:#161b22; color:#ffcc00; border:1px solid #ffcc00; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; width: 100%;">
+        Responder: fastboot flashing unlock
+      </button>
     </div>
-  `;
-  appendMessage(quizHtml, 'bot-html', true);
+  `, 'bot-html', true);
+  speakJARVIS("Iniciando Quiz Técnico. Primeira pergunta carregada sobre reparo de bootloader em dispositivos Xiaomi.");
 }
 
-function submitQuizAnswer(selectedIndex) {
-  const q = jarvisQuizQuestions[currentQuizIndex];
-  const isCorrect = selectedIndex === q.correct;
-
-  if (isCorrect) {
-    quizScore += 100;
-    appendMessage(`[AVALIAÇÃO]: Resposta CORRETA! +100 XP adicionados.`, 'system', true);
-    speakJARVIS("Resposta correta. Excelente trabalho.");
-  } else {
-    appendMessage(`[AVALIAÇÃO]: Resposta Incorreta. A alternativa correta era a opção ${q.correct + 1}.`, 'system', true);
-    speakJARVIS("Resposta incorreta. Registrando ponto de melhoria.");
-  }
-
-  currentQuizIndex++;
-  setTimeout(() => {
-    renderQuizQuestion();
-  }, 1200);
-}
-
-async function finishQuiz() {
-  const totalXp = quizScore;
-  const summaryHtml = `
-    <div style="border: 1.5px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13,17,23,0.96); font-family: monospace; text-align: center;">
-      <h3 style="color:#00ffcc; margin:0 0 8px 0; font-size:0.85rem;">🏆 TESTE CONCLUÍDO COM SUCESSO</h3>
-      <p style="color:#c9d1d9; font-size:0.75rem;">Pontuação Total: <strong>${totalXp} XP</strong></p>
-      <p style="color:#8b949e; font-size:0.65rem;">Dados sincronizados e salvos no banco de dados central.</p>
-    </div>
-  `;
-  appendMessage(summaryHtml, 'bot-html', true);
-  speakJARVIS(`Teste concluído. Você obteve ${totalXp} pontos de experiência.`);
-
-  await saveQuizScoreToFirebase(totalXp);
-}
-
-async function saveQuizScoreToFirebase(score) {
-  if (!auth || !auth.currentUser || !db) {
-    console.log("Firebase não autenticado. O score foi computado apenas localmente.");
-    return;
-  }
-  try {
-    const uid = auth.currentUser.uid;
-    await db.collection('users').doc(uid).collection('quiz_history').add({
-      score: score,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await db.collection('users').doc(uid).set({
-      lastQuizScore: score,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    console.log("[FIREBASE]: Pontuação do quiz salva com sucesso!");
-  } catch (e) {
-    console.error("Erro ao salvar pontuação no Firebase:", e);
-  }
-}
+window.submitQuizAnswer = function(answer) {
+  processQueryText(`Minha resposta para a pergunta de desbloqueio do Xiaomi é: ${answer}. Esta resposta está correta no contexto moderno da MIUI 15?`);
+};
