@@ -1,6 +1,6 @@
 /**
  * J.A.R.V.I.S. Diagnostics Engine v6.0
- * Módulo de captura global de exceções, auditoria de DOM e relatórios de execução no frontend.
+ * Módulo de captura global de exceções e auditoria de UI.
  */
 
 class SiteDiagnostics {
@@ -14,10 +14,7 @@ class SiteDiagnostics {
   }
 
   init() {
-    // Captura os erros imediatamente no carregamento inicial
     this.catchErrors();
-
-    // Aguarda o body existir para criar a interface visual
     if (document.body) {
       this.createDiagnosticUI();
     } else {
@@ -26,7 +23,6 @@ class SiteDiagnostics {
   }
 
   catchErrors() {
-    // Erros de execução JS e carregamento de recursos (imagens, scripts, CSS)
     window.addEventListener('error', (event) => {
       this.addError({
         type: 'Runtime Error',
@@ -37,7 +33,6 @@ class SiteDiagnostics {
       });
     }, true);
 
-    // Promises não tratadas (Falhas de Fetch, APIs e código Async)
     window.addEventListener('unhandledrejection', (event) => {
       this.addError({
         type: 'Unhandled Rejection',
@@ -60,11 +55,9 @@ class SiteDiagnostics {
     this.isMinimized = !this.isMinimized;
     const bodyEl = document.getElementById('diag-body');
     const toggleEl = document.getElementById('diag-toggle');
-    const panelEl = document.getElementById('site-diagnostics-panel');
     
     if (bodyEl) bodyEl.style.display = this.isMinimized ? 'none' : 'flex';
     if (toggleEl) toggleEl.innerText = this.isMinimized ? '▼' : '▲';
-    if (panelEl && !this.isMinimized) panelEl.style.display = 'flex';
   }
 
   createDiagnosticUI() {
@@ -72,19 +65,20 @@ class SiteDiagnostics {
 
     const container = document.createElement('div');
     container.id = 'site-diagnostics-panel';
+    // Alterado para posicionar no topo direito e liberar a área de input/botão inferior
     container.style.cssText = `
       position: fixed;
-      bottom: 20px;
+      top: 70px;
       right: 20px;
-      width: 380px;
-      max-height: 500px;
+      width: 360px;
+      max-height: 450px;
       background: #0a0a10;
       color: #00ffff;
-      font-family: 'Courier New', monospace;
+      font-family: monospace;
       font-size: 12px;
       border-radius: 8px;
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-      z-index: 999999;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.25);
+      z-index: 99999;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -92,14 +86,14 @@ class SiteDiagnostics {
     `;
 
     container.innerHTML = `
-      <div id="diag-header" style="background: #11111b; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #00ffff;">
+      <div id="diag-header" style="background: #11111b; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #00ffff;">
         <span style="font-weight: bold; color: #ff5555;">🚨 Diagnóstico J.A.R.V.I.S. (<span id="diag-count">0</span>)</span>
         <div>
-          <button id="diag-clear" style="background: #222; color: #00ffff; border: 1px solid #00ffff; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin-right: 5px; font-size: 10px;">Limpar</button>
-          <button id="diag-toggle" style="background: none; color: #00ffff; border: none; cursor: pointer; font-size: 12px;">▼</button>
+          <button id="diag-clear" style="background: #222; color: #00ffff; border: 1px solid #00ffff; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 10px;">Limpar</button>
+          <button id="diag-toggle" style="background: none; color: #00ffff; border: none; cursor: pointer;">▼</button>
         </div>
       </div>
-      <div id="diag-body" style="padding: 10px; overflow-y: auto; display: none; flex-direction: column; gap: 8px; max-height: 400px;">
+      <div id="diag-body" style="padding: 10px; overflow-y: auto; display: none; flex-direction: column; gap: 8px; max-height: 350px;">
         <div style="color: #8b949e; text-align: center;">Nenhum erro detectado no momento.</div>
       </div>
     `;
@@ -107,7 +101,6 @@ class SiteDiagnostics {
     document.body.appendChild(container);
     this.uiCreated = true;
 
-    // Eventos do Painel
     document.getElementById('diag-header').addEventListener('click', (e) => {
       if (e.target.id === 'diag-clear') return;
       this.togglePanel();
@@ -118,7 +111,6 @@ class SiteDiagnostics {
       this.render();
     });
 
-    // Renderiza erros ocorridos antes do DOM terminar de carregar
     this.render();
   }
 
@@ -159,5 +151,4 @@ class SiteDiagnostics {
   }
 }
 
-// Inicialização síncrona imediata no <head>
 window.siteDiagnostics = new SiteDiagnostics();
