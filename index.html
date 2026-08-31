@@ -6,28 +6,28 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J.A.R.V.I.S. - Advanced Quantum Operating System</title>
+  <title>J.A.R.V.I.S. - Advanced Quantum Operating System v6.0</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <link rel="manifest" href="manifest.json">
   <script>
     if ('serviceWorker' in navigator) {
-      // 1. Desregistra os Service Workers antigos presos no cache do celular
+      // 1. Desregistra Service Workers legados presos em cache
       navigator.serviceWorker.getRegistrations().then(registrations => {
         for (let registration of registrations) {
           registration.unregister();
         }
       }).then(() => {
-        // 2. Registra novamente adicionando uma query string (?v=1.1) para forçar a leitura do arquivo novo
+        // 2. Registra forçando o escopo v6.0
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('service-worker.js?v=1.1');
+          navigator.serviceWorker.register('service-worker.js?v=6.0');
         });
       });
     }
   </script>
 
-  <!-- Módulo de Visão Computacional (MediaPipe) - Essencial para evitar erros de carregamento -->
+  <!-- Módulo de Visão Computacional (MediaPipe) -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -39,12 +39,12 @@
     <div class="header-left">
       <i class="fa-solid fa-terminal logo-icon"></i>
       <div class="brand-title">
-        <span>J.A.R.V.I.S.</span> <small>v5.1 Master Protocol</small>
+        <span>J.A.R.V.I.S.</span> <small>v6.0 Core Protocol</small>
       </div>
     </div>
     <div class="header-right">
       <div class="system-controls">
-        <span>Status: <strong id="jarvStatus" class="text-cyan">Optimal</strong></span>
+        <span>Status: <strong id="jarvStatus" class="text-cyan">Optimal (v6.0)</strong></span>
         <span class="clock-display" id="clockDisplay">00:00:00</span>
       </div>
       <div class="user-profile">
@@ -64,7 +64,7 @@
         <img src="ab67616d00001e02809dcf7bac73ec9b042dd10a.jpeg" alt="Anonymous Legion">
       </div>
 
-      <div class="history-label">SUBSISTEMAS N2</div>
+      <div class="history-label">SUBSISTEMAS CORE v6.0</div>
       <nav class="sidebar-nav">
         <button class="jarv-nav-item active" onclick="switchModule('master', event)"><i class="fa-solid fa-brain"></i> Master Agent</button>
         <button class="jarv-nav-item" onclick="switchModule('brain', event)"><i class="fa-solid fa-network-wired"></i> Segundo Cérebro</button>
@@ -74,7 +74,12 @@
           <i class="fa-solid fa-microchip"></i> Autonomous Core
         </button>
 
-        <!-- MÓDULO DE DIAGNÓSTICO -->
+        <!-- MÓDULO QUIZ & DIAGNÓSTICO TÉCNICO -->
+        <button class="jarv-nav-item" id="btn_mod_quiz" onclick="switchModule('quiz', event)">
+          <i class="fa-solid fa-wrench"></i> Suporte Técnico & Quiz
+        </button>
+
+        <!-- MÓDULO DE DIAGNÓSTICO DE SISTEMA -->
         <button class="jarv-nav-item" id="btn_mod_diagnostics" onclick="if(window.siteDiagnostics) window.siteDiagnostics.togglePanel();">
           <i class="fa-solid fa-bug"></i> Diagnóstico
         </button>
@@ -111,9 +116,24 @@
           <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoramento em tempo real do banco de dados via Firebase onSnapshot.</p>
         </div>
         <div id="terminal-feed" style="display: flex; flex-direction: column; gap: 10px;">
-          <!-- Relatórios autônomos injetados dinamicamente com animação cyberpunk -->
+          <!-- Relatórios autônomos injetados dinamicamente -->
         </div>
       </div>
+
+      <!-- PAINEL DE QUIZ / SUPORTE TÉCNICO (MIUI 15 & REPAROS) -->
+      <div id="quizModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+          <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-vial-circle-check"></i> Diagnóstico Técnico & Quiz Xiaomi/MIUI 15</h3>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Módulo interativo para testes de bancada, comandos MTP e Unlock Tools.</p>
+        </div>
+        <div id="quizContainer" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Perguntas e Diagnósticos injetados pelo JS v6.0 -->
+        </div>
+      </div>
+
+      <!-- ELEMENTOS DA VISÃO COMPUTACIONAL (MEDIAPIPE) -->
+      <video id="webcam" autoplay playsinline style="display: none;"></video>
+      <canvas id="output_canvas" style="display: none;"></canvas>
 
       <!-- BARRA DE FERRAMENTAS E CAMPO DE TEXTO -->
       <div class="input-section" id="chatInputSection">
@@ -133,6 +153,8 @@
         <div class="input-wrapper">
           <input type="text" id="chatInput" placeholder="Insira suas diretrizes para o Master Agent..." autocomplete="off" onkeydown="if(event.key==='Enter') sendMsg()">
           <button class="btn-send" id="executeBtn" onclick="sendMsg()">EXECUTAR</button>
+          <!-- Aliases de botão para compatibilidade técnica -->
+          <button id="btnSend" onclick="sendMsg()" style="display: none;"></button>
         </div>
       </div>
     </main>
@@ -144,7 +166,7 @@
       <div class="modal-logo" style="margin-bottom: 15px;">
         <i class="fa-solid fa-shield-halved" style="font-size: 3rem; color: #4285F4; text-shadow: 0 0 15px rgba(66, 133, 244, 0.6);"></i>
       </div>
-      <h2 style="color: #fff; margin-bottom: 5px; letter-spacing: 2px;">J.A.R.V.I.S. SYSTEM</h2>
+      <h2 style="color: #fff; margin-bottom: 5px; letter-spacing: 2px;">J.A.R.V.I.S. SYSTEM v6.0</h2>
       <p class="subtitle" style="color: #8b949e; font-size: 0.85rem; margin-bottom: 25px;">Autenticação de Segurança Necessária</p>
       
       <!-- BOTÃO DE LOGIN GOOGLE CONECTADO AO APP.JS -->
@@ -159,14 +181,13 @@
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- SCRIPTS DO FIREBASE (OBRIGATÓRIOS PARA O LOGIN) -->
-  <!-- ========================================== -->
+  <!-- SCRIPTS DO FIREBASE (OBRIGATÓRIOS PARA AUTENTICAÇÃO E SNAPSHOTS) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-  <!-- SCRIPT EXTERNO MODULARIZADO v5.1 -->
+  <!-- SCRIPT EXTERNO MODULARIZADO v6.0 -->
   <script src="js/app.js" defer></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
