@@ -1,5 +1,5 @@
 /* ========================================================== */
-/* J.A.R.V.I.S. - Cyberpunk & Neon Master Protocol style.css  */
+/* J.A.R.V.I.S. - Cyberpunk & Neon Master Protocol v6.0 style.css */
 /* ========================================================== */
 
 :root {
@@ -10,11 +10,14 @@
   --accent-blue: #0078d4;
   --accent-cyan: #00d2ff;
   --accent-green: #00ff66;
+  --accent-purple: #9d4edd;
+  --accent-orange: #ff9e00;
   --neon-pink: #ff0077;
   --border-color: #162646;
   --text-main: #d0e1ff;
   --text-muted: #5c78a5;
   --neon-glow: 0 0 15px rgba(0, 210, 255, 0.35);
+  --neon-glow-green: 0 0 15px rgba(0, 255, 102, 0.35);
   --transition-fluid: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -298,6 +301,14 @@ body.kali-theme {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  overflow-y: auto;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--border-color);
 }
 
 .jarv-nav-item {
@@ -465,7 +476,90 @@ body.kali-theme {
 }
 
 /* ========================================================== */
-/* NOVOS ESTILOS: FEED DE RELATÓRIOS AUTÔNOMOS & ANIMAÇÕES CYBER*/
+/* MÓDULO DE QUIZ & SUPORTE TÉCNICO (MIUI 15 / XIAOMI REPAROS) */
+/* ========================================================== */
+
+.quiz-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--accent-cyan);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 12px;
+  transition: var(--transition-fluid);
+  animation: slideInCyber 0.4s ease-out forwards;
+}
+
+.quiz-card:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+}
+
+.quiz-card h4 {
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.quiz-card p {
+  color: var(--text-main);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.quiz-option-btn {
+  width: 100%;
+  text-align: left;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-fluid);
+  margin-top: 6px;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quiz-option-btn:hover {
+  border-color: var(--accent-cyan);
+  background-color: #12203a;
+  color: var(--accent-cyan);
+  transform: translateX(4px);
+}
+
+.quiz-option-btn.correct {
+  border-color: var(--accent-green);
+  background-color: rgba(0, 255, 102, 0.15);
+  color: var(--accent-green);
+}
+
+.quiz-option-btn.wrong {
+  border-color: #ff4444;
+  background-color: rgba(255, 68, 68, 0.15);
+  color: #ff6666;
+}
+
+/* VISÃO COMPUTACIONAL (MEDIAPIPE CANVAS HUD) */
+#output_canvas {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 180px;
+  height: 135px;
+  border: 1px solid var(--accent-cyan);
+  border-radius: 6px;
+  box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+  z-index: 20;
+  background: rgba(5, 9, 16, 0.9);
+  pointer-events: none;
+}
+
+/* ========================================================== */
+/* FEED DE RELATÓRIOS AUTÔNOMOS & ANIMAÇÕES CYBER             */
 /* ========================================================== */
 
 @keyframes slideInCyber {
@@ -533,8 +627,7 @@ body.kali-theme {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--accent-cyan);
-  width: 34px;
-  height: 34px;
+  padding: 4px 8px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
