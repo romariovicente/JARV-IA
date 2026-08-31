@@ -40,7 +40,7 @@ if (typeof firebase !== 'undefined') {
 }  
 
 // Função de Login com Google integrada
-function loginWithGoogle() {
+window.loginWithGoogle = function() {
   if (!auth || !provider) {
     alert("Firebase Auth não inicializado.");
     return;
@@ -49,7 +49,7 @@ function loginWithGoogle() {
     console.error("Erro no login com popup, tentando redirect:", error);
     auth.signInWithRedirect(provider);
   });
-}
+};
 
 // Função para salvar preferências ou memórias no Firebase (Módulo de Memória)
 async function saveUserPreferenceToFirebase(key, value) {
@@ -105,13 +105,16 @@ document.addEventListener("DOMContentLoaded", () => {
   injectJarvisOrbStyles();  
   createJarvisOrbElement();  
   injectControlPanel();
+  
+  // Inicializa o armazenamento ANTES de injetar a UI de histórico para garantir consistência
+  initChatStore();
+  
   injectModuleSidebar();
   injectChatHistoryUI();
   setupExecutionButtonListener();
   setupVoiceRecognition(); 
   initAudioAnalyzer();  
   setupFileUploadListener();  
-  initChatStore();  
   startSystemClock(); 
   injectAnimations();
   
@@ -237,25 +240,25 @@ function setupVoiceRecognition() {
     micIcons.forEach(btn => {
       const htmlContent = (btn.innerHTML || '').toLowerCase();
       if (btn.id !== 'btnMicToggle' && btn.id !== 'btnMicPause' && (htmlContent.includes('mic') || btn.querySelector('svg') || btn.classList.contains('fa-microphone'))) {
-        btn.onclick = (e) => { e.preventDefault(); startContinuousMic(); };
+        btn.onclick = (e) => { e.preventDefault(); window.startContinuousMic(); };
       }
     });
   }, 600);
 }
 
-function startContinuousMic() {
+window.startContinuousMic = function() {
   if (!recognition) { alert("Navegador não suporta reconhecimento de voz."); return; }
   userRequestedMicStop = false;
   try { recognition.start(); } catch (e) {}
   updateMicUI();
-}
+};
 
-function pauseContinuousMic() {
+window.pauseContinuousMic = function() {
   userRequestedMicStop = true;
   if (recognition) { try { recognition.stop(); } catch (e) {} }
   updateMicUI();
   appendMessage("[SISTEMA]: Microfone pausado pelo operador.", 'system', false);
-}
+};
 
 function updateMicUI() {
   const btnLig = document.getElementById('btnMicToggle');
@@ -316,7 +319,7 @@ function injectControlPanel() {
   updateMicUI();
 }
 
-function toggleTtsMaster() {
+window.toggleTtsMaster = function() {
   ttsEnabled = !ttsEnabled;
   localStorage.setItem('jarv_tts_enabled', ttsEnabled);
   const badge = document.getElementById('voiceStatusBadge');
@@ -335,7 +338,7 @@ function toggleTtsMaster() {
   } else {
     speakJARVIS("Síntese vocal reativada.");
   }
-}
+};
 
 // ----------------------------------------------------
 // SISTEMA DE LEITURA EM VOZ (CHUNKED TTS)
@@ -347,10 +350,10 @@ function speakJARVIS(text) {
   isJarvisSpeaking = true;  
   
   let cleanText = text.replace(/[-|_|=]{2,}/g, ' ') 
-                      .replace(/[#*`~\[\]>]/g, '')
-                      .replace(/(https?:\/\/[^\s]+)/g, "link oculto")
-                      .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') 
-                      .replace(/\s+/g, ' ').trim();
+                    .replace(/[#*`~\[\]>]/g, '')
+                    .replace(/(https?:\/\/[^\s]+)/g, "link oculto")
+                    .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') 
+                    .replace(/\s+/g, ' ').trim();
 
   let chunks = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
   
@@ -400,7 +403,7 @@ function playNextSpeechChunk() {
   window.speechSynthesis.speak(utterance);  
 }
 
-function stopJarvisVoice() {
+window.stopJarvisVoice = function() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   speechQueue = [];
   isJarvisSpeaking = false;
@@ -408,7 +411,7 @@ function stopJarvisVoice() {
   if (recognition && !userRequestedMicStop) {
     setTimeout(() => { try { recognition.start(); } catch(e){} }, 400);
   }
-}
+};
 
 // ----------------------------------------------------
 // UI, EFEITOS VISUAIS E MÓDULOS INCLUINDO AUTÔNOMOS E DASHBOARDS
@@ -453,8 +456,13 @@ function injectModuleSidebar() {
   sidebar.appendChild(container);
 }
 
+// Correção crítica: Expondo switchModule globalmente para evitar o erro do console
+window.switchModule = async function(modName) {
+  await setModule(modName);
+};
+
 // Lógica Gamificação / Dashboard
-function openLifeDashboard() {
+window.openLifeDashboard = function() {
   appendMessage(`
     <div style="border: 1px solid #ff0077; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,119,0.3);">
       <h3 style="color:#ff0077; margin:0 0 12px 0; text-transform: uppercase; font-size: 0.9rem;">🎮 Dashboard: Minha Vida é um Jogo</h3>
@@ -481,10 +489,10 @@ function openLifeDashboard() {
       </div>
     `, 'bot-html', true);
   }, 2500);
-}
+};
 
 // Lógica do Sistema de Conhecimento Autônomo
-function toggleAutonomousMode() {
+window.toggleAutonomousMode = function() {
   const btn = document.getElementById('btn_mod_autonomous');
   if (autonomousInterval) {
     clearInterval(autonomousInterval);
@@ -519,7 +527,7 @@ function toggleAutonomousMode() {
       await generateAutonomousReport(area);
     }, 30000); 
   }
-}
+};
 
 async function generateAutonomousReport(area) {
   setOrbState(true);
@@ -612,25 +620,25 @@ function renderChatHistoryList() {
   });
 }
 
-function switchChat(chatId) {
+window.switchChat = function(chatId) {
   if (chatsStore[chatId]) {
     activeChatId = chatId;
     saveStore();
     loadChatMessages(chatId);
     renderChatHistoryList();
   }
-}
+};
 
-function renameChatPrompt(chatId) {
+window.renameChatPrompt = function(chatId) {
   const newTitle = prompt("Digite o novo nome para este chat:", chatsStore[chatId]?.title || 'Chat');
   if (newTitle && newTitle.trim() !== '') {
     chatsStore[chatId].title = newTitle.trim();
     saveStore();
     renderChatHistoryList();
   }
-}
+};
 
-function deleteChat(chatId) {
+window.deleteChat = function(chatId) {
   const chat = chatsStore[chatId];
   if (chat && chat.is_readonly) {
     alert("Protocolo de Segurança: Acesso Negado. Registros Autônomos do Sistema não podem ser excluídos pelo operador.");
@@ -645,7 +653,7 @@ function deleteChat(chatId) {
     loadChatMessages(activeChatId);
     renderChatHistoryList();
   }
-}
+};
 
 async function setModule(modName) {
   activeModule = modName;
@@ -700,141 +708,183 @@ function injectJarvisOrbStyles() {
     @keyframes orb-frequency-react { 0% { transform: scale(1.0); } 100% { transform: scale(1.12); } }
     @keyframes ring-expand { 
       0% { width: 50px; height: 50px; opacity: 1; } 
-      100% { width: 110px; height: 110px; opacity: 0; } 
+      100% { width: 120px; height: 120px; opacity: 0; } 
     }
-  `;
-  document.head.appendChild(style);
+  `;  
+  document.head.appendChild(style);  
 }
 
 function createJarvisOrbElement() {
-  if (document.getElementById('jarvisOrb')) return;
-  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
-  const orbContainer = document.createElement('div');
-  orbContainer.className = 'jarvis-orb-container';
-  orbContainer.innerHTML = `
+  if (document.getElementById('jarvisOrbContainer')) return;
+  const targetArea = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
+  const container = document.createElement('div');
+  container.id = 'jarvisOrbContainer';
+  container.className = 'jarvis-orb-container';
+  container.innerHTML = `
     <div class="jarvis-orb-wrapper">
       <div class="ring-wave"></div>
       <div class="ring-wave"></div>
       <div class="ring-wave"></div>
-      <div id="jarvisOrb" class="jarvis-orb" onclick="startContinuousMic()" title="Clique para ativar microfone"></div>
+      <div id="jarvisOrb" class="jarvis-orb" onclick="toggleTtsMaster()" title="Clique para alternar voz"></div>
     </div>
-    <div style="font-size:0.6rem; color:#00ffcc; font-family:monospace; margin-top:4px; letter-spacing:1px;">J.A.R.V.I.S. CORE</div>
   `;
-  sidebar.insertBefore(orbContainer, sidebar.firstChild);
+  targetArea.appendChild(container);
+  jarvisOrb = document.getElementById('jarvisOrb');
 }
 
-function setOrbState(active) {
-  const orb = document.getElementById('jarvisOrb');
-  if (!orb) return;
-  if (active) {
-    orb.classList.add('active-speaking');
+function setOrbState(speaking) {
+  if (!jarvisOrb) jarvisOrb = document.getElementById('jarvisOrb');
+  if (!jarvisOrb) return;
+  if (speaking) {
+    jarvisOrb.classList.add('active-speaking');
   } else {
-    orb.classList.remove('active-speaking');
+    jarvisOrb.classList.remove('active-speaking');
   }
 }
 
-function initAudioAnalyzer() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    audioCtx = new AudioContext();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-  } catch (e) {
-    console.warn("AudioAnalyzer não pôde ser inicializado:", e);
-  }
-}
-
-// ----------------------------------------------------
-// GERENCIAMENTO DE CHATS E MENSAGENS
-// ----------------------------------------------------
+// Funções auxiliares adicionais do sistema
 function initChatStore() {
   if (Object.keys(chatsStore).length === 0) {
-    createNewChat(false);
+    const defaultId = 'chat_' + Date.now();
+    chatsStore[defaultId] = { title: 'Sessão Principal v6.0', timestamp: Date.now(), messages: [] };
+    activeChatId = defaultId;
+    saveStore();
   } else if (!activeChatId || !chatsStore[activeChatId]) {
     activeChatId = Object.keys(chatsStore)[0];
   }
-  saveStore();
+  // Carrega as mensagens do chat ativo e renderiza a lista
   loadChatMessages(activeChatId);
-}
-
-function createNewChat(switchImmediately = true) {
-  const newId = 'chat_' + Date.now();
-  chatsStore[newId] = {
-    title: `Sessão ${Object.keys(chatsStore).length + 1}`,
-    timestamp: Date.now(),
-    messages: []
-  };
-  saveStore();
   renderChatHistoryList();
-  if (switchImmediately) switchChat(newId);
-  return newId;
 }
 
 function saveStore() {
   localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
-  if (activeChatId) localStorage.setItem('jarv_active_chat', activeChatId);
+  localStorage.setItem('jarv_active_chat', activeChatId);
+}
+
+function appendMessage(content, type = 'bot', save = true) {
+  if (!msgArea) {
+    msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
+  }
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `jarv-message ${type}`;
+  msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; background: #161b22; border: 1px solid #30363d; color: #c9d1d9;`;
+  msgDiv.innerHTML = content;
+  msgArea.appendChild(msgDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
+
+  if (save && activeChatId && chatsStore[activeChatId]) {
+    chatsStore[activeChatId].messages.push({ content, type, timestamp: Date.now() });
+    saveStore();
+  }
 }
 
 function loadChatMessages(chatId) {
-  if (!msgArea) return;
+  if (!msgArea) {
+    msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
+  }
   msgArea.innerHTML = '';
   const chat = chatsStore[chatId];
-  if (chat && chat.messages) {
-    chat.messages.forEach(msg => {
-      appendMessageUI(msg.text, msg.sender, msg.isHtml);
+  if (!chat || !chat.messages) return;
+  chat.messages.forEach(m => {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `jarv-message ${m.type}`;
+    msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; background: #161b22; border: 1px solid #30363d; color: #c9d1d9;`;
+    msgDiv.innerHTML = m.content;
+    msgArea.appendChild(msgDiv);
+  });
+  msgArea.scrollTop = msgArea.scrollHeight;
+}
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
+}
+
+function formatMarkdown(text) {
+  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+             .replace(/\*(.*?)\*/g, '<em>$1</em>')
+             .replace(/`([^`]+)`/g, '<code style="background:#0d1117; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>');
+}
+
+window.createNewChat = function(switchNow = true) {
+  const newId = 'chat_' + Date.now();
+  chatsStore[newId] = { title: `Nova Sessão`, timestamp: Date.now(), messages: [] };
+  saveStore();
+  if (switchNow) {
+    switchChat(newId);
+  }
+  renderChatHistoryList();
+};
+
+function setupExecutionButtonListener() {
+  // O botão #executeBtn já possui onclick="sendMsg()" no HTML, 
+  // mas definimos também um listener por segurança
+  const execBtn = document.getElementById('executeBtn') || document.querySelector('button.exec-btn');
+  if (execBtn && !execBtn.getAttribute('data-listener-bound')) {
+    execBtn.setAttribute('data-listener-bound', 'true');
+    execBtn.onclick = (e) => {
+      e.preventDefault();
+      window.sendMsg();
+    };
+  }
+  // Adiciona listener para o input se não existir
+  if (chatInput && !chatInput.getAttribute('data-listener-bound')) {
+    chatInput.setAttribute('data-listener-bound', 'true');
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        window.sendMsg();
+      }
     });
   }
 }
 
-function setupExecutionButtonListener() {
-  const sendBtn = document.getElementById('sendBtn') || document.querySelector('button[type="submit"]') || document.querySelector('.send-btn');
-  if (sendBtn) {
-    sendBtn.onclick = (e) => {
-      e.preventDefault();
-      sendMessage();
-    };
-  }
-  if (chatInput) {
-    chatInput.onkeydown = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    };
-  }
-}
+// ==========================================================
+// FUNÇÕES FALTANTES CORRIGIDAS (sendMsg, filterBrainNotes, initJarvisSession)
+// ==========================================================
 
-function sendMessage() {
+// Função global para envio de mensagem a partir do campo de entrada
+window.sendMsg = function() {
+  if (!chatInput) {
+    chatInput = document.getElementById('chatInput');
+  }
   if (!chatInput) return;
   const text = chatInput.value.trim();
   if (!text && !attachedFileContent) return;
   chatInput.value = '';
   processQueryText(text);
-}
+};
 
-async function processQueryText(userText) {
-  if (!activeChatId) createNewChat(false);
-
-  let fullPrompt = userText;
-  if (attachedFileContent) {
-    fullPrompt += `\n\n[CONTEÚDO DO ANEXO]:\n${attachedFileContent}`;
-    attachedFileContent = null;
+// Função stub para filtragem de notas do Segundo Cérebro (expansível)
+window.filterBrainNotes = function() {
+  const searchTerm = document.getElementById('brainSearchInput')?.value?.trim() || '';
+  console.log(`[SEGUNDO CÉREBRO] Filtro aplicado: "${searchTerm}"`);
+  // Por enquanto, apenas notifica; futuramente integrar com pesquisa real
+  if (searchTerm.length > 0) {
+    appendMessage(`[SEGUNDO CÉREBRO] Pesquisando por "${searchTerm}"... (funcionalidade em desenvolvimento)`, 'system', true);
+  } else {
+    appendMessage('[SEGUNDO CÉREBRO] Lista de notas restaurada.', 'system', true);
   }
+};
 
-  if (userText) {
-    appendMessage(userText, 'user', false);
-  }
+// Função stub para modo offline (fallback de autenticação)
+window.initJarvisSession = function() {
+  const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');
+  if (loginModal) loginModal.style.display = 'none';
+  appendMessage('[SISTEMA] Sessão offline iniciada. Recursos limitados.', 'system', true);
+  speakJARVIS('Modo offline ativado. Operador, você está em ambiente restrito.');
+};
 
+// ==========================================================
+// FIM DAS CORREÇÕES
+// ==========================================================
+
+async function processQueryText(query) {
+  appendMessage(`[OPERADOR]: ${query}`, 'user', true);
   setOrbState(true);
-
-  const history = (chatsStore[activeChatId]?.messages || [])
-    .slice(-6)
-    .map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
-
-  history.push({ role: 'user', content: fullPrompt });
-
+  
   try {
     const response = await fetch(WORKER_URL, {
       method: "POST",
@@ -842,65 +892,46 @@ async function processQueryText(userText) {
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S. v6.0, uma I.A. avançada, eficiente, formal e altamente capacitada, operando em sinergia com o operador Romário." },
-          ...history
+          { role: "system", content: "Você é o J.A.R.V.I.S., um assistente virtual avançado integrado com módulos de suporte técnico e cibersegurança." },
+          { role: "user", content: attachedFileContent ? `Contexto do Arquivo Anexo:\n${attachedFileContent}\n\nConsulta: ${query}` : query }
         ]
       })
     });
-
     const data = await response.json();
-    let botText = "Erro ao obter resposta do modelo.";
-    if (data && !data.error) {
-      botText = data.choices?.[0]?.message?.content || data.response || "Resposta vazia.";
-    } else if (data.error) {
-      botText = `Erro: ${data.error}`;
-    }
-
-    appendMessage(botText, 'bot', false);
-    speakJARVIS(botText);
+    const reply = data.choices?.[0]?.message?.content || data.response || "Comando processado sem retorno de texto.";
+    
+    appendMessage(formatMarkdown(reply), 'bot', true);
+    speakJARVIS(reply);
+    attachedFileContent = null; // Limpa anexo após envio
   } catch (err) {
-    console.error("Erro no processamento:", err);
-    const errText = "Erro de conexão com a infraestrutura do proxy J.A.R.V.I.S.";
-    appendMessage(errText, 'system', false);
-    speakJARVIS(errText);
-  } finally {
-    setOrbState(false);
+    console.error("Erro na comunicação com o Worker:", err);
+    appendMessage("[SISTEMA]: Falha na comunicação com o Cloudflare Worker.", 'system', true);
+    speakJARVIS("Erro de conexão com o servidor central.");
+  }
+  setOrbState(false);
+}
+
+function initAudioAnalyzer() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+  } catch (e) {
+    console.warn("Áudio analyser não suportado neste ambiente.");
   }
 }
 
-function appendMessage(text, sender, isHtml = false) {
-  if (!activeChatId) createNewChat(false);
-  
-  chatsStore[activeChatId].messages.push({ text, sender, isHtml, timestamp: Date.now() });
-  saveStore();
-
-  appendMessageUI(text, sender, isHtml);
-}
-
-function appendMessageUI(text, sender, isHtml) {
-  if (!msgArea) return;
-
-  const msgDiv = document.createElement('div');
-  msgDiv.className = `jarv-msg msg-${sender}`;
-  msgDiv.style.cssText = `margin: 8px 0; padding: 10px 14px; border-radius: 8px; font-family: monospace; max-width: 85%; ${
-    sender === 'user' ? 'margin-left: auto; background: #1f2937; color: #00ffcc; border: 1px solid #00ffcc;' :
-    sender === 'system' ? 'background: #21262d; color: #ff7b72; border: 1px solid #ff7b72; font-size: 0.8rem;' :
-    'background: #0d1117; color: #c9d1d9; border: 1px solid #30363d;'
-  }`;
-
-  if (isHtml) {
-    msgDiv.innerHTML = text;
+window.initJarvisVision = function() {
+  jarvisVisionActive = !jarvisVisionActive;
+  if (jarvisVisionActive) {
+    appendMessage("[VISÃO COMPUTACIONAL]: Subsistema MediaPipe ativado. Monitoramento visual em segundo plano.", 'system', true);
+    speakJARVIS("Visão computacional ativada.");
   } else {
-    msgDiv.innerHTML = formatMarkdown(text);
+    appendMessage("[VISÃO COMPUTACIONAL]: Subsistema desativado.", 'system', true);
+    speakJARVIS("Visão computacional desativada.");
   }
+};
 
-  msgArea.appendChild(msgDiv);
-  msgArea.scrollTop = msgArea.scrollHeight;
-}
-
-// ----------------------------------------------------
-// QUIZ E VISÃO COMPUTACIONAL SUITE
-// ----------------------------------------------------
+// Função de Quiz (exposição global)
 function startKnowledgeQuiz() {
   const quizHtml = `
     <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px;">
@@ -930,40 +961,3 @@ window.checkQuizAnswer = function(btn, isCorrect) {
     speakJARVIS("Resposta incorreta. Tente novamente ou revise o material do CC50.");
   }
 };
-
-function initJarvisVision() {
-  jarvisVisionActive = !jarvisVisionActive;
-  if (jarvisVisionActive) {
-    appendMessage("[VISÃO COMPUTACIONAL]: Módulo ativado. Analisando stream de entrada visual...", 'system', true);
-    speakJARVIS("Visão computacional ativada. Analisando ambiente.");
-  } else {
-    appendMessage("[VISÃO COMPUTACIONAL]: Módulo desativado.", 'system', true);
-    speakJARVIS("Visão computacional desativada.");
-  }
-}
-
-// ----------------------------------------------------
-// UTILITÁRIOS
-// ----------------------------------------------------
-function formatMarkdown(text) {
-  if (!text) return '';
-  let formatted = escapeHTML(text)
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code style="background:#21262d; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>')
-    .replace(/\n/g, '<br>');
-  return formatted;
-}
-
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/[&<>'"]/g, 
-    tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag)
-  );
-}
