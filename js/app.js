@@ -690,7 +690,7 @@ function injectJarvisOrbStyles() {
   style.innerHTML = `  
     .jarvis-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 10px auto; padding: 2px; }  
     .jarvis-orb-wrapper { position: relative; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }  
-    .jarvis-orb { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 20px #00ffff, inset 0 0 10px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; }  
+    .jarvis-orb { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle, #00ffff 0%, #0044ff 60%, #000814 100%); box-shadow: 0 0 20px #00ffff, inset 0 0 10px #ffffff; animation: orb-idle 3s infinite ease-in-out; position: relative; z-index: 2; cursor: pointer; }  
     .ring-wave { position: absolute; border-radius: 50%; border: 1.5px solid rgba(0, 255, 255, 0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; animation: ring-expand 4s linear infinite; }  
     .ring-wave:nth-child(1) { width: 60px; height: 60px; animation-delay: 0s; border-color: rgba(0, 255, 255, 0.7); }  
     .ring-wave:nth-child(2) { width: 70px; height: 70px; animation-delay: 1.3s; border-color: rgba(0, 150, 255, 0.5); }  
@@ -699,124 +699,114 @@ function injectJarvisOrbStyles() {
     @keyframes orb-idle { 0%, 100% { transform: scale(0.97); box-shadow: 0 0 15px #00ffff; } 50% { transform: scale(1.03); box-shadow: 0 0 25px #00d2ff; } }  
     @keyframes orb-frequency-react { 0% { transform: scale(1.0); } 100% { transform: scale(1.12); } }
     @keyframes ring-expand { 
-      0% { width: 50px; height: 50px; opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
-      100% { width: 110px; height: 110px; opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+      0% { width: 50px; height: 50px; opacity: 1; } 
+      100% { width: 110px; height: 110px; opacity: 0; } 
     }
   `;
   document.head.appendChild(style);
 }
 
 function createJarvisOrbElement() {
-  if (document.getElementById('jarvisOrbContainer')) return;
-  const targetArea = document.querySelector('header') || document.querySelector('.subsystem-list') || document.body;
-  const container = document.createElement('div');
-  container.id = 'jarvisOrbContainer';
-  container.className = 'jarvis-orb-container';
-  container.innerHTML = `
+  if (document.getElementById('jarvisOrb')) return;
+  const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
+  const orbContainer = document.createElement('div');
+  orbContainer.className = 'jarvis-orb-container';
+  orbContainer.innerHTML = `
     <div class="jarvis-orb-wrapper">
       <div class="ring-wave"></div>
       <div class="ring-wave"></div>
       <div class="ring-wave"></div>
-      <div id="jarvisOrb" class="jarvis-orb" title="J.A.R.V.I.S. Visual Core"></div>
+      <div id="jarvisOrb" class="jarvis-orb" onclick="startContinuousMic()" title="Clique para ativar microfone"></div>
     </div>
+    <div style="font-size:0.6rem; color:#00ffcc; font-family:monospace; margin-top:4px; letter-spacing:1px;">J.A.R.V.I.S. CORE</div>
   `;
-  targetArea.prepend(container);
-  jarvisOrb = document.getElementById('jarvisOrb');
+  sidebar.insertBefore(orbContainer, sidebar.firstChild);
 }
 
 function setOrbState(active) {
-  if (!jarvisOrb) jarvisOrb = document.getElementById('jarvisOrb');
-  if (jarvisOrb) {
-    if (active) {
-      jarvisOrb.classList.add('active-speaking');
-    } else {
-      jarvisOrb.classList.remove('active-speaking');
-    }
+  const orb = document.getElementById('jarvisOrb');
+  if (!orb) return;
+  if (active) {
+    orb.classList.add('active-speaking');
+  } else {
+    orb.classList.remove('active-speaking');
   }
 }
 
 function initAudioAnalyzer() {
   try {
-    window.AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (window.AudioContext) {
-      audioCtx = new AudioContext();
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 64;
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-    }
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
   } catch (e) {
-    console.warn("AudioContext não inicializado.", e);
+    console.warn("AudioAnalyzer não pôde ser inicializado:", e);
   }
 }
 
+// ----------------------------------------------------
+// GERENCIAMENTO DE CHATS E MENSAGENS
+// ----------------------------------------------------
 function initChatStore() {
-  if (!activeChatId || !chatsStore[activeChatId]) {
-    const defaultId = 'chat_' + Date.now();
-    chatsStore[defaultId] = {
-      title: 'Sessão Principal',
-      timestamp: Date.now(),
-      messages: []
-    };
-    activeChatId = defaultId;
-    saveStore();
+  if (Object.keys(chatsStore).length === 0) {
+    createNewChat(false);
+  } else if (!activeChatId || !chatsStore[activeChatId]) {
+    activeChatId = Object.keys(chatsStore)[0];
   }
+  saveStore();
   loadChatMessages(activeChatId);
-  renderChatHistoryList();
 }
 
-function saveStore() {
-  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
-  localStorage.setItem('jarv_active_chat', activeChatId);
-}
-
-function createNewChat(isUserAction = true) {
+function createNewChat(switchImmediately = true) {
   const newId = 'chat_' + Date.now();
   chatsStore[newId] = {
     title: `Sessão ${Object.keys(chatsStore).length + 1}`,
     timestamp: Date.now(),
     messages: []
   };
-  activeChatId = newId;
   saveStore();
-  loadChatMessages(activeChatId);
   renderChatHistoryList();
-  if (isUserAction) {
-    appendMessage("[SISTEMA]: Nova sessão de chat inicializada.", 'system', false);
-  }
+  if (switchImmediately) switchChat(newId);
+  return newId;
+}
+
+function saveStore() {
+  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
+  if (activeChatId) localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
 function loadChatMessages(chatId) {
-  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
+  if (!msgArea) return;
   msgArea.innerHTML = '';
   const chat = chatsStore[chatId];
   if (chat && chat.messages) {
     chat.messages.forEach(msg => {
-      appendMessageToDOM(msg.content, msg.type);
+      appendMessageUI(msg.text, msg.sender, msg.isHtml);
     });
   }
 }
 
 function setupExecutionButtonListener() {
-  if (!chatInput) chatInput = document.querySelector('input[type="text"], textarea') || document.getElementById('chatInput');
-  const sendBtn = document.getElementById('btnSend') || document.querySelector('button[type="submit"]') || document.querySelector('.send-btn');
-
-  if (chatInput) {
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        submitUserQuery();
-      }
-    });
-  }
+  const sendBtn = document.getElementById('sendBtn') || document.querySelector('button[type="submit"]') || document.querySelector('.send-btn');
   if (sendBtn) {
     sendBtn.onclick = (e) => {
       e.preventDefault();
-      submitUserQuery();
+      sendMessage();
+    };
+  }
+  if (chatInput) {
+    chatInput.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
     };
   }
 }
 
-function submitUserQuery() {
+function sendMessage() {
   if (!chatInput) return;
   const text = chatInput.value.trim();
   if (!text && !attachedFileContent) return;
@@ -824,214 +814,156 @@ function submitUserQuery() {
   processQueryText(text);
 }
 
-async function processQueryText(text) {
-  let fullPrompt = text;
+async function processQueryText(userText) {
+  if (!activeChatId) createNewChat(false);
+
+  let fullPrompt = userText;
   if (attachedFileContent) {
-    fullPrompt += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`;
+    fullPrompt += `\n\n[CONTEÚDO DO ANEXO]:\n${attachedFileContent}`;
     attachedFileContent = null;
   }
 
-  if (text) {
-    appendMessage(text, 'user', false);
-  } else {
-    appendMessage("[Arquivo Anexado Enviado]", 'user', false);
+  if (userText) {
+    appendMessage(userText, 'user', false);
   }
 
   setOrbState(true);
-  const loadingId = appendMessage(`<div class="skeleton-shimmer" style="height: 20px; border-radius: 4px; width: 60%;"></div>`, 'bot-html', false);
+
+  const history = (chatsStore[activeChatId]?.messages || [])
+    .slice(-6)
+    .map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
+
+  history.push({ role: 'user', content: fullPrompt });
 
   try {
-    const historyMessages = getChatHistoryForAPI();
-    historyMessages.push({ role: "user", content: fullPrompt });
-
     const response = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
-        messages: historyMessages
+        messages: [
+          { role: "system", content: "Você é o J.A.R.V.I.S. v6.0, uma I.A. avançada, eficiente, formal e altamente capacitada, operando em sinergia com o operador Romário." },
+          ...history
+        ]
       })
     });
 
     const data = await response.json();
-    let reply = "Sem resposta do servidor.";
+    let botText = "Erro ao obter resposta do modelo.";
     if (data && !data.error) {
-      reply = data.choices?.[0]?.message?.content || data.response || JSON.stringify(data);
-    } else if (data && data.error) {
-      reply = `Erro na API: ${data.error}`;
+      botText = data.choices?.[0]?.message?.content || data.response || "Resposta vazia.";
+    } else if (data.error) {
+      botText = `Erro: ${data.error}`;
     }
 
-    removeMessageElement(loadingId);
-    appendMessage(reply, 'bot', true);
+    appendMessage(botText, 'bot', false);
+    speakJARVIS(botText);
   } catch (err) {
-    console.error("Erro no envio:", err);
-    removeMessageElement(loadingId);
-    appendMessage(`[ERRO]: Falha na comunicação com o servidor worker. ${err.message}`, 'system', false);
+    console.error("Erro no processamento:", err);
+    const errText = "Erro de conexão com a infraestrutura do proxy J.A.R.V.I.S.";
+    appendMessage(errText, 'system', false);
+    speakJARVIS(errText);
   } finally {
     setOrbState(false);
   }
 }
 
-function getChatHistoryForAPI() {
-  const history = [];
-  if (activeChatId && chatsStore[activeChatId]) {
-    const msgs = chatsStore[activeChatId].messages || [];
-    msgs.slice(-6).forEach(m => {
-      if (m.type === 'user') history.push({ role: "user", content: m.content });
-      else if (m.type === 'bot') history.push({ role: "assistant", content: m.content });
-    });
-  }
-  return history;
-}
-
-function appendMessage(content, type, speak = false) {
-  const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+function appendMessage(text, sender, isHtml = false) {
+  if (!activeChatId) createNewChat(false);
   
-  if (type !== 'bot-html' && activeChatId && chatsStore[activeChatId]) {
-    chatsStore[activeChatId].messages.push({ id: msgId, content, type });
-    saveStore();
-  }
+  chatsStore[activeChatId].messages.push({ text, sender, isHtml, timestamp: Date.now() });
+  saveStore();
 
-  appendMessageToDOM(content, type, msgId);
-
-  if (speak && ttsEnabled && type === 'bot') {
-    speakJARVIS(content);
-  }
-  return msgId;
+  appendMessageUI(text, sender, isHtml);
 }
 
-function appendMessageToDOM(content, type, msgId = null) {
-  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
-  const div = document.createElement('div');
-  div.className = `jarv-message jarv-message-${type}`;
-  if (msgId) div.id = msgId;
+function appendMessageUI(text, sender, isHtml) {
+  if (!msgArea) return;
 
-  div.style.cssText = `margin: 8px 0; padding: 10px 14px; border-radius: 8px; font-family: sans-serif; max-width: 85%; word-break: break-word; line-height: 1.4; font-size: 0.85rem;`;
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `jarv-msg msg-${sender}`;
+  msgDiv.style.cssText = `margin: 8px 0; padding: 10px 14px; border-radius: 8px; font-family: monospace; max-width: 85%; ${
+    sender === 'user' ? 'margin-left: auto; background: #1f2937; color: #00ffcc; border: 1px solid #00ffcc;' :
+    sender === 'system' ? 'background: #21262d; color: #ff7b72; border: 1px solid #ff7b72; font-size: 0.8rem;' :
+    'background: #0d1117; color: #c9d1d9; border: 1px solid #30363d;'
+  }`;
 
-  if (type === 'user') {
-    div.style.background = '#1f2937';
-    div.style.color = '#ffffff';
-    div.style.marginLeft = 'auto';
-    div.style.border = '1px solid #374151';
-    div.innerText = content;
-  } else if (type === 'bot') {
-    div.style.background = '#0d1117';
-    div.style.color = '#c9d1d9';
-    div.style.border = '1px solid #00ffcc';
-    div.style.boxShadow = '0 0 10px rgba(0,255,204,0.1)';
-    div.innerHTML = formatMarkdown(content);
-  } else if (type === 'bot-html') {
-    div.style.background = 'transparent';
-    div.style.padding = '0';
-    div.style.maxWidth = '100%';
-    div.innerHTML = content;
-  } else if (type === 'system') {
-    div.style.background = 'rgba(255, 123, 114, 0.1)';
-    div.style.color = '#ff7b72';
-    div.style.border = '1px solid #ff7b72';
-    div.style.fontSize = '0.75rem';
-    div.innerText = content;
+  if (isHtml) {
+    msgDiv.innerHTML = text;
+  } else {
+    msgDiv.innerHTML = formatMarkdown(text);
   }
 
-  msgArea.appendChild(div);
+  msgArea.appendChild(msgDiv);
   msgArea.scrollTop = msgArea.scrollHeight;
 }
 
-function removeMessageElement(msgId) {
-  if (!msgId) return;
-  const el = document.getElementById(msgId);
-  if (el) el.remove();
-}
-
-function initJarvisVision() {
-  if (jarvisVisionActive) {
-    jarvisVisionActive = false;
-    appendMessage("[VISÃO COMPUTACIONAL]: Módulo de visão desativado.", 'system', true);
-    speakJARVIS("Módulo de visão desativado.");
-    return;
-  }
-  jarvisVisionActive = true;
-  appendMessage("[VISÃO COMPUTACIONAL]: Inicializando rastreamento óptico...", 'system', true);
-  speakJARVIS("Inicializando módulo de visão computacional.");
-
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
-        appendMessage("[VISÃO COMPUTACIONAL]: Câmera conectada com sucesso. Rastreamento ativo.", 'system', true);
-        speakJARVIS("Câmera conectada com sucesso.");
-      })
-      .catch((err) => {
-        console.error("Erro na câmera:", err);
-        appendMessage("[VISÃO COMPUTACIONAL]: Acesso à câmera negado ou indisponível.", 'system', true);
-        speakJARVIS("Acesso à câmera indisponível.");
-        jarvisVisionActive = false;
-      });
-  } else {
-    appendMessage("[VISÃO COMPUTACIONAL]: Dispositivo não suporta captura de vídeo.", 'system', true);
-  }
-}
-
+// ----------------------------------------------------
+// QUIZ E VISÃO COMPUTACIONAL SUITE
+// ----------------------------------------------------
 function startKnowledgeQuiz() {
   const quizHtml = `
-    <div style="border: 1px solid #00ffcc; padding: 14px; background: rgba(13,17,23,0.95); border-radius: 8px; font-family: monospace;">
-      <h3 style="color:#00ffcc; margin:0 0 10px 0; font-size:0.85rem;">🎯 QUIZ DE AVALIAÇÃO HACKER & DEV</h3>
-      <p style="color:#c9d1d9; font-size:0.75rem;"><strong>Pergunta 1:</strong> Qual o comando MTP/ADB utilizado para listar dispositivos conectados via Terminal?</p>
+    <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px;">
+      <h4 style="color:#00ffcc; margin:0 0 8px 0;">[DESAFIO DE CONHECIMENTO HACKER / CC50]</h4>
+      <p style="color:#c9d1d9; font-size:0.8rem;">Questão 1: Em C/C++, qual é a complexidade de tempo de uma busca binária em um vetor ordenado de tamanho N?</p>
       <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-        <button onclick="checkQuizAnswer(this, true)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">A) adb devices</button>
-        <button onclick="checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">B) fastboot reboot</button>
-        <button onclick="checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">C) adb push --all</button>
+        <button onclick="checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; text-align:left; cursor:pointer;">A) O(N)</button>
+        <button onclick="checkQuizAnswer(this, true)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; text-align:left; cursor:pointer;">B) O(log N)</button>
+        <button onclick="checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; text-align:left; cursor:pointer;">C) O(N^2)</button>
       </div>
     </div>
   `;
   appendMessage(quizHtml, 'bot-html', true);
-  speakJARVIS("Iniciando avaliação de conhecimentos.");
+  speakJARVIS("Iniciando desafio da Academia Hacker. Responda à questão exibida.");
 }
 
 window.checkQuizAnswer = function(btn, isCorrect) {
   if (isCorrect) {
-    btn.style.background = '#238636';
-    btn.style.color = '#fff';
-    btn.innerHTML += ' ✅ (CORRETO!)';
-    speakJARVIS("Resposta correta! Excelente raciocínio.");
+    btn.style.background = '#00ffcc';
+    btn.style.color = '#000';
+    btn.innerHTML += ' - CORRETO!';
+    speakJARVIS("Resposta correta! Excelente raciocínio lógico.");
   } else {
-    btn.style.background = '#da3633';
+    btn.style.background = '#ff5555';
     btn.style.color = '#fff';
-    btn.innerHTML += ' ❌ (INCORRETO)';
-    speakJARVIS("Resposta incorreta. Tente novamente.");
+    btn.innerHTML += ' - INCORRETO!';
+    speakJARVIS("Resposta incorreta. Tente novamente ou revise o material do CC50.");
   }
 };
 
+function initJarvisVision() {
+  jarvisVisionActive = !jarvisVisionActive;
+  if (jarvisVisionActive) {
+    appendMessage("[VISÃO COMPUTACIONAL]: Módulo ativado. Analisando stream de entrada visual...", 'system', true);
+    speakJARVIS("Visão computacional ativada. Analisando ambiente.");
+  } else {
+    appendMessage("[VISÃO COMPUTACIONAL]: Módulo desativado.", 'system', true);
+    speakJARVIS("Visão computacional desativada.");
+  }
+}
+
+// ----------------------------------------------------
+// UTILITÁRIOS
+// ----------------------------------------------------
 function formatMarkdown(text) {
   if (!text) return '';
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+  let formatted = escapeHTML(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code style="background:#21262d; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>')
+    .replace(/`([^`]+)`/g, '<code style="background:#21262d; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>')
     .replace(/\n/g, '<br>');
+  return formatted;
 }
 
 function escapeHTML(str) {
   if (!str) return '';
   return str.replace(/[&<>'"]/g, 
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
   );
 }
-
-// Vinculação global das funções para acionamento via handlers inline
-window.loginWithGoogle = loginWithGoogle;
-window.toggleTtsMaster = toggleTtsMaster;
-window.stopJarvisVoice = stopJarvisVoice;
-window.startContinuousMic = startContinuousMic;
-window.pauseContinuousMic = pauseContinuousMic;
-window.initJarvisVision = initJarvisVision;
-window.openLifeDashboard = openLifeDashboard;
-window.toggleAutonomousMode = toggleAutonomousMode;
-window.setModule = setModule;
-window.createNewChat = createNewChat;
-window.switchChat = switchChat;
-window.renameChatPrompt = renameChatPrompt;
-window.deleteChat = deleteChat;
-window.startKnowledgeQuiz = startKnowledgeQuiz;
