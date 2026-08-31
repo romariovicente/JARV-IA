@@ -1,37 +1,57 @@
 name: JARV Auto-Heal Agent
 
 on:
-  workflow_run:
-    workflows: ["Pages build and deployment"]
-    types:
-      - completed
+  issues:
+    types: [labeled]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   healing-bot:
+    if: contains(github.event.issue.labels.*.name, 'auto-heal')
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
     steps:
       - name: 1. Clonar Repositório
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: 2. Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 3. Executar Script de Diagnóstico e Correção via IA
+      - name: 3. Executar Agente de Diagnóstico e Correção
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           node scripts/jarv-heal.js
 
-      - name: 4. Enviar Correção Automática (Commit & Push)
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "[JARV-BOT] Auto-correção de erro detectada no build"
-          branch: ${{ github.event.workflow_run.head_branch }}
+      - name: 4. Criar Branch e Pull Request (Governança J.A.R.V.I.S.)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Configura a identidade do robô
+          git config --global user.name 'jarv-autonomous-agent'
+          git config --global user.email 'jarv@ai.bot'
+          
+          # 2. Cria uma branch dinâmica usando o número da Issue
+          BRANCH_NAME="fix/auto-heal-issue-${{ github.event.issue.number }}"
+          git checkout -b $BRANCH_NAME
+          
+          # 3. Adiciona as correções e faz o commit semântico
+          git add .
+          git commit -m "fix: auto-correção do J.A.R.V.I.S. - Closes #${{ github.event.issue.number }}" || echo "Nenhuma anomalia precisou ser corrigida."
+          git push origin $BRANCH_NAME
+          
+          # 4. Abre o Pull Request automaticamente para sua revisão
+          gh pr create \
+            --title "fix: Correção Autônoma da Issue #${{ github.event.issue.number }}" \
+            --body "🤖 **J.A.R.V.I.S. Auto-Heal Engine** atuou nesta PR.
+          
+          O módulo de auto-correção foi acionado pela Issue #${{ github.event.issue.number }}. O arquivo \`js/app.js\` foi analisado via Groq API (fallback em cascata) e a anomalia foi isolada e corrigida.
+          
+          **Supervisor (Romário)**, aguardando sua auditoria e aprovação para consolidar o código na \`main\`." \
+            --base main \
+            --head $BRANCH_NAME
