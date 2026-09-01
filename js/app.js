@@ -2,9 +2,9 @@
 // J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
-// Configuração Firebase  
+// Configuração Firebase atualizada com a nova chave de API
 const firebaseConfig = {  
-  apiKey: "AIzaSyD-aKfpRaNuaCpIoNZMp1IVF2RFGxSB9Oo",  
+  apiKey: "AIzaSyAQ0CB7R4mMh7ppUU-6HY9UqSAvNdhP5bY",  
   authDomain: "jarv-ia.firebaseapp.com",  
   projectId: "jarv-ia",  
   storageBucket: "jarv-ia.firebasestorage.app",  
@@ -17,7 +17,7 @@ if (typeof firebase !== 'undefined') {
   if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }  
   auth = firebase.auth();  
   db = firebase.firestore();  
-  
+    
   provider = new firebase.auth.GoogleAuthProvider();  
   provider.addScope('https://www.googleapis.com/auth/calendar');  
   provider.addScope('https://www.googleapis.com/auth/calendar.readonly');  
@@ -65,7 +65,7 @@ window.sendMsg = function() {
   }  
 };  
 
-// Filtro de notas (Segundo Cérebro) – stub funcional
+// Filtro de notas (Segundo Cérebro)
 window.filterBrainNotes = function() {  
   const input = document.getElementById('brainSearchInput');  
   const term = input ? input.value.trim() : '';  
@@ -156,13 +156,12 @@ document.addEventListener("DOMContentLoaded", () => {
     statusEl.style.color = "#00ffcc";  
   }  
 
-  if (auth) {  
+  if (auth && auth.getRedirectResult) {  
     auth.getRedirectResult().catch((error) => console.error("Erro Auth:", error));  
   }  
 
-  // Listener de tecla Enter no chatInput (substitui o atributo onkeydown)  
   if (chatInput) {  
-    chatInput.removeEventListener('keydown', handleEnterKey); // evita duplicação  
+    chatInput.removeEventListener('keydown', handleEnterKey);  
     chatInput.addEventListener('keydown', handleEnterKey);  
   }  
 });  
@@ -279,7 +278,6 @@ function setupVoiceRecognition() {
     }  
   };  
 
-  // Configura botões de microfone do painel  
   setTimeout(() => {  
     const micIcons = document.querySelectorAll('.fa-microphone, button');  
     micIcons.forEach(btn => {  
@@ -651,7 +649,7 @@ window.copyToClipboard = async function(btnElement) {
   }  
 };  
 
-// ----- Histórico de Chat -----
+// ----- Histórico de Chat e Gestão de Sessões -----
 function injectChatHistoryUI() {  
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
   if (document.getElementById('jarvChatHistoryContainer')) return;  
@@ -673,281 +671,153 @@ function renderChatHistoryList() {
   const listEl = document.getElementById('chatHistoryList');  
   if (!listEl) return;  
   listEl.innerHTML = '';  
-  Object.keys(chatsStore).forEach(chatId => {  
+  Object.keys(chatsStore).reverse().forEach(chatId => {  
     const chat = chatsStore[chatId];  
     const isActive = chatId === activeChatId;  
-    const isReadonly = chat.is_readonly === true;  
     const item = document.createElement('div');  
     item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: ${isActive ? '#1f2937' : '#161b22'}; border: 1px solid ${isActive ? '#00ffcc' : '#30363d'}; cursor: pointer;`;  
-    item.innerHTML = `  
-      <span onclick="window.switchChat('${chatId}')" style="font-size: 0.7rem; color: ${isActive ? '#00ffcc' : '#c9d1d9'}; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Clique para abrir">  
-        ${isReadonly ? '🧠 ' : ''}${escapeHTML(chat.title)}  
-      </span>  
-      <div style="display:flex; gap:4px; align-items:center;">  
-        <button onclick="window.renameChatPrompt('${chatId}')" style="background:none; border:none; color:#8b949e; font-size:0.65rem; cursor:pointer;" title="Renomear">✏️</button>  
-        <button onclick="window.deleteChat('${chatId}')" style="background:none; border:none; color:${isReadonly ? '#444' : '#ff7b72'}; font-size:0.65rem; cursor:${isReadonly ? 'not-allowed' : 'pointer'};" title="Excluir">🗑️</button>  
-      </div>  
-    `;  
+    item.innerHTML = `<span style="font-size:0.65rem; color:${isActive ? '#00ffcc' : '#c9d1d9'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px;">${chat.title || 'Chat'}</span>`;  
+    item.onclick = () => window.switchChat(chatId);  
     listEl.appendChild(item);  
   });  
 }  
 
+window.createNewChat = function(renderList = true) {  
+  const newId = 'chat_' + Date.now();  
+  chatsStore[newId] = { title: `Sessão ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [] };  
+  activeChatId = newId;  
+  saveStore();  
+  if (renderList) renderChatHistoryList();  
+  if (msgArea) msgArea.innerHTML = '';  
+  appendMessage("[SISTEMA]: Nova sessão neural iniciada.", 'system', true);  
+};  
+
 window.switchChat = function(chatId) {  
-  if (chatsStore[chatId]) {  
-    activeChatId = chatId;  
-    saveStore();  
-    loadChatMessages(chatId);  
-    renderChatHistoryList();  
-  }  
-};  
-
-window.renameChatPrompt = function(chatId) {  
-  const newTitle = prompt("Digite o novo nome para este chat:", chatsStore[chatId]?.title || 'Chat');  
-  if (newTitle && newTitle.trim() !== '') {  
-    chatsStore[chatId].title = newTitle.trim();  
-    saveStore();  
-    renderChatHistoryList();  
-  }  
-};  
-
-window.deleteChat = function(chatId) {  
+  if (!chatsStore[chatId]) return;  
+  activeChatId = chatId;  
+  saveStore();  
+  if (msgArea) msgArea.innerHTML = '';  
   const chat = chatsStore[chatId];  
-  if (chat && chat.is_readonly) {  
-    alert("Protocolo de Segurança: Acesso Negado. Registros Autônomos do Sistema não podem ser excluídos pelo operador.");  
-    return;  
+  if (chat && chat.messages) {  
+    chat.messages.forEach(m => appendMessage(m.text, m.sender, false, m.isHtml));  
   }  
-  const keys = Object.keys(chatsStore);  
-  if (keys.length <= 1) { alert("Mantenha pelo menos um chat."); return; }  
-  if (confirm("Deseja excluir esta sessão?")) {  
-    delete chatsStore[chatId];  
-    if (activeChatId === chatId) activeChatId = Object.keys(chatsStore)[0];  
-    saveStore();  
-    loadChatMessages(activeChatId);  
-    renderChatHistoryList();  
-  }  
+  renderChatHistoryList();  
 };  
 
-// ----- Gerenciamento de Chat (Store, Mensagens) -----
 function initChatStore() {  
-  try {  
-    const saved = localStorage.getItem('jarv_chats_v5');  
-    if (saved) { chatsStore = JSON.parse(saved); }  
-  } catch (e) {  
-    console.error("Erro ao carregar o storage de chats:", e);  
-  }  
   if (Object.keys(chatsStore).length === 0) {  
-    const defaultId = 'chat_' + Date.now();  
-    chatsStore[defaultId] = { title: 'Sessão Principal v6.0', timestamp: Date.now(), messages: [] };  
-    activeChatId = defaultId;  
-    saveStore();  
-  } else if (!activeChatId || !chatsStore[activeChatId]) {  
-    activeChatId = Object.keys(chatsStore)[0];  
+    window.createNewChat(false);  
+  } else {  
+    if (!activeChatId || !chatsStore[activeChatId]) {  
+      activeChatId = Object.keys(chatsStore)[0];  
+    }  
+    window.switchChat(activeChatId);  
   }  
-  // Carrega mensagens do chat ativo e renderiza lista  
-  loadChatMessages(activeChatId);  
-  renderChatHistoryList();  
 }  
 
 function saveStore() {  
-  try {  
-    localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
-    localStorage.setItem('jarv_active_chat', activeChatId);  
-  } catch (e) {  
-    console.error("Erro ao salvar o storage de chats:", e);  
-  }  
+  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
+  localStorage.setItem('jarv_active_chat', activeChatId);  
 }  
 
-function loadChatMessages(chatId) {  
-  if (!msgArea) {  
-    msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
-  }  
-  msgArea.innerHTML = '';  
-  const chat = chatsStore[chatId];  
-  if (!chat || !chat.messages) return;  
-  chat.messages.forEach(m => {  
-    const msgDiv = document.createElement('div');  
-    msgDiv.className = `jarv-msg ${m.type}`;  
-    msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; background: #161b22; border: 1px solid #30363d; color: #c9d1d9;`;  
-    msgDiv.innerHTML = m.content;  
-    msgArea.appendChild(msgDiv);  
-  });  
-  msgArea.scrollTop = msgArea.scrollHeight;  
-}  
-
-window.createNewChat = function(switchNow = true) {  
-  const newId = 'chat_' + Date.now();  
-  chatsStore[newId] = { title: `Nova Sessão`, timestamp: Date.now(), messages: [] };  
-  saveStore();  
-  if (switchNow) {  
-    window.switchChat(newId);  
-  }  
-  renderChatHistoryList();  
-};  
-
-function appendMessage(content, type = 'bot', isHtml = false) {  
-  if (!msgArea) {  
-    msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
-  }  
+// ----- Funções de Mensagem e UI de Chat -----
+function appendMessage(text, sender = 'bot', save = true, isHtml = false) {  
+  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
   const msgDiv = document.createElement('div');  
-  msgDiv.className = `jarv-msg ${type}`;  
-  msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; background: #161b22; border: 1px solid #30363d; color: #c9d1d9;`;  
-  if (isHtml) {  
-    msgDiv.innerHTML = content;  
+  msgDiv.className = `jarv-msg ${sender}`;  
+  msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; word-break: break-word;`;  
+
+  if (sender === 'user') {  
+    msgDiv.style.background = '#1f2937';  
+    msgDiv.style.border = '1px solid #30363d';  
+    msgDiv.style.color = '#c9d1d9';  
+    msgDiv.innerHTML = `<strong>👤 Operador:</strong> ${escapeHTML(text)}`;  
+  } else if (sender === 'system') {  
+    msgDiv.style.background = '#161b22';  
+    msgDiv.style.border = '1px dashed #00ffcc';  
+    msgDiv.style.color = '#00ffcc';  
+    msgDiv.innerHTML = `⚙️ ${escapeHTML(text)}`;  
+  } else if (isHtml || sender === 'bot-html') {  
+    msgDiv.style.background = '#0d1117';  
+    msgDiv.style.border = '1px solid #005cc5';  
+    msgDiv.style.color = '#c9d1d9';  
+    msgDiv.innerHTML = text;  
   } else {  
-    msgDiv.innerText = content;  
+    msgDiv.style.background = '#0d1117';  
+    msgDiv.style.border = '1px solid #30363d';  
+    msgDiv.style.color = '#58a6ff';  
+    msgDiv.innerHTML = `<strong>🤖 J.A.R.V.I.S.:</strong> ${formatMarkdown(text)}`;  
+    speakJARVIS(text);  
   }  
+
   msgArea.appendChild(msgDiv);  
   msgArea.scrollTop = msgArea.scrollHeight;  
 
-  // Salva no store se houver chat ativo  
-  if (activeChatId && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ content, type, isHtml, timestamp: Date.now() });  
+  if (save && activeChatId && chatsStore[activeChatId]) {  
+    chatsStore[activeChatId].messages.push({ text, sender, isHtml: isHtml || sender === 'bot-html', timestamp: Date.now() });  
     saveStore();  
   }  
 }  
 
-function formatMarkdown(text) {  
-  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  
+function formatMarkdown(txt) {  
+  if (!txt) return '';  
+  return txt.replace(/</g, "&lt;").replace(/>/g, "&gt;")  
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  
     .replace(/\*(.*?)\*/g, '<em>$1</em>')  
-    .replace(/`([^`]+)`/g, '<code style="background:#0d1117; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>')  
+    .replace(/```([\s\S]*?)```/g, '<pre style="background:#161b22; padding:8px; border-radius:4px; overflow-x:auto;">$1</pre>')  
+    .replace(/`([^`]+)`/g, '<code style="background:#161b22; padding:2px 4px; border-radius:3px;">$1</code>')  
     .replace(/\n/g, '<br>');  
 }  
 
 function escapeHTML(str) {  
-  return str.replace(/[&<>'"]/g,  
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)  
-  );  
+  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));  
 }  
 
-// ----- Processamento de Mensagem (Worker) -----
+// ----- Processamento de Consulta e Conexão com Proxy Worker -----
 async function processQueryText(query) {  
-  appendMessage(`[OPERADOR]: ${query}`, 'user', false);  
-  setOrbState(true);  
+  if (!query) return;  
+  appendMessage(query, 'user', true);  
 
-  const fullQuery = attachedFileContent ? `Contexto do Arquivo Anexo:\n${attachedFileContent}\n\nConsulta: ${query}` : query;  
+  let finalPrompt = query;  
+  if (attachedFileContent) {  
+    finalPrompt = `[CONTEÚDO ANEXADO DO ARQUIVO]:\n${attachedFileContent}\n\n[SOLICITAÇÃO DO OPERADOR]: ${query}`;  
+    attachedFileContent = null;  
+  }  
+
+  setOrbState(true);  
+  let responseText = "Erro de conexão com o subsistema neural.";  
 
   try {  
-    const response = await fetch(WORKER_URL, {  
+    const res = await fetch(WORKER_URL, {  
       method: "POST",  
       headers: { "Content-Type": "application/json" },  
       body: JSON.stringify({  
         model: ULTRA_FAST_MODEL,  
         messages: [  
-          { role: "system", content: "Você é o J.A.R.V.I.S., um assistente virtual avançado integrado com módulos de suporte técnico e cibersegurança." },  
-          { role: "user", content: fullQuery }  
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente avançado de inteligência artificial de Romário. Seja direto, técnico e preciso." },  
+          { role: "user", content: finalPrompt }  
         ]  
       })  
     });  
-    const data = await response.json();  
-    const reply = data.choices?.[0]?.message?.content || data.response || "Comando processado sem retorno de texto.";  
-    const formatted = formatMarkdown(reply);  
-    appendMessage(formatted, 'bot', true);  
-    speakJARVIS(reply);  
-    attachedFileContent = null; // limpa anexo  
-  } catch (err) {  
-    console.error("Erro na comunicação com o Worker:", err);  
-    appendMessage("[SISTEMA]: Falha na comunicação com o Cloudflare Worker.", 'system', true);  
-    speakJARVIS("Erro de conexão com o servidor central.");  
-  }  
-  setOrbState(false);  
-}  
-
-// ----- Módulos setModule e Quiz -----
-async function setModule(modName) {  
-  activeModule = modName;  
-  updateModuleButtonStyles();  
-  if (modName === 'academy') {  
-    appendMessage(`  
-      <div style="border: 1px solid #00ffcc; padding: 14px; border-radius: 8px; background: rgba(13,17,23,0.95); font-family: monospace;">  
-        <strong style="color: #00ffcc; font-size: 0.9rem;">🎓 ACADEMIA HACKER & CC50</strong><br>  
-        <p style="color: #c9d1d9; font-size: 0.75rem; margin: 8px 0;">Progresso atual: Sincronizado. Pronto para iniciar o ciclo de avaliação técnica.</p>  
-        <button onclick="window.startKnowledgeQuiz()" style="background:#00ffcc; color:#000; border:none; padding:8px 14px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold; margin-top:6px;">  
-          🚀 Iniciar Teste de Conhecimento  
-        </button>  
-      </div>  
-    `, 'bot-html', true);  
-    speakJARVIS("Academia Hacker ativada.");  
-    return;  
-  }  
-  appendMessage(`[SUBSISTEMA ATIVADO]: ${modName}.`, 'system', true);  
-  speakJARVIS(`Subsistema ${modName} ativado.`);  
-}  
-
-function updateModuleButtonStyles() {  
-  document.querySelectorAll('.mod-btn').forEach(btn => {  
-    btn.style.background = '#161b22';  
-    btn.style.color = '#c9d1d9';  
-    btn.style.borderColor = '#30363d';  
-  });  
-  if (activeModule) {  
-    const activeBtn = document.getElementById(`btn_mod_${activeModule}`);  
-    if (activeBtn) {  
-      activeBtn.style.background = '#0d1117';  
-      activeBtn.style.color = '#00ffcc';  
-      activeBtn.style.borderColor = '#00ffcc';  
+    const data = await res.json();  
+    if (data && !data.error) {  
+      responseText = data.choices?.[0]?.message?.content || data.response || "Resposta vazia do modelo.";  
+    } else {  
+      responseText = `Erro da API: ${data.error?.message || 'Falha desconhecida'}`;  
     }  
+  } catch (err) {  
+    console.error("Erro na requisição ao Worker:", err);  
+    responseText = "Erro crítico de rede ao contatar o Cloudflare Worker.";  
   }  
+
+  setOrbState(false);  
+  appendMessage(responseText, 'bot', true, false);  
 }  
 
-window.startKnowledgeQuiz = function() {  
-  const quizHtml = `  
-    <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px;">  
-      <h4 style="color:#00ffcc; margin:0 0 8px 0;">[DESAFIO DE CONHECIMENTO HACKER / CC50]</h4>  
-      <p style="color:#c9d1d9; font-size:0.8rem;">Questão 1: Em C/C++, qual é a complexidade de tempo de uma busca binária em um vetor ordenado de tamanho N?</p>  
-      <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">  
-        <button onclick="window.checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; text-align:left; cursor:pointer;">A) O(N)</button>  
-        <button onclick="window.checkQuizAnswer(this, true)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; text-align:left; cursor:pointer;">B) O(log N)</button>  
-        <button onclick="window.checkQuizAnswer(this, false)" style="background:#161b22; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; text-align:left; cursor:pointer;">C) O(N^2)</button>  
-      </div>  
-    </div>  
-  `;  
-  appendMessage(quizHtml, 'bot-html', true);  
-  speakJARVIS("Iniciando desafio da Academia Hacker.");  
-};  
-
-window.checkQuizAnswer = function(btn, isCorrect) {  
-  if (isCorrect) {  
-    btn.style.background = '#00ffcc';  
-    btn.style.color = '#000';  
-    btn.innerHTML += ' - CORRETO!';  
-    speakJARVIS("Resposta correta!");  
-  } else {  
-    btn.style.background = '#ff5555';  
-    btn.style.color = '#fff';  
-    btn.innerHTML += ' - INCORRETO!';  
-    speakJARVIS("Resposta incorreta. Tente novamente.");  
-  }  
-};  
-
-// ----- Áudio Analyzer (stub) -----
-function initAudioAnalyzer() {  
-  try {  
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();  
-    analyser = audioCtx.createAnalyser();  
-    analyser.fftSize = 64;  
-    dataArray = new Uint8Array(analyser.frequencyBinCount);  
-  } catch (e) {  
-    console.warn("AudioAnalyzer não suportado.");  
-  }  
-}  
-
-// ----- Visão Computacional -----
-window.initJarvisVision = function() {  
-  jarvisVisionActive = !jarvisVisionActive;  
-  if (jarvisVisionActive) {  
-    appendMessage("[VISÃO COMPUTACIONAL]: Subsistema MediaPipe ativado. Monitoramento visual em segundo plano.", 'system', true);  
-    speakJARVIS("Visão computacional ativada.");  
-  } else {  
-    appendMessage("[VISÃO COMPUTACIONAL]: Subsistema desativado.", 'system', true);  
-    speakJARVIS("Visão computacional desativada.");  
-  }  
-};  
-
-// ----- Listener do botão de execução (fallback) -----
+// ----- Utilitários extras de configuração de UI -----
 function setupExecutionButtonListener() {  
-  const execBtn = document.getElementById('executeBtn') || document.querySelector('button[onclick*="sendMsg"]');  
-  if (execBtn && !execBtn.getAttribute('data-listener-bound')) {  
-    execBtn.setAttribute('data-listener-bound', 'true');  
+  const execBtn = document.querySelector('button[onclick*="sendMsg"]') || document.getElementById('btnExecute') || document.querySelector('.fa-paper-plane')?.parentElement;  
+  if (execBtn) {  
     execBtn.onclick = (e) => {  
       e.preventDefault();  
       window.sendMsg();  
@@ -955,4 +825,29 @@ function setupExecutionButtonListener() {
   }  
 }  
 
-// Fim do script
+function initAudioAnalyzer() {  
+  try {  
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;  
+    if (AudioCtx) {  
+      audioCtx = new AudioCtx();  
+      analyser = audioCtx.createAnalyser();  
+    }  
+  } catch(e) {  
+    console.log("Áudio Analyzer não suportado ou pendente de gesto.");  
+  }  
+}  
+
+window.setModule = async function(modName) {  
+  activeModule = modName;  
+  document.querySelectorAll('.mod-btn').forEach(b => b.style.borderColor = '#30363d');  
+  const btn = document.getElementById(`btn_mod_${modName}`);  
+  if (btn) btn.style.borderColor = '#00ffcc';  
+  appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);  
+  speakJARVIS(`Módulo ${modName} ativado.`);  
+};  
+
+window.initJarvisVision = function() {  
+  jarvisVisionActive = !jarvisVisionActive;  
+  appendMessage(`[VISÃO COMPUTACIONAL]: ${jarvisVisionActive ? 'Ativada (Captura de tela/câmera em lote)' : 'Desativada'}`, 'system', true);  
+  speakJARVIS(jarvisVisionActive ? "Visão computacional iniciada." : "Visão computacional desativada.");  
+};
