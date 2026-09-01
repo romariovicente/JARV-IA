@@ -6,13 +6,12 @@
 const fs = require('fs');  
 const path = require('path');
 
-// Lista focada em modelos leves e de visualização (Preview) com alta taxa de aceite em chaves Groq
+// Lista focada em modelos de produção estáveis e de altíssima velocidade na Groq
 const GROQ_MODELS = [
-  'llama-3.2-3b-preview',
-  'llama-3.2-1b-preview',
   'llama-3.1-8b-instant',
   'llama-3.3-70b-versatile',
-  'gemma-7b-it'
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-120b'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
