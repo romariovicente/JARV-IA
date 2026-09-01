@@ -2,26 +2,23 @@
  * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback Amplo)
  * Módulo de auto-correção e diagnóstico contínuo via Groq API.
  * 
- * Versão: 6.1 (Atualizada & Otimizada)
+ * Versão: 6.2 (Otimizada & Atualizada)
  * Arquivo: scripts/jarv-heal.js
  */
 
 const fs = require('fs');  
 const path = require('path');
 
-// Lista de modelos de produção em ordem de prioridade e alta performance na Groq API
+// Lista atualizada com os modelos ativos na Groq API
 const GROQ_MODELS = [
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
-  'mixtral-8x7b-32768',
-  'gemma2-9b-it',
-  'deepseek-r1-distill-llama-70b'
+  'llama3-70b-8192',
+  'llama3-8b-8192'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
-  const TIMEOUT_MS = 45000; // 45 segundos de limite para dar suporte a arquivos mais extensos
+  const TIMEOUT_MS = 45000;
 
   for (const model of GROQ_MODELS) {
     try {
@@ -41,7 +38,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
           messages: [
             {
               role: 'system',
-              content: 'Você é o J.A.R.V.I.S. Auto-Heal Engine. Responda ESTRITAMENTE em formato JSON sem marcações externas de markdown e sem texto adicional.'
+              content: 'Você é o J.A.R.V.I.S. Auto-Heal Engine. Responda ESTRITAMENTE em formato JSON sem marcações de markdown e sem texto adicional.'
             },
             {
               role: 'user',
@@ -49,7 +46,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
             }
           ],
           temperature: 0.1,
-          max_tokens: 8192 // Limite expandido para evitar truncamento do código js/app.js
+          max_tokens: 4096 // Ajustado para não estourar a cota de Tokens Por Minuto (TPM)
         }),
         signal: controller.signal
       });
@@ -58,7 +55,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
 
       if (!response.ok) {
         const errText = await response.text();
-        console.warn(`[JARV-HEAL] ⚠️ O modelo ${model} falhou com status ${response.status} (${errText}). Alternando para o próximo...`);
+        console.warn(`[JARV-HEAL] ⚠️ O modelo ${model} falhou com status ${response.status} (${errText}). Alternando...`);
         continue;
       }
 
@@ -78,7 +75,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
     }
   }
   
-  throw new Error('Todos os modelos falharam ou o limite da API da Groq foi atingido.');
+  throw new Error('Todos os modelos operacionais falharam ou o limite da API da Groq foi atingido.');
 }
 
 async function runAutoHeal() {  
@@ -100,7 +97,6 @@ async function runAutoHeal() {
   
   const codeContent = fs.readFileSync(targetFile, 'utf8');  
   
-  // Prevenção de envio de arquivo vazio
   if (!codeContent.trim()) {
     console.warn(`[AVISO] O arquivo ${targetFile} está vazio. Encerrando operação.`);
     return;
@@ -133,7 +129,6 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
     
     const textResponse = await callGroqWithAutoModel(apiKey, prompt);
 
-    // Sanitização de resposta bruta para isolamento rigoroso de JSON
     const jsonStartIndex = textResponse.indexOf('{');
     const jsonEndIndex = textResponse.lastIndexOf('}');
     
@@ -151,7 +146,6 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
       throw new Error(parseError.message);
     }
 
-    // Validação de segurança para impedir truncamento/sobrescrita por código incompleto
     if (result.newContent && result.newContent.trim().length > 0) {
       const minExpectedLength = Math.floor(codeContent.length * 0.5);
       if (result.newContent.length < minExpectedLength) {
