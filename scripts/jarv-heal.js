@@ -6,11 +6,10 @@
 const fs = require('fs');  
 const path = require('path');
 
-// Lista atualizada de modelos priorizados para seleção automática e fallback em cascata na Groq
+// Lista focada nos modelos mais estáveis e compatíveis da Groq
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile', // Modelo primário de alta inteligência
   'llama-3.1-8b-instant',     // Fallback ultra-rápido e altamente estável
-  'llama3-70b-8192',          // Alternativa clássica robusta de 70B
+  'llama-3.3-70b-versatile',  // Modelo primário de alta inteligência
   'llama3-8b-8192'            // Alternativa clássica de 8B
 ];
 
@@ -33,8 +32,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
         body: JSON.stringify({
           model: model,
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-          response_format: { type: "json_object" } // Força o formato de saída estruturado
+          temperature: 0.1
         }),
         signal: controller.signal
       });
@@ -102,7 +100,7 @@ Código atual:
 ${codeContent}
 \`\`\`
 
-Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto ou marcação extra.
+Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto ou marcação extra fora do bloco JSON.
 A propriedade "newContent" DEVE conter o código completo do arquivo atualizado com o ajuste.
 
 {
