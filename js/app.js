@@ -8,7 +8,7 @@
 
 // Configuração Firebase atualizada com a chave de API ativa
 const firebaseConfig = {  
-  apiKey: "AIzaSyDyLKg0d8Gg-MiHQjt0OEENgpfa8VbNIcU", // Subsitua pela 'Nova Chave de API 2' do Google Cloud se necessário
+  apiKey: "AIzaSyDlpeje_aHRoJpJNl6Yp1TzKWUM8Pt-4pw", // Chave de API atualizada e restrita (Identity Toolkit, Token Service, Firebase Management)
   authDomain: "jarv-ia.firebaseapp.com",  
   projectId: "jarv-ia",  
   storageBucket: "jarv-ia.firebasestorage.app",  
@@ -686,198 +686,206 @@ function renderChatHistoryList() {
   const listEl = document.getElementById('chatHistoryList');  
   if (!listEl) return;  
   listEl.innerHTML = '';  
-  Object.keys(chatsStore).reverse().forEach(chatId => {  
-    const chat = chatsStore[chatId];  
-    const isActive = chatId === activeChatId;  
+  
+  const sortedIds = Object.keys(chatsStore).sort((a, b) => (chatsStore[b].timestamp || 0) - (chatsStore[a].timestamp || 0));  
+  
+  if (sortedIds.length === 0) {  
+    window.createNewChat(false);  
+    return;  
+  }  
+
+  sortedIds.forEach(id => {  
+    const chat = chatsStore[id];  
     const item = document.createElement('div');  
-    item.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:4px 6px; background:${isActive ? '#21262d' : '#161b22'}; border:1px solid ${isActive ? '#00ffcc' : '#30363d'}; border-radius:4px; font-size:0.65rem; color:#c9d1d9; cursor:pointer;`;  
-    
-    const titleSpan = document.createElement('span');  
-    titleSpan.style.cssText = 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px;';  
-    titleSpan.innerText = chat.title || 'Sessão Sem Nome';  
-    titleSpan.onclick = () => switchChat(chatId);  
-
-    const actionsDiv = document.createElement('div');  
-    actionsDiv.style.cssText = 'display:flex; gap:4px;';  
-
-    if (!chat.is_readonly) {  
-      const delBtn = document.createElement('button');  
-      delBtn.innerText = '🗑️';  
-      delBtn.style.cssText = 'background:none; border:none; color:#ff7b72; cursor:pointer; font-size:0.6rem;';  
-      delBtn.onclick = (e) => { e.stopPropagation(); deleteChat(chatId); };  
-      actionsDiv.appendChild(delBtn);  
-    }  
-
-    item.appendChild(titleSpan);  
-    item.appendChild(actionsDiv);  
+    const isActive = id === activeChatId;  
+    item.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:5px 8px; background:${isActive ? '#1f6feb' : '#161b22'}; border:1px solid ${isActive ? '#58a6ff' : '#30363d'}; border-radius:4px; cursor:pointer; font-size:0.7rem; color:#c9d1d9;`;  
+    item.innerHTML = `  
+      <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" onclick="window.switchChat('${id}')">${chat.title || 'Sessão Sem Título'}</span>  
+      <button onclick="window.deleteChatSession('${id}', event)" style="background:transparent; border:none; color:#ff7b72; cursor:pointer; font-size:0.7rem;" title="Deletar Chat">🗑️</button>  
+    `;  
     listEl.appendChild(item);  
   });  
 }  
 
-window.createNewChat = function(shouldSwitch = true) {  
-  const id = 'chat_' + Date.now();  
-  chatsStore[id] = {  
-    title: `Sessão ${Object.keys(chatsStore).length + 1}`,  
+window.createNewChat = function(switchNow = true) {  
+  const newId = 'chat_' + Date.now();  
+  chatsStore[newId] = {  
+    title: `Sessão ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`,  
     timestamp: Date.now(),  
     messages: []  
   };  
   saveStore();  
-  if (shouldSwitch) switchChat(id);  
-  renderChatHistoryList();  
+  if (switchNow) {  
+    window.switchChat(newId);  
+  } else {  
+    renderChatHistoryList();  
+  }  
 };  
 
-function switchChat(chatId) {  
-  if (!chatsStore[chatId]) return;  
-  activeChatId = chatId;  
-  localStorage.setItem('jarv_active_chat', activeChatId);  
-  if (msgArea) msgArea.innerHTML = '';  
-  chatsStore[chatId].messages.forEach(m => {  
-    appendMessage(m.content, m.type, false);  
-  });  
+window.switchChat = function(id) {  
+  if (!chatsStore[id]) return;  
+  activeChatId = id;  
+  localStorage.setItem('jarv_active_chat', id);  
   renderChatHistoryList();  
-}  
+  if (msgArea) {  
+    msgArea.innerHTML = '';  
+    const chat = chatsStore[id];  
+    if (chat && chat.messages) {  
+      chat.messages.forEach(m => {  
+        appendMessageRaw(m.content, m.type, false);  
+      });  
+    }  
+  }  
+};  
 
-function deleteChat(chatId) {  
-  delete chatsStore[chatId];  
+window.deleteChatSession = function(id, event) {  
+  event.stopPropagation();  
+  if (Object.keys(chatsStore).length <= 1) {  
+    alert("Você precisa manter ao menos uma sessão ativa.");  
+    return;  
+  }  
+  delete chatsStore[id];  
   saveStore();  
-  const keys = Object.keys(chatsStore);  
-  if (keys.length > 0) {  
-    switchChat(keys[keys.length - 1]);  
+  if (activeChatId === id) {  
+    const remainingIds = Object.keys(chatsStore);  
+    window.switchChat(remainingIds[0]);  
   } else {  
-    createNewChat(true);  
+    renderChatHistoryList();  
+  }  
+};  
+
+function saveStore() {  
+  try {  
+    localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
+  } catch (e) {  
+    console.error("Erro ao salvar store de chats:", e);  
   }  
 }  
 
 function initChatStore() {  
-  if (Object.keys(chatsStore).length === 0) {  
-    createNewChat(true);  
-  } else if (!activeChatId || !chatsStore[activeChatId]) {  
-    switchChat(Object.keys(chatsStore)[0]);  
+  const keys = Object.keys(chatsStore);  
+  if (keys.length === 0) {  
+    window.createNewChat(true);  
   } else {  
-    switchChat(activeChatId);  
-  }  
-}  
-
-function saveStore() {  
-  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
-}  
-
-// ----- Processamento Principal de Consultas -----
-async function processQueryText(userText) {  
-  if (!userText && !attachedFileContent) return;  
-
-  let finalPrompt = userText;  
-  if (attachedFileContent) {  
-    finalPrompt += `\n\n[CONTEÚDO DO ARQUIVO ANEXADO]:\n${attachedFileContent}`;  
-    attachedFileContent = null;  
-  }  
-
-  appendMessage(userText, 'user', true);  
-  setOrbState(true);  
-
-  const thinkingId = 'thinking_' + Date.now();  
-  appendMessage(`<span id="${thinkingId}">🧠 Processando resposta...</span>`, 'system', false);  
-
-  let botResponse = "Desculpe, ocorreu uma falha na comunicação com os servidores.";  
-  
-  try {  
-    const messagesPayload = [  
-      { role: "system", content: "Você é o J.A.R.V.I.S., assistente autônomo e altamente eficiente de Romário." },  
-      { role: "user", content: finalPrompt }  
-    ];  
-
-    const response = await fetch(WORKER_URL, {  
-      method: "POST",  
-      headers: { "Content-Type": "application/json" },  
-      body: JSON.stringify({ model: ULTRA_FAST_MODEL, messages: messagesPayload })  
-    });  
-
-    const data = await response.json();  
-    if (data && !data.error) {  
-      botResponse = data.choices?.[0]?.message?.content || data.response || botResponse;  
+    if (!activeChatId || !chatsStore[activeChatId]) {  
+      activeChatId = keys[0];  
     }  
-  } catch (err) {  
-    console.error("Erro no processamento:", err);  
+    window.switchChat(activeChatId);  
   }  
-
-  const thinkingEl = document.getElementById(thinkingId);  
-  if (thinkingEl) thinkingEl.parentElement.remove();  
-
-  setOrbState(false);  
-  appendMessage(botResponse, 'bot', true);  
-  speakJARVIS(botResponse);  
 }  
 
-// ----- Renderização e Formatação de Mensagens -----
-function appendMessage(content, type, save = true) {  
-  if (!msgArea) return;  
-  const msgDiv = document.createElement('div');  
-  msgDiv.className = `jarv-msg msg-${type}`;  
-  msgDiv.style.cssText = `margin: 8px 0; padding: 10px 14px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; max-width: 90%;`;  
-
-  if (type === 'user') {  
-    msgDiv.style.background = '#1f6feb';  
-    msgDiv.style.color = '#ffffff';  
-    msgDiv.style.marginLeft = 'auto';  
-    msgDiv.innerText = content;  
-  } else if (type === 'bot') {  
-    msgDiv.style.background = '#161b22';  
-    msgDiv.style.color = '#c9d1d9';  
-    msgDiv.style.border = '1px solid #30363d';  
-    msgDiv.innerHTML = formatMarkdown(content);  
-  } else if (type === 'bot-html') {  
-    msgDiv.innerHTML = content;  
-  } else {  
-    msgDiv.style.background = 'rgba(56, 139, 253, 0.15)';  
-    msgDiv.style.color = '#58a6ff';  
-    msgDiv.style.border = '1px solid rgba(56, 139, 253, 0.4)';  
-    msgDiv.innerHTML = content;  
-  }  
-
-  msgArea.appendChild(msgDiv);  
-  msgArea.scrollTop = msgArea.scrollHeight;  
-
-  if (save && activeChatId && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ content, type });  
+function appendMessage(content, type, saveToStore = true) {  
+  appendMessageRaw(content, type, saveToStore);  
+  if (saveToStore && activeChatId && chatsStore[activeChatId]) {  
+    chatsStore[activeChatId].messages.push({ content, type, timestamp: Date.now() });  
     saveStore();  
   }  
 }  
 
-function formatMarkdown(text) {  
-  if (!text) return '';  
-  return text  
-    .replace(/```([\s\S]*?)```/g, '<pre style="background:#0d1117; padding:8px; border-radius:4px; overflow-x:auto;"><code>$1</code></pre>')  
-    .replace(/`([^`]+)`/g, '<code style="background:#0d1117; padding:2px 4px; border-radius:3px; color:#58a6ff;">$1</code>')  
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')  
-    .replace(/\n/g, '<br>');  
+function appendMessageRaw(content, type, animate = false) {  
+  if (!msgArea) return;  
+  const msgEl = document.createElement('div');  
+  msgEl.style.cssText = `margin-bottom: 10px; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; word-break: break-word;`;  
+  
+  if (type === 'user') {  
+    msgEl.style.background = '#1f6feb22';  
+    msgEl.style.border = '1px solid #1f6feb';  
+    msgEl.style.color = '#c9d1d9';  
+    msgEl.innerHTML = `<strong>👤 Operador:</strong> ${escapeHTML(content)}`;  
+  } else if (type === 'system') {  
+    msgEl.style.background = '#21262d';  
+    msgEl.style.border = '1px solid #30363d';  
+    msgEl.style.color = '#8b949e';  
+    msgEl.innerHTML = `<em>${content}</em>`;  
+  } else if (type === 'bot-html') {  
+    msgEl.style.background = '#161b22';  
+    msgEl.style.border = '1px solid #30363d';  
+    msgEl.style.color = '#c9d1d9';  
+    msgEl.innerHTML = content;  
+  } else {  
+    msgEl.style.background = '#161b22';  
+    msgEl.style.border = '1px solid #00ffcc55';  
+    msgEl.style.color = '#00ffcc';  
+    msgEl.innerHTML = `<strong>🤖 J.A.R.V.I.S.:</strong> ${formatMarkdown(content)}`;  
+  }  
+  msgArea.appendChild(msgEl);  
+  msgArea.scrollTop = msgArea.scrollHeight;  
 }  
 
 function escapeHTML(str) {  
-  return str.replace(/[&<>'"]/g,   
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)  
+  return str.replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );  
 }  
 
-// ----- Analisador de Áudio & Visão -----
+function formatMarkdown(text) {  
+  if (!text) return '';  
+  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')  
+    .replace(/```([\s\S]*?)```/g, '<pre style="background:#0d1117; padding:8px; border-radius:4px; overflow-x:auto;"><code>$1</code></pre>')  
+    .replace(/`([^`]+)`/g, '<code style="background:#0d1117; padding:2px 4px; border-radius:3px;">$1</code>')  
+    .replace(/\n/g, '<br>');  
+}  
+
+async function processQueryText(text) {  
+  appendMessage(text, 'user', true);  
+  setOrbState(true);  
+  
+  let augmentedPrompt = text;  
+  if (attachedFileContent) {  
+    augmentedPrompt = `[Contexto do Arquivo Anexado]:\n${attachedFileContent}\n\n[Consulta do Operador]: ${text}`;  
+    attachedFileContent = null;  
+  }  
+
+  let botReply = "Erro ao processar requisição no servidor proxy.";  
+  try {  
+    const response = await fetch(WORKER_URL, {  
+      method: "POST",  
+      headers: { "Content-Type": "application/json" },  
+      body: JSON.stringify({  
+        model: ULTRA_FAST_MODEL,  
+        messages: [  
+          { role: "system", content: "Você é o J.A.R.V.I.S., assistente cibernético avançado de Romário Vicente Amaro. Seja direto, técnico, prestativo e utilize formatação limpa." },  
+          { role: "user", content: augmentedPrompt }  
+        ]  
+      })  
+    });  
+    const data = await response.json();  
+    if (data && !data.error) {  
+      botReply = data.choices?.[0]?.message?.content || data.response || "Comando executado sem retorno textual.";  
+    } else {  
+      botReply = `Erro do Worker: ${data.error?.message || JSON.stringify(data)}`;  
+    }  
+  } catch (err) {  
+    console.error("Falha na requisição ao Worker:", err);  
+    botReply = "Falha crítica de comunicação com o Cloudflare Worker proxy.";  
+  }  
+
+  setOrbState(false);  
+  appendMessage(botReply, 'bot', true);  
+  speakJARVIS(botReply);  
+}  
+
 function initAudioAnalyzer() {  
   try {  
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();  
+    const AudioContext = window.AudioContext || window.webkitAudioContext;  
+    if (!AudioContext) return;  
+    audioCtx = new AudioContext();  
     analyser = audioCtx.createAnalyser();  
     analyser.fftSize = 64;  
     dataArray = new Uint8Array(analyser.frequencyBinCount);  
   } catch (e) {  
-    console.warn("AudioContext não suportado no ambiente local.");  
+    console.log("AudioContext não suportado ou restrito por políticas de autoplay.");  
   }  
 }  
 
 window.initJarvisVision = function() {  
   jarvisVisionActive = !jarvisVisionActive;  
   if (jarvisVisionActive) {  
-    appendMessage("[VISÃO COMPUTACIONAL]: Câmera/Captura de tela inicializada. Monitorando entrada visual...", 'system', true);  
-    speakJARVIS("Visão computacional ativada.");  
+    appendMessage("[VISÃO COMPUTACIONAL]: Módulo de captura de tela/câmera ativado.", 'system', true);  
+    speakJARVIS("Visão computacional ativada com sucesso.");  
   } else {  
-    appendMessage("[VISÃO COMPUTACIONAL]: Módulo visual desativado.", 'system', true);  
+    appendMessage("[VISÃO COMPUTACIONAL]: Módulo desativado.", 'system', true);  
     speakJARVIS("Visão computacional desativada.");  
   }  
 };
