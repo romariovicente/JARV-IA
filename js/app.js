@@ -7,9 +7,9 @@
 // J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
-// Configuração Firebase atualizada com a nova chave de API
+// Configuração Firebase atualizada com a chave de API segura e restrita
 const firebaseConfig = {  
-  apiKey: "AIzaSyAQ0CB7R4mMh7ppUU-6HY9UqSAvNdhP5bY",  
+  apiKey: "AIzaSyDyLKg0d8Gg-MiHQjt0OEENgpfa8VbNIcU",  
   authDomain: "jarv-ia.firebaseapp.com",  
   projectId: "jarv-ia",  
   storageBucket: "jarv-ia.firebasestorage.app",  
@@ -90,7 +90,6 @@ window.initJarvisSession = function() {
   speakJARVIS('Modo offline ativado.');  
 };  
 
-// ----- Variáveis globais do sistema -----
 async function saveUserPreferenceToFirebase(key, value) {  
   if (!auth || !auth.currentUser || !db) return;  
   try {  
@@ -104,6 +103,7 @@ async function saveUserPreferenceToFirebase(key, value) {
   }  
 }  
 
+// ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
 const MODEL_FALLBACK_LIST = [  
   'llama-3.3-70b-versatile',  
@@ -680,247 +680,252 @@ function renderChatHistoryList() {
     const chat = chatsStore[chatId];  
     const isActive = chatId === activeChatId;  
     const item = document.createElement('div');  
-    item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: ${isActive ? '#1f2937' : '#161b22'}; border: 1px solid ${isActive ? '#00ffcc' : '#30363d'}; cursor: pointer;`;  
-    item.innerHTML = `
-      <span onclick="window.switchChat('${chatId}')" style="font-size:0.7rem; color:${isActive ? '#00ffcc' : '#c9d1d9'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${chat.title || 'Chat'}</span>
-      <button onclick="window.deleteChat('${chatId}', event)" style="background:transparent; border:none; color:#ff7b72; font-size:0.7rem; cursor:pointer;" title="Deletar Chat">🗑️</button>
-    `;
-    listEl.appendChild(item);
-  });
-}
+    item.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding: 4px 6px; background: ${isActive ? '#1f6feb22' : '#161b22'}; border: 1px solid ${isActive ? '#58a6ff' : '#30363d'}; border-radius: 4px; font-size: 0.65rem; color: #c9d1d9; cursor: pointer;`;  
 
-window.createNewChat = function(switchNow = true) {
-  const chatId = 'chat_' + Date.now();
-  chatsStore[chatId] = { title: `Chat ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`, timestamp: Date.now(), messages: [] };
-  saveStore();
-  renderChatHistoryList();
-  if (switchNow) {
-    window.switchChat(chatId);
-  }
+    const titleSpan = document.createElement('span');  
+    titleSpan.style.cssText = `overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; font-weight: ${isActive ? 'bold' : 'normal'}; color: ${isActive ? '#58a6ff' : '#c9d1d9'};`;  
+    titleSpan.innerText = chat.title || 'Conversa sem título';  
+    titleSpan.onclick = () => switchChat(chatId);  
+
+    const actionsDiv = document.createElement('div');  
+    actionsDiv.style.cssText = `display: flex; gap: 4px; align-items: center;`;  
+
+    if (!chat.is_readonly) {  
+      const delBtn = document.createElement('button');  
+      delBtn.innerText = '🗑️';  
+      delBtn.style.cssText = `background: transparent; border: none; color: #ff7b72; cursor: pointer; font-size: 0.65rem; padding: 0 2px;`;  
+      delBtn.onclick = (e) => {  
+        e.stopPropagation();  
+        deleteChat(chatId);  
+      };  
+      actionsDiv.appendChild(delBtn);  
+    }  
+
+    item.appendChild(titleSpan);  
+    item.appendChild(actionsDiv);  
+    listEl.appendChild(item);  
+  });  
+}  
+
+function initChatStore() {  
+  if (Object.keys(chatsStore).length === 0) {  
+    createNewChat(false);  
+  } else {  
+    if (!activeChatId || !chatsStore[activeChatId]) {  
+      activeChatId = Object.keys(chatsStore)[0];  
+    }  
+    loadChatMessages(activeChatId);  
+  }  
+}  
+
+window.createNewChat = function(switchToIt = true) {  
+  const newId = 'chat_' + Date.now();  
+  chatsStore[newId] = {  
+    title: `Sessão ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,  
+    timestamp: Date.now(),  
+    messages: []  
+  };  
+  saveStore();  
+  if (switchToIt) {  
+    switchChat(newId);  
+  } else {  
+    activeChatId = newId;  
+    saveStore();  
+  }  
+  renderChatHistoryList();  
+};  
+
+function switchChat(chatId) {  
+  if (!chatsStore[chatId]) return;  
+  activeChatId = chatId;  
+  localStorage.setItem('jarv_active_chat', activeChatId);  
+  renderChatHistoryList();  
+  loadChatMessages(chatId);  
+}  
+
+function deleteChat(chatId) {  
+  if (Object.keys(chatsStore).length <= 1) {  
+    alert("É necessário manter ao menos uma sessão ativa.");  
+    return;  
+  }  
+  delete chatsStore[chatId];  
+  if (activeChatId === chatId) {  
+    activeChatId = Object.keys(chatsStore)[0];  
+  }  
+  saveStore();  
+  renderChatHistoryList();  
+  loadChatMessages(activeChatId);  
+}  
+
+function saveStore() {  
+  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
+  localStorage.setItem('jarv_active_chat', activeChatId);  
+}  
+
+function loadChatMessages(chatId) {  
+  if (!msgArea) return;  
+  msgArea.innerHTML = '';  
+  const chat = chatsStore[chatId];  
+  if (chat && chat.messages) {  
+    chat.messages.forEach(m => {  
+      renderMessageToDOM(m.content, m.sender, false);  
+    });  
+  }  
+}  
+
+// ----- Processamento Principal e Renderização -----
+async function processQueryText(userText) {  
+  if (!userText && !attachedFileContent) return;  
+    
+  let fullPrompt = userText;  
+  if (attachedFileContent) {  
+    fullPrompt = `[ARQUIVO ANEXADO CONTEÚDO]:\n${attachedFileContent}\n\n[SOLICITAÇÃO]: ${userText}`;  
+    attachedFileContent = null;  
+  }  
+
+  appendMessage(userText || "[Arquivo anexado enviado]", 'user', true);  
+
+  const loadingId = 'loading_' + Date.now();  
+  appendMessage(`  
+    <div id="${loadingId}" class="skeleton-shimmer" style="height: 40px; border-radius: 6px; padding: 8px; color: #8b949e; font-size: 0.75rem; display: flex; align-items: center; gap: 8px;">  
+      <span>🧠 J.A.R.V.I.S. processando requisição neural...</span>  
+    </div>  
+  `, 'bot-html', false);  
+
+  setOrbState(true);  
+
+  try {  
+    const chatHistory = chatsStore[activeChatId]?.messages || [];  
+    const apiMessages = [  
+      { role: "system", content: "Você é o J.A.R.V.I.S., uma I.A. assistente pessoal avançada, autônoma, direta e altamente eficiente. Responda em Português do Brasil de forma clara, técnica e precisa." },  
+      ...chatHistory.slice(-6).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content })),  
+      { role: "user", content: fullPrompt }  
+    ];  
+
+    const response = await fetch(WORKER_URL, {  
+      method: "POST",  
+      headers: { "Content-Type": "application/json" },  
+      body: JSON.stringify({  
+        model: ULTRA_FAST_MODEL,  
+        messages: apiMessages  
+      })  
+    });  
+
+    const data = await response.json();  
+    const loadEl = document.getElementById(loadingId);  
+    if (loadEl && loadEl.parentElement) loadEl.parentElement.remove();  
+
+    let botReply = "Aguardando resposta do núcleo de processamento...";  
+    if (data && !data.error) {  
+      botReply = data.choices?.[0]?.message?.content || data.response || JSON.stringify(data);  
+    } else if (data.error) {  
+      botReply = `[ERRO CORE]: ${data.error.message || data.error}`;  
+    }  
+
+    appendMessage(botReply, 'bot', true);  
+    speakJARVIS(botReply);  
+
+  } catch (err) {  
+    console.error("Erro na comunicação com Worker:", err);  
+    const loadEl = document.getElementById(loadingId);  
+    if (loadEl && loadEl.parentElement) loadEl.parentElement.remove();  
+      
+    const errMsg = "[FALHA CRÍTICA DE CONEXÃO]: Não foi possível obter resposta do servidor proxy JARVIS.";  
+    appendMessage(errMsg, 'system', true);  
+  } finally {  
+    setOrbState(false);  
+  }  
+}  
+
+function appendMessage(content, sender, save = true) {  
+  renderMessageToDOM(content, sender, true);  
+  if (save && activeChatId && chatsStore[activeChatId]) {  
+    chatsStore[activeChatId].messages.push({ content, sender, timestamp: Date.now() });  
+    if (chatsStore[activeChatId].messages.length === 1 && sender === 'user') {  
+      chatsStore[activeChatId].title = content.substring(0, 22) + (content.length > 22 ? '...' : '');  
+      renderChatHistoryList();  
+    }  
+    saveStore();  
+  }  
+}  
+
+function renderMessageToDOM(content, sender, scroll = true) {  
+  if (!msgArea) return;  
+  const msgDiv = document.createElement('div');  
+  msgDiv.className = `jarv-msg msg-${sender}`;  
+  msgDiv.style.cssText = `margin: 8px 0; padding: 10px 12px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; word-break: break-word;`;  
+
+  if (sender === 'user') {  
+    msgDiv.style.background = '#1f6feb22';  
+    msgDiv.style.border = '1px solid #1f6feb';  
+    msgDiv.style.color = '#58a6ff';  
+    msgDiv.style.marginLeft = 'auto';  
+    msgDiv.style.maxWidth = '85%';  
+    msgDiv.innerHTML = `<strong>[OPERADOR]:</strong> ${escapeHTML(content)}`;  
+  } else if (sender === 'bot') {  
+    msgDiv.style.background = '#161b22';  
+    msgDiv.style.border = '1px solid #30363d';  
+    msgDiv.style.color = '#c9d1d9';  
+    msgDiv.style.maxWidth = '90%';  
+    msgDiv.innerHTML = `<strong style="color:#00ffcc;">[J.A.R.V.I.S.]:</strong> ${formatMarkdown(content)}`;  
+  } else if (sender === 'bot-html') {  
+    msgDiv.style.background = 'transparent';  
+    msgDiv.style.padding = '4px 0';  
+    msgDiv.innerHTML = content;  
+  } else {  
+    msgDiv.style.background = '#21262d';  
+    msgDiv.style.border = '1px solid #8b949e';  
+    msgDiv.style.color = '#8b949e';  
+    msgDiv.style.fontSize = '0.7rem';  
+    msgDiv.innerHTML = content;  
+  }  
+
+  msgArea.appendChild(msgDiv);  
+  if (scroll) msgArea.scrollTop = msgArea.scrollHeight;  
+}  
+
+function formatMarkdown(text) {  
+  if (!text) return '';  
+  return text  
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")  
+    .replace(/```([\s\S]*?)```/g, '<pre style="background:#0d1117; padding:8px; border-radius:4px; border:1px solid #30363d; overflow-x:auto;"><code>$1</code></pre>')  
+    .replace(/`([^`]+)`/g, '<code style="background:#21262d; padding:2px 4px; border-radius:3px; color:#00ffcc;">$1</code>')  
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')  
+    .replace(/\n/g, '<br>');  
+}  
+
+function escapeHTML(str) {  
+  if (!str) return '';  
+  return str.replace(/[&<>'"]/g,   
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)  
+  );  
+}  
+
+function setupExecutionButtonListener() {  
+  setTimeout(() => {  
+    const execBtns = document.querySelectorAll('button');  
+    execBtns.forEach(btn => {  
+      const txt = (btn.innerText || '').toUpperCase();  
+      if (txt.includes('EXECUTAR') || txt.includes('ENVIAR') || txt.includes('SEND')) {  
+        btn.onclick = (e) => { e.preventDefault(); window.sendMsg(); };  
+      }  
+    });  
+  }, 500);  
+}  
+
+function initAudioAnalyzer() {  
+  // Analisador de frequência de áudio opcional
+}  
+
+window.setModule = function(modName) {  
+  activeModule = modName;  
+  appendMessage(`[MODULO ATIVADO]: Módulo '${modName}' selecionado.`, 'system', true);  
+  speakJARVIS(`Módulo ${modName} ativado.`);  
+};  
+
+window.initJarvisVision = function() {  
+  jarvisVisionActive = !jarvisVisionActive;  
+  appendMessage(`[VISÃO COMPUTACIONAL]: ${jarvisVisionActive ? 'Ativada e mapeando entrada de vídeo.' : 'Desativada.'}`, 'system', true);  
+  speakJARVIS(jarvisVisionActive ? "Visão computacional ativada." : "Visão computacional desativada.");  
 };
-
-window.switchChat = function(chatId) {
-  if (!chatsStore[chatId]) return;
-  activeChatId = chatId;
-  localStorage.setItem('jarv_active_chat', chatId);
-  renderChatHistoryList();
-  if (msgArea) {
-    msgArea.innerHTML = '';
-  }
-  const chat = chatsStore[chatId];
-  if (chat && chat.messages) {
-    chat.messages.forEach(m => {
-      appendMessage(m.content, m.sender, false, m.isHtml);
-    });
-  }
-  appendMessage(`[SESSÃO]: Alternado para "${chat.title}"`, 'system', true);
-};
-
-window.deleteChat = function(chatId, event) {
-  event.stopPropagation();
-  if (Object.keys(chatsStore).length <= 1) {
-    alert("Você deve manter pelo menos uma sessão ativa.");
-    return;
-  }
-  delete chatsStore[chatId];
-  saveStore();
-  if (activeChatId === chatId) {
-    const remaining = Object.keys(chatsStore);
-    window.switchChat(remaining[remaining.length - 1]);
-  } else {
-    renderChatHistoryList();
-  }
-};
-
-function initChatStore() {
-  if (Object.keys(chatsStore).length === 0) {
-    const defaultId = 'chat_' + Date.now();
-    chatsStore[defaultId] = { title: 'Sessão Principal v6.0', timestamp: Date.now(), messages: [] };
-    activeChatId = defaultId;
-    saveStore();
-  } else if (!activeChatId || !chatsStore[activeChatId]) {
-    activeChatId = Object.keys(chatsStore)[0];
-  }
-  localStorage.setItem('jarv_active_chat', activeChatId);
-  window.switchChat(activeChatId);
-}
-
-function saveStore() {
-  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
-}
-
-// ----- Processamento de Mensagens e IA -----
-async function processQueryText(text) {
-  if (!text && !attachedFileContent) return;
-  
-  let fullUserMsg = text;
-  if (attachedFileContent) {
-    fullUserMsg += `\n\n[CONTEÚDO DO ARQUIVO ANEXO]:\n${attachedFileContent.substring(0, 3000)}`;
-    attachedFileContent = null;
-    const fileInput = document.getElementById('jarvFileUpload');
-    if (fileInput) fileInput.value = '';
-  }
-
-  appendMessage(fullUserMsg, 'user', true);
-
-  const placeholderId = 'bot_msg_' + Date.now();
-  appendMessage('<span id="' + placeholderId + '">J.A.R.V.I.S. processando requisição neural...</span>', 'bot-html', true, true);
-  setOrbState(true);
-
-  let botReply = "Erro ao contatar o servidor proxy.";
-  try {
-    const response = await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ULTRA_FAST_MODEL,
-        messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S., um assistente de inteligência artificial avançado, autônomo, analítico e leal ao operador Romário. Responda com precisão técnica e eficiência." },
-          { role: "user", content: fullUserMsg }
-        ]
-      })
-    });
-    const data = await response.json();
-    if (data && !data.error) {
-      botReply = data.choices?.[0]?.message?.content || data.response || "Resposta vazia do modelo.";
-    } else {
-      botReply = "Erro na API: " + (data.error?.message || JSON.stringify(data));
-    }
-  } catch (err) {
-    console.error("Erro no fetch do worker:", err);
-    botReply = "Erro crítico de conexão com o Cloudflare Worker.";
-  }
-
-  setOrbState(false);
-  
-  const placeholderEl = document.getElementById(placeholderId);
-  if (placeholderEl) {
-    placeholderEl.innerHTML = formatMarkdown(botReply);
-    placeholderEl.id = '';
-    saveMessageToCurrentChat(botReply, 'bot-html');
-  } else {
-    appendMessage(botReply, 'bot', true);
-  }
-
-  speakJARVIS(botReply);
-}
-
-function appendMessage(text, sender, save = true, isHtml = false) {
-  if (!msgArea) return;
-  const msgDiv = document.createElement('div');
-  msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; word-break: break-word;`;
-
-  if (sender === 'user') {
-    msgDiv.style.background = '#1f2937';
-    msgDiv.style.border = '1px solid #30363d';
-    msgDiv.style.color = '#c9d1d9';
-    msgDiv.innerHTML = `<strong>[OPERADOR]:</strong> ${escapeHTML(text)}`;
-  } else if (sender === 'system') {
-    msgDiv.style.background = '#0d1117';
-    msgDiv.style.border = '1px dashed #00ffcc';
-    msgDiv.style.color = '#00ffcc';
-    msgDiv.innerHTML = `<strong>${text}</strong>`;
-  } else if (sender === 'bot-html' || isHtml) {
-    msgDiv.style.background = '#161b22';
-    msgDiv.style.border = '1px solid #005cc5';
-    msgDiv.style.color = '#c9d1d9';
-    msgDiv.innerHTML = text;
-  } else {
-    msgDiv.style.background = '#161b22';
-    msgDiv.style.border = '1px solid #00ffcc';
-    msgDiv.style.color = '#c9d1d9';
-    msgDiv.innerHTML = `<strong>[J.A.R.V.I.S.]:</strong> ${formatMarkdown(text)}`;
-  }
-
-  msgArea.appendChild(msgDiv);
-  msgArea.scrollTop = msgArea.scrollHeight;
-
-  if (save && sender !== 'system') {
-    saveMessageToCurrentChat(text, sender);
-  }
-}
-
-function saveMessageToCurrentChat(content, sender) {
-  if (!activeChatId || !chatsStore[activeChatId]) return;
-  chatsStore[activeChatId].messages.push({ content, sender, timestamp: Date.now() });
-  saveStore();
-}
-
-function formatMarkdown(text) {
-  if (!text) return '';
-  let escaped = escapeHTML(text);
-  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  escaped = escaped.replace(/\n/g, '<br>');
-  return escaped;
-}
-
-function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, 
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-  );
-}
-
-// ----- Módulos Adicionais -----
-window.setModule = async function(modName) {
-  activeModule = modName;
-  document.querySelectorAll('.mod-btn').forEach(b => {
-    b.style.borderColor = '#30363d';
-    b.style.color = '#c9d1d9';
-  });
-  const activeBtn = document.getElementById('btn_mod_' + modName);
-  if (activeBtn) {
-    activeBtn.style.borderColor = '#00ffcc';
-    activeBtn.style.color = '#00ffcc';
-  }
-
-  if (modName === 'academy') {
-    appendMessage("[ACADEMIA HACKER & CC50]: Módulo carregado. Pronto para compilação C e análise de algoritmos.", 'system', true);
-    speakJARVIS("Módulo Academia CC50 ativado.");
-  } else if (modName === 'globe') {
-    appendMessage("[GLOBO CIBERAMEAÇAS]: Varredura de IPs e análise de tráfego global ativada.", 'system', true);
-    speakJARVIS("Globo de ciberameaças ativo.");
-  } else if (modName === 'imageGen') {
-    appendMessage("[GERADOR DE IMAGEM 3D]: Pronto para criar conceitos visuais em alta resolução.", 'system', true);
-    speakJARVIS("Gerador de imagem 3D ativado.");
-  } else if (modName === 'videoGen') {
-    appendMessage("[GERADOR DE VÍDEO 3D]: Subsistema de renderização cinematográfica em prontidão.", 'system', true);
-    speakJARVIS("Gerador de vídeo ativado.");
-  }
-};
-
-window.initJarvisVision = function() {
-  jarvisVisionActive = !jarvisVisionActive;
-  if (jarvisVisionActive) {
-    appendMessage("[VISÃO COMPUTACIONAL]: Ativada. Capturando fluxo de tela e ambiente...", 'system', true);
-    speakJARVIS("Visão computacional iniciada.");
-  } else {
-    appendMessage("[VISÃO COMPUTACIONAL]: Desativada.", 'system', true);
-    speakJARVIS("Visão computacional suspensa.");
-  }
-};
-
-function setupExecutionButtonListener() {
-  const execBtns = document.querySelectorAll('button');
-  execBtns.forEach(btn => {
-    const text = (btn.innerText || '').toLowerCase();
-    if (text.includes('executar') || text.includes('enviar') || text.classList.contains('fa-paper-plane')) {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        window.sendMsg();
-      };
-    }
-  });
-}
-
-function initAudioAnalyzer() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (AudioContext) {
-      audioCtx = new AudioContext();
-      analyser = audioCtx.createAnalyser();
-    }
-  } catch (e) {
-    console.log("Áudio context não suportado:", e);
-  }
-}
