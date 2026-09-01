@@ -1,19 +1,18 @@
 /**
- * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback)
+ * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback Amplo)
  * Módulo de auto-correção e diagnóstico contínuo via Groq API.
  */
 
 const fs = require('fs');  
 const path = require('path');
 
-// Lista ampliada com múltiplos modelos ativos e populares da Groq para varredura de fallback
+// Lista focada em modelos leves e de visualização (Preview) com alta taxa de aceite em chaves Groq
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
-  'deepseek-r1-distill-llama-70b',
-  'llama-3.1-70b-versatile',
+  'llama-3.2-3b-preview',
+  'llama-3.2-1b-preview',
   'llama-3.1-8b-instant',
-  'gemma2-9b-it',
-  'mixtral-8x7b-32768'
+  'llama-3.3-70b-versatile',
+  'gemma-7b-it'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
