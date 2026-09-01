@@ -1,21 +1,24 @@
 /**
  * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback Amplo)
  * Módulo de auto-correção e diagnóstico contínuo via Groq API.
+ * 
+ * Versão: 6.0 (Atualizada & Otimizada)
  */
 
 const fs = require('fs');  
 const path = require('path');
 
-// Lista focada em modelos de produção estáveis e de altíssima velocidade na Groq
+// Lista oficial de modelos de produção estáveis e de alta velocidade na Groq API
 const GROQ_MODELS = [
-  'llama-3.1-8b-instant',
   'llama-3.3-70b-versatile',
-  'openai/gpt-oss-20b',
-  'openai/gpt-oss-120b'
+  'llama-3.1-8b-instant',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it',
+  'deepseek-r1-distill-llama-70b'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
-  const TIMEOUT_MS = 30000; // 30 segundos de limite para evitar travamento da engine
+  const TIMEOUT_MS = 45000; // 45 segundos de limite para dar suporte a arquivos mais extensos
 
   for (const model of GROQ_MODELS) {
     try {
@@ -32,9 +35,18 @@ async function callGroqWithAutoModel(apiKey, prompt) {
         },
         body: JSON.stringify({
           model: model,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [
+            {
+              role: 'system',
+              content: 'Você é o J.A.R.V.I.S. Auto-Heal Engine. Responda ESTRITAMENTE em formato JSON sem marcações externas de markdown e sem texto adicional.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
           temperature: 0.1,
-          max_tokens: 4096 // Parâmetro obrigatório para evitar erro 400 em diversos modelos da Groq
+          max_tokens: 8192 // Limite expandido para evitar truncamento do código js/app.js
         }),
         signal: controller.signal
       });
@@ -51,7 +63,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
       const textResponse = data.choices?.[0]?.message?.content;
 
       if (textResponse) {
-        console.log(`[JARV-HEAL] ✨ Resposta obtida via: ${model}`);
+        console.log(`[JARV-HEAL] ✨ Resposta obtida via modelo: ${model}`);
         return textResponse;
       }
     } catch (err) {
@@ -96,16 +108,16 @@ async function runAutoHeal() {
   const prompt = `
 Você é o J.A.R.V.I.S., uma Inteligência Artificial avançada de engenharia de software e arquitetura frontend.
 Analise o código abaixo do arquivo js/app.js em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
-Se estiver tudo correto, adicione um comentário elegante no início ou no fim do arquivo confirmando que o sistema de auto-correção autônoma está ativo e operacional.
+Se estiver tudo correto, adicione um comentário elegante no início confirmando que o sistema de auto-correção autônoma está ativo e operacional.
+
+IMPORTANTE: Retorne integralmente o código funcional no campo "newContent", SEM omissões, SEM comentários como "// [restante do código]" e SEM truncamentos.
 
 Código atual:
 \`\`\`javascript
 ${codeContent}
 \`\`\`
 
-Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto ou marcação extra fora do bloco JSON.
-A propriedade "newContent" DEVE conter o código completo do arquivo atualizado com o ajuste.
-
+Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto ou marcação extra fora do bloco JSON:
 {
   "hasError": true,
   "explanation": "Descrição técnica e direta da falha e da correção aplicada",
@@ -136,8 +148,14 @@ A propriedade "newContent" DEVE conter o código completo do arquivo atualizado 
       throw new Error(parseError.message);
     }
 
-    // Validação de segurança antes de sobrescrever o arquivo original
+    // Validação de segurança para impedir truncamento/sobrescrita por código incompleto
     if (result.newContent && result.newContent.trim().length > 0) {
+      const minExpectedLength = Math.floor(codeContent.length * 0.5);
+      if (result.newContent.length < minExpectedLength) {
+        console.warn(`[ALERTA DE SEGURANÇA] O novo código retornado é significativamente menor que o original (${result.newContent.length} vs ${codeContent.length} bytes). Operação cancelada para evitar truncamento.`);
+        return;
+      }
+
       console.log(`\n[JARV-HEAL] ⚠️ Processando ajustes no código!`);
       console.log(`[DIAGNÓSTICO] ${result.explanation}`);
       
