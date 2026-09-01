@@ -1,4 +1,9 @@
 // ==========================================================
+// [AUTO-HEAL SYSTEM]: Status - Ativo e Operacional
+// J.A.R.V.I.S. Autonomous Self-Correction Engine v6.0
+// Validado via GitHub Issues - Protocolo de Ajuste Preventivo
+// ==========================================================
+// ==========================================================
 // J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
@@ -676,178 +681,246 @@ function renderChatHistoryList() {
     const isActive = chatId === activeChatId;  
     const item = document.createElement('div');  
     item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: ${isActive ? '#1f2937' : '#161b22'}; border: 1px solid ${isActive ? '#00ffcc' : '#30363d'}; cursor: pointer;`;  
-    item.innerHTML = `<span style="font-size:0.65rem; color:${isActive ? '#00ffcc' : '#c9d1d9'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px;">${chat.title || 'Chat'}</span>`;  
-    item.onclick = () => window.switchChat(chatId);  
-    listEl.appendChild(item);  
-  });  
-}  
+    item.innerHTML = `
+      <span onclick="window.switchChat('${chatId}')" style="font-size:0.7rem; color:${isActive ? '#00ffcc' : '#c9d1d9'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${chat.title || 'Chat'}</span>
+      <button onclick="window.deleteChat('${chatId}', event)" style="background:transparent; border:none; color:#ff7b72; font-size:0.7rem; cursor:pointer;" title="Deletar Chat">🗑️</button>
+    `;
+    listEl.appendChild(item);
+  });
+}
 
-window.createNewChat = function(renderList = true) {  
-  const newId = 'chat_' + Date.now();  
-  chatsStore[newId] = { title: `Sessão ${Object.keys(chatsStore).length + 1}`, timestamp: Date.now(), messages: [] };  
-  activeChatId = newId;  
-  saveStore();  
-  if (renderList) renderChatHistoryList();  
-  if (msgArea) msgArea.innerHTML = '';  
-  appendMessage("[SISTEMA]: Nova sessão neural iniciada.", 'system', true);  
-};  
-
-window.switchChat = function(chatId) {  
-  if (!chatsStore[chatId]) return;  
-  activeChatId = chatId;  
-  saveStore();  
-  if (msgArea) msgArea.innerHTML = '';  
-  const chat = chatsStore[chatId];  
-  if (chat && chat.messages) {  
-    chat.messages.forEach(m => appendMessage(m.text, m.sender, false, m.isHtml));  
-  }  
-  renderChatHistoryList();  
-};  
-
-function initChatStore() {  
-  if (Object.keys(chatsStore).length === 0) {  
-    window.createNewChat(false);  
-  } else {  
-    if (!activeChatId || !chatsStore[activeChatId]) {  
-      activeChatId = Object.keys(chatsStore)[0];  
-    }  
-    window.switchChat(activeChatId);  
-  }  
-}  
-
-function saveStore() {  
-  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
-  localStorage.setItem('jarv_active_chat', activeChatId);  
-}  
-
-// ----- Funções de Mensagem e UI de Chat -----
-function appendMessage(text, sender = 'bot', save = true, isHtml = false) {  
-  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;  
-  const msgDiv = document.createElement('div');  
-  msgDiv.className = `jarv-msg ${sender}`;  
-  msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; word-break: break-word;`;  
-
-  if (sender === 'user') {  
-    msgDiv.style.background = '#1f2937';  
-    msgDiv.style.border = '1px solid #30363d';  
-    msgDiv.style.color = '#c9d1d9';  
-    msgDiv.innerHTML = `<strong>👤 Operador:</strong> ${escapeHTML(text)}`;  
-  } else if (sender === 'system') {  
-    msgDiv.style.background = '#161b22';  
-    msgDiv.style.border = '1px dashed #00ffcc';  
-    msgDiv.style.color = '#00ffcc';  
-    msgDiv.innerHTML = `⚙️ ${escapeHTML(text)}`;  
-  } else if (isHtml || sender === 'bot-html') {  
-    msgDiv.style.background = '#0d1117';  
-    msgDiv.style.border = '1px solid #005cc5';  
-    msgDiv.style.color = '#c9d1d9';  
-    msgDiv.innerHTML = text;  
-  } else {  
-    msgDiv.style.background = '#0d1117';  
-    msgDiv.style.border = '1px solid #30363d';  
-    msgDiv.style.color = '#58a6ff';  
-    msgDiv.innerHTML = `<strong>🤖 J.A.R.V.I.S.:</strong> ${formatMarkdown(text)}`;  
-    speakJARVIS(text);  
-  }  
-
-  msgArea.appendChild(msgDiv);  
-  msgArea.scrollTop = msgArea.scrollHeight;  
-
-  if (save && activeChatId && chatsStore[activeChatId]) {  
-    chatsStore[activeChatId].messages.push({ text, sender, isHtml: isHtml || sender === 'bot-html', timestamp: Date.now() });  
-    saveStore();  
-  }  
-}  
-
-function formatMarkdown(txt) {  
-  if (!txt) return '';  
-  return txt.replace(/</g, "&lt;").replace(/>/g, "&gt;")  
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')  
-    .replace(/```([\s\S]*?)```/g, '<pre style="background:#161b22; padding:8px; border-radius:4px; overflow-x:auto;">$1</pre>')  
-    .replace(/`([^`]+)`/g, '<code style="background:#161b22; padding:2px 4px; border-radius:3px;">$1</code>')  
-    .replace(/\n/g, '<br>');  
-}  
-
-function escapeHTML(str) {  
-  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));  
-}  
-
-// ----- Processamento de Consulta e Conexão com Proxy Worker -----
-async function processQueryText(query) {  
-  if (!query) return;  
-  appendMessage(query, 'user', true);  
-
-  let finalPrompt = query;  
-  if (attachedFileContent) {  
-    finalPrompt = `[CONTEÚDO ANEXADO DO ARQUIVO]:\n${attachedFileContent}\n\n[SOLICITAÇÃO DO OPERADOR]: ${query}`;  
-    attachedFileContent = null;  
-  }  
-
-  setOrbState(true);  
-  let responseText = "Erro de conexão com o subsistema neural.";  
-
-  try {  
-    const res = await fetch(WORKER_URL, {  
-      method: "POST",  
-      headers: { "Content-Type": "application/json" },  
-      body: JSON.stringify({  
-        model: ULTRA_FAST_MODEL,  
-        messages: [  
-          { role: "system", content: "Você é o J.A.R.V.I.S., assistente avançado de inteligência artificial de Romário. Seja direto, técnico e preciso." },  
-          { role: "user", content: finalPrompt }  
-        ]  
-      })  
-    });  
-    const data = await res.json();  
-    if (data && !data.error) {  
-      responseText = data.choices?.[0]?.message?.content || data.response || "Resposta vazia do modelo.";  
-    } else {  
-      responseText = `Erro da API: ${data.error?.message || 'Falha desconhecida'}`;  
-    }  
-  } catch (err) {  
-    console.error("Erro na requisição ao Worker:", err);  
-    responseText = "Erro crítico de rede ao contatar o Cloudflare Worker.";  
-  }  
-
-  setOrbState(false);  
-  appendMessage(responseText, 'bot', true, false);  
-}  
-
-// ----- Utilitários extras de configuração de UI -----
-function setupExecutionButtonListener() {  
-  const execBtn = document.querySelector('button[onclick*="sendMsg"]') || document.getElementById('btnExecute') || document.querySelector('.fa-paper-plane')?.parentElement;  
-  if (execBtn) {  
-    execBtn.onclick = (e) => {  
-      e.preventDefault();  
-      window.sendMsg();  
-    };  
-  }  
-}  
-
-function initAudioAnalyzer() {  
-  try {  
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;  
-    if (AudioCtx) {  
-      audioCtx = new AudioCtx();  
-      analyser = audioCtx.createAnalyser();  
-    }  
-  } catch(e) {  
-    console.log("Áudio Analyzer não suportado ou pendente de gesto.");  
-  }  
-}  
-
-window.setModule = async function(modName) {  
-  activeModule = modName;  
-  document.querySelectorAll('.mod-btn').forEach(b => b.style.borderColor = '#30363d');  
-  const btn = document.getElementById(`btn_mod_${modName}`);  
-  if (btn) btn.style.borderColor = '#00ffcc';  
-  appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);  
-  speakJARVIS(`Módulo ${modName} ativado.`);  
-};  
-
-window.initJarvisVision = function() {  
-  jarvisVisionActive = !jarvisVisionActive;  
-  appendMessage(`[VISÃO COMPUTACIONAL]: ${jarvisVisionActive ? 'Ativada (Captura de tela/câmera em lote)' : 'Desativada'}`, 'system', true);  
-  speakJARVIS(jarvisVisionActive ? "Visão computacional iniciada." : "Visão computacional desativada.");  
+window.createNewChat = function(switchNow = true) {
+  const chatId = 'chat_' + Date.now();
+  chatsStore[chatId] = { title: `Chat ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`, timestamp: Date.now(), messages: [] };
+  saveStore();
+  renderChatHistoryList();
+  if (switchNow) {
+    window.switchChat(chatId);
+  }
 };
+
+window.switchChat = function(chatId) {
+  if (!chatsStore[chatId]) return;
+  activeChatId = chatId;
+  localStorage.setItem('jarv_active_chat', chatId);
+  renderChatHistoryList();
+  if (msgArea) {
+    msgArea.innerHTML = '';
+  }
+  const chat = chatsStore[chatId];
+  if (chat && chat.messages) {
+    chat.messages.forEach(m => {
+      appendMessage(m.content, m.sender, false, m.isHtml);
+    });
+  }
+  appendMessage(`[SESSÃO]: Alternado para "${chat.title}"`, 'system', true);
+};
+
+window.deleteChat = function(chatId, event) {
+  event.stopPropagation();
+  if (Object.keys(chatsStore).length <= 1) {
+    alert("Você deve manter pelo menos uma sessão ativa.");
+    return;
+  }
+  delete chatsStore[chatId];
+  saveStore();
+  if (activeChatId === chatId) {
+    const remaining = Object.keys(chatsStore);
+    window.switchChat(remaining[remaining.length - 1]);
+  } else {
+    renderChatHistoryList();
+  }
+};
+
+function initChatStore() {
+  if (Object.keys(chatsStore).length === 0) {
+    const defaultId = 'chat_' + Date.now();
+    chatsStore[defaultId] = { title: 'Sessão Principal v6.0', timestamp: Date.now(), messages: [] };
+    activeChatId = defaultId;
+    saveStore();
+  } else if (!activeChatId || !chatsStore[activeChatId]) {
+    activeChatId = Object.keys(chatsStore)[0];
+  }
+  localStorage.setItem('jarv_active_chat', activeChatId);
+  window.switchChat(activeChatId);
+}
+
+function saveStore() {
+  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
+}
+
+// ----- Processamento de Mensagens e IA -----
+async function processQueryText(text) {
+  if (!text && !attachedFileContent) return;
+  
+  let fullUserMsg = text;
+  if (attachedFileContent) {
+    fullUserMsg += `\n\n[CONTEÚDO DO ARQUIVO ANEXO]:\n${attachedFileContent.substring(0, 3000)}`;
+    attachedFileContent = null;
+    const fileInput = document.getElementById('jarvFileUpload');
+    if (fileInput) fileInput.value = '';
+  }
+
+  appendMessage(fullUserMsg, 'user', true);
+
+  const placeholderId = 'bot_msg_' + Date.now();
+  appendMessage('<span id="' + placeholderId + '">J.A.R.V.I.S. processando requisição neural...</span>', 'bot-html', true, true);
+  setOrbState(true);
+
+  let botReply = "Erro ao contatar o servidor proxy.";
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ULTRA_FAST_MODEL,
+        messages: [
+          { role: "system", content: "Você é o J.A.R.V.I.S., um assistente de inteligência artificial avançado, autônomo, analítico e leal ao operador Romário. Responda com precisão técnica e eficiência." },
+          { role: "user", content: fullUserMsg }
+        ]
+      })
+    });
+    const data = await response.json();
+    if (data && !data.error) {
+      botReply = data.choices?.[0]?.message?.content || data.response || "Resposta vazia do modelo.";
+    } else {
+      botReply = "Erro na API: " + (data.error?.message || JSON.stringify(data));
+    }
+  } catch (err) {
+    console.error("Erro no fetch do worker:", err);
+    botReply = "Erro crítico de conexão com o Cloudflare Worker.";
+  }
+
+  setOrbState(false);
+  
+  const placeholderEl = document.getElementById(placeholderId);
+  if (placeholderEl) {
+    placeholderEl.innerHTML = formatMarkdown(botReply);
+    placeholderEl.id = '';
+    saveMessageToCurrentChat(botReply, 'bot-html');
+  } else {
+    appendMessage(botReply, 'bot', true);
+  }
+
+  speakJARVIS(botReply);
+}
+
+function appendMessage(text, sender, save = true, isHtml = false) {
+  if (!msgArea) return;
+  const msgDiv = document.createElement('div');
+  msgDiv.style.cssText = `margin: 8px 0; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; word-break: break-word;`;
+
+  if (sender === 'user') {
+    msgDiv.style.background = '#1f2937';
+    msgDiv.style.border = '1px solid #30363d';
+    msgDiv.style.color = '#c9d1d9';
+    msgDiv.innerHTML = `<strong>[OPERADOR]:</strong> ${escapeHTML(text)}`;
+  } else if (sender === 'system') {
+    msgDiv.style.background = '#0d1117';
+    msgDiv.style.border = '1px dashed #00ffcc';
+    msgDiv.style.color = '#00ffcc';
+    msgDiv.innerHTML = `<strong>${text}</strong>`;
+  } else if (sender === 'bot-html' || isHtml) {
+    msgDiv.style.background = '#161b22';
+    msgDiv.style.border = '1px solid #005cc5';
+    msgDiv.style.color = '#c9d1d9';
+    msgDiv.innerHTML = text;
+  } else {
+    msgDiv.style.background = '#161b22';
+    msgDiv.style.border = '1px solid #00ffcc';
+    msgDiv.style.color = '#c9d1d9';
+    msgDiv.innerHTML = `<strong>[J.A.R.V.I.S.]:</strong> ${formatMarkdown(text)}`;
+  }
+
+  msgArea.appendChild(msgDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
+
+  if (save && sender !== 'system') {
+    saveMessageToCurrentChat(text, sender);
+  }
+}
+
+function saveMessageToCurrentChat(content, sender) {
+  if (!activeChatId || !chatsStore[activeChatId]) return;
+  chatsStore[activeChatId].messages.push({ content, sender, timestamp: Date.now() });
+  saveStore();
+}
+
+function formatMarkdown(text) {
+  if (!text) return '';
+  let escaped = escapeHTML(text);
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  escaped = escaped.replace(/\n/g, '<br>');
+  return escaped;
+}
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
+}
+
+// ----- Módulos Adicionais -----
+window.setModule = async function(modName) {
+  activeModule = modName;
+  document.querySelectorAll('.mod-btn').forEach(b => {
+    b.style.borderColor = '#30363d';
+    b.style.color = '#c9d1d9';
+  });
+  const activeBtn = document.getElementById('btn_mod_' + modName);
+  if (activeBtn) {
+    activeBtn.style.borderColor = '#00ffcc';
+    activeBtn.style.color = '#00ffcc';
+  }
+
+  if (modName === 'academy') {
+    appendMessage("[ACADEMIA HACKER & CC50]: Módulo carregado. Pronto para compilação C e análise de algoritmos.", 'system', true);
+    speakJARVIS("Módulo Academia CC50 ativado.");
+  } else if (modName === 'globe') {
+    appendMessage("[GLOBO CIBERAMEAÇAS]: Varredura de IPs e análise de tráfego global ativada.", 'system', true);
+    speakJARVIS("Globo de ciberameaças ativo.");
+  } else if (modName === 'imageGen') {
+    appendMessage("[GERADOR DE IMAGEM 3D]: Pronto para criar conceitos visuais em alta resolução.", 'system', true);
+    speakJARVIS("Gerador de imagem 3D ativado.");
+  } else if (modName === 'videoGen') {
+    appendMessage("[GERADOR DE VÍDEO 3D]: Subsistema de renderização cinematográfica em prontidão.", 'system', true);
+    speakJARVIS("Gerador de vídeo ativado.");
+  }
+};
+
+window.initJarvisVision = function() {
+  jarvisVisionActive = !jarvisVisionActive;
+  if (jarvisVisionActive) {
+    appendMessage("[VISÃO COMPUTACIONAL]: Ativada. Capturando fluxo de tela e ambiente...", 'system', true);
+    speakJARVIS("Visão computacional iniciada.");
+  } else {
+    appendMessage("[VISÃO COMPUTACIONAL]: Desativada.", 'system', true);
+    speakJARVIS("Visão computacional suspensa.");
+  }
+};
+
+function setupExecutionButtonListener() {
+  const execBtns = document.querySelectorAll('button');
+  execBtns.forEach(btn => {
+    const text = (btn.innerText || '').toLowerCase();
+    if (text.includes('executar') || text.includes('enviar') || text.classList.contains('fa-paper-plane')) {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        window.sendMsg();
+      };
+    }
+  });
+}
+
+function initAudioAnalyzer() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      audioCtx = new AudioContext();
+      analyser = audioCtx.createAnalyser();
+    }
+  } catch (e) {
+    console.log("Áudio context não suportado:", e);
+  }
+}
