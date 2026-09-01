@@ -8,9 +8,9 @@ const path = require('path');
 
 // Lista focada nos modelos mais estáveis e compatíveis da Groq
 const GROQ_MODELS = [
-  'llama-3.1-8b-instant',     // Fallback ultra-rápido e altamente estável
-  'llama-3.3-70b-versatile',  // Modelo primário de alta inteligência
-  'llama3-8b-8192'            // Alternativa clássica de 8B
+  'llama3-8b-8192',           // Altamente estável e suporta max_tokens nativamente
+  'llama3-70b-8192',          // Alternativa robusta de 70B
+  'llama-3.1-8b-instant'      // Fallback ultrarrápido
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
@@ -32,7 +32,8 @@ async function callGroqWithAutoModel(apiKey, prompt) {
         body: JSON.stringify({
           model: model,
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1
+          temperature: 0.1,
+          max_tokens: 4096 // Parâmetro obrigatório para evitar erro 400 em diversos modelos da Groq
         }),
         signal: controller.signal
       });
@@ -40,7 +41,8 @@ async function callGroqWithAutoModel(apiKey, prompt) {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        console.warn(`[JARV-HEAL] ⚠️ O modelo ${model} falhou com status ${response.status}. Alternando para o próximo...`);
+        const errText = await response.text();
+        console.warn(`[JARV-HEAL] ⚠️ O modelo ${model} falhou com status ${response.status} (${errText}). Alternando para o próximo...`);
         continue;
       }
 
