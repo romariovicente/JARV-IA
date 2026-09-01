@@ -6,11 +6,14 @@
 const fs = require('fs');  
 const path = require('path');
 
-// Lista focada nos modelos mais estáveis e compatíveis da Groq
+// Lista ampliada com múltiplos modelos ativos e populares da Groq para varredura de fallback
 const GROQ_MODELS = [
-  'llama3-8b-8192',           // Altamente estável e suporta max_tokens nativamente
-  'llama3-70b-8192',          // Alternativa robusta de 70B
-  'llama-3.1-8b-instant'      // Fallback ultrarrápido
+  'llama-3.3-70b-versatile',
+  'deepseek-r1-distill-llama-70b',
+  'llama-3.1-70b-versatile',
+  'llama-3.1-8b-instant',
+  'gemma2-9b-it',
+  'mixtral-8x7b-32768'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
