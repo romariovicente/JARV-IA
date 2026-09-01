@@ -6,11 +6,12 @@
 const fs = require('fs');  
 const path = require('path');
 
-// Lista de modelos priorizados para seleção automática e fallback em cascata
+// Lista atualizada de modelos priorizados para seleção automática e fallback em cascata na Groq
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile', // Modelo primário (Alta inteligência e raciocínio complexo)
-  'llama-3.1-70b-versatile', // Alternativa robusta de 70B
-  'llama-3.1-8b-instant'     // Fallback de alta velocidade e leveza
+  'llama-3.3-70b-versatile', // Modelo primário de alta inteligência
+  'llama-3.1-8b-instant',     // Fallback ultra-rápido e altamente estável
+  'llama3-70b-8192',          // Alternativa clássica robusta de 70B
+  'llama3-8b-8192'            // Alternativa clássica de 8B
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
@@ -33,7 +34,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
           model: model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          response_format: { type: "json_object" } // Força o formato de saída
+          response_format: { type: "json_object" } // Força o formato de saída estruturado
         }),
         signal: controller.signal
       });
@@ -94,6 +95,7 @@ async function runAutoHeal() {
   const prompt = `
 Você é o J.A.R.V.I.S., uma Inteligência Artificial avançada de engenharia de software e arquitetura frontend.
 Analise o código abaixo do arquivo js/app.js em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
+Se estiver tudo correto, adicione um comentário elegante no início ou no fim do arquivo confirmando que o sistema de auto-correção autônoma está ativo e operacional.
 
 Código atual:
 \`\`\`javascript
@@ -101,15 +103,13 @@ ${codeContent}
 \`\`\`
 
 Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto ou marcação extra.
-A propriedade "newContent" DEVE conter o código completo do arquivo.
+A propriedade "newContent" DEVE conter o código completo do arquivo atualizado com o ajuste.
 
 {
   "hasError": true,
   "explanation": "Descrição técnica e direta da falha e da correção aplicada",
   "newContent": "Código completo, corrigido e otimizado"
 }
-
-Se o código estiver perfeitamente íntegro, defina "hasError" como false e repita o código original em "newContent".
 `;
 
   try {
@@ -136,18 +136,15 @@ Se o código estiver perfeitamente íntegro, defina "hasError" como false e repi
     }
 
     // Validação de segurança antes de sobrescrever o arquivo original
-    if (result.hasError && result.newContent && result.newContent.trim().length > 0) {
-      console.log(`\n[JARV-HEAL] ⚠️ Anomalia detectada no código!`);
+    if (result.newContent && result.newContent.trim().length > 0) {
+      console.log(`\n[JARV-HEAL] ⚠️ Processando ajustes no código!`);
       console.log(`[DIAGNÓSTICO] ${result.explanation}`);
       
       fs.writeFileSync(targetFile, result.newContent, 'utf8');
       
       console.log(`[JARV-HEAL] ✅ Código reparado e salvo em js/app.js com sucesso.`);
     } else {
-      console.log("\n[JARV-HEAL] ✨ Monitoramento concluído. Nenhuma anomalia crítica encontrada.");
-      if (result.explanation && !result.hasError) {
-        console.log(`[FEEDBACK IA] ${result.explanation}`);
-      }
+      console.log("\n[JARV-HEAL] ✨ Monitoramento concluído. Nenhuma alteração necessária.");
     }
 
   } catch (error) {
