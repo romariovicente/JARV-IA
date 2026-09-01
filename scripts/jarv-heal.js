@@ -2,7 +2,7 @@
  * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback Amplo)
  * Módulo de auto-correção e diagnóstico contínuo via Groq API.
  * 
- * Versão: 6.2 (Otimizada & Atualizada)
+ * Versão: 6.3 (Atualizada e Otimizada para Modelos Ativos)
  * Arquivo: scripts/jarv-heal.js
  */
 
@@ -11,10 +11,10 @@ const path = require('path');
 
 // Lista atualizada com os modelos ativos na Groq API
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
+  'llama-3.1-70b-versatile',
   'llama-3.1-8b-instant',
-  'llama3-70b-8192',
-  'llama3-8b-8192'
+  'llama-3.3-70b-versatile',
+  'gemma2-9b-it'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
