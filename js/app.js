@@ -1,9 +1,9 @@
 // ==========================================================
 // [AUTO-HEAL SYSTEM]: Status - Ativo e Operacional
-// J.A.R.V.I.S. Autonomous Self-Correction Engine v6.0
-// Validado via GitHub Issues - Protocolo de Ajuste Preventivo
+// J.A.R.V.I.S. Autonomous Self-Correction Engine v6.1
+// Validado via GitHub Issues - Protocolo de Ajuste Preventivo (Mobile Login Stabilized)
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v6.0 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
+// J.A.R.V.I.S. - Core Application Script v6.1 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
 // Configuração Firebase atualizada com a chave de API ativa
@@ -48,9 +48,14 @@ window.loginWithGoogle = async function() {
     return;  
   }  
   try {
-    // Corrige o congelamento no mobile usando redirect se for dispositivo móvel, popup no desktop
-    if (/Mobi|Android/i.test(navigator.userAgent)) {
-      await auth.signInWithRedirect(provider);
+    // Tratamento otimizado para dispositivos móveis (tenta popup seguro com fallback para redirect)
+    if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (popupErr) {
+        console.warn("Popup bloqueado ou não suportado no mobile, alternando para redirect:", popupErr);
+        await auth.signInWithRedirect(provider);
+      }
     } else {
       await auth.signInWithPopup(provider);
     }
