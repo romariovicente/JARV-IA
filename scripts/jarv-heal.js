@@ -9,11 +9,11 @@
 const fs = require('fs');  
 const path = require('path');
 
-// Lista atualizada com os modelos ativos, estáveis e garantidos na API da Groq
+// Lista atualizada com os modelos ativos e alinhados ao ecossistema atual
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile', // Tentativa 1: Modelo principal de alta capacidade
-  'llama-3.1-8b-instant',    // Tentativa 2: Fallback rápido
-  'mixtral-8x7b-32768'       // Tentativa 3: Fallback alternativo robusto
+  'openai/gpt-oss-120b', // Tentativa 1: Modelo principal de alta capacidade
+  'openai/gpt-oss-20b',    // Tentativa 2: Fallback rápido
+  'groq/compound'          // Tentativa 3: Fallback alternativo robusto
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
