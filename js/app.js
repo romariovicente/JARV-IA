@@ -1,9 +1,9 @@
 // ==========================================================
 // [AUTO-HEAL SYSTEM]: Status - Ativo e Operacional
-// J.A.R.V.I.S. Autonomous Self-Correction Engine v6.1
-// Validado via GitHub Issues - Protocolo de Ajuste Preventivo (Mobile Login Stabilized)
+// J.A.R.V.I.S. Autonomous Self-Correction Engine v6.7
+// Validado via Auto-Heal - Protocolo de Ajuste Preventivo e Estabilização de Modelos Groq
 // ==========================================================
-// J.A.R.V.I.S. - Core Application Script v6.1 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
+// J.A.R.V.I.S. - Core Application Script v6.7 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
 // Configuração Firebase atualizada com a chave de API ativa
@@ -551,7 +551,7 @@ function injectModuleSidebar() {
   container.id = 'exclusiveModulesContainer';  
   container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #0d1117;`;  
   container.innerHTML = `  
-    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v6.0 Core</div>  
+    <div style="font-size: 0.7rem; color: #00d2ff; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; text-align: center;">⚙️ Módulos v6.7 Core</div>  
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">  
       <button onclick="window.openLifeDashboard()" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#ff0077; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🎮 Minha Vida é um Jogo</button>  
       <button onclick="window.toggleAutonomousMode()" id="btn_mod_autonomous" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#00ffff; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🧠 JARV Core Autônomo</button>  
@@ -589,9 +589,9 @@ window.openLifeDashboard = function() {
       <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,204,0.2);">  
         <h3 style="color:#00ffcc; margin:0 0 10px 0; font-size: 0.85rem;">[STATUS DO JOGADOR: ROMÁRIO]</h3>  
         <ul style="color:#c9d1d9; font-size:0.75rem; list-style-type: none; padding-left: 0;">  
-          <li>🛡️ <strong>Classe:</strong> Especialista de Suporte (Nível 45)</li>  
-          <li>🧠 <strong>Inteligência:</strong> +12% (Estudos Xiaomi/Mecânica)</li>  
-          <li>💼 <strong>Ouro Diário:</strong> Sincronizando com Fintechs...</li>  
+          <li>🛡️ <strong>Classe:</strong> Especialista de Suporte & Operações (Nível 45)</li>  
+          <li>🧠 <strong>Inteligência:</strong> +12% (Estudos Computação & Enfermagem Senac)</li>  
+          <li>💼 <strong>Ouro Diário:</strong> Sincronizando com Stone & Ecossistema...</li>  
           <li>🏆 <strong>Conquista Desbloqueada:</strong> Google Local Guide Nível 3</li>  
         </ul>  
       </div>  
@@ -627,7 +627,7 @@ window.toggleAutonomousMode = function() {
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);  
     speakJARVIS("Iniciando loop de conhecimento autônomo.");
     autonomousInterval = setInterval(async () => {  
-      const areas = ["Mecânica Quântica e Vetores", "Reparo Avançado de Software Xiaomi MIUI 15", "Biologia Molecular", "Engenharia de Prompt", "Mercado Financeiro e Fintechs"];  
+      const areas = ["Enfermagem e Protocolos SAE", "Cálculo de Medicamentos e Infusão", "Segurança da Informação e Kali Linux", "Engenharia de Prompt e RAG", "Arquitetura de Sistemas Web"];  
       const area = areas[Math.floor(Math.random() * areas.length)];  
       await generateAutonomousReport(area);  
     }, 30000);  
