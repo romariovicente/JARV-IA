@@ -102,10 +102,10 @@ async function saveUserPreferenceToFirebase(key, value) {
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
 const MODEL_FALLBACK_LIST = [  
-  'llama-3.3-70b-versatile',  
-  'llama-3.1-8b-instant',  
+  'llama3-70b-8192',  
+  'llama3-8b-8192',  
   'mixtral-8x7b-32768',  
-  'gemma2-9b-it'  
+  'gemma-7b-it'  
 ];  
 let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
@@ -889,3 +889,12 @@ window.initJarvisVision = function() {
     speakJARVIS("Visão computacional desativada.");  
   }  
 };
+
+// =========================================================================
+// EXPOSIÇÃO GLOBAL DE FUNÇÕES (J.A.R.V.I.S. Core Protocol)
+// Necessário para que os botões HTML (onclick) consigam acessar os métodos
+// =========================================================================
+if (typeof window !== 'undefined') {
+    if (typeof loginWithGoogle === 'function') window.loginWithGoogle = loginWithGoogle;
+    if (typeof switchModule === 'function') window.switchModule = switchModule;
+}
