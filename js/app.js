@@ -30,7 +30,7 @@ if (typeof firebase !== 'undefined') {
     const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');  
     const userNameDisplay = document.getElementById('userNameDisplay');  
     if (user) {  
-      console.log("J.A.R.V.I.S. - Operador reconhecido:", user.email);  
+      console.log("J.A.R.V.I.S. - Operador reconhecido:", user.email);
       if (loginModal) loginModal.style.display = 'none';  
       if (userNameDisplay) {  
         userNameDisplay.innerText = user.displayName ? user.displayName.split(' ')[0] : 'Romário';  
@@ -42,15 +42,25 @@ if (typeof firebase !== 'undefined') {
 }  
 
 // ----- Funções globais expostas -----
-window.loginWithGoogle = function() {  
+window.loginWithGoogle = async function() {  
   if (!auth || !provider) {  
-    alert("Firebase Auth não inicializado.");  
+    alert("Firebase Auth não inicializado.");
     return;  
   }  
-  auth.signInWithPopup(provider).catch((error) => {  
-    console.error("Erro no login com popup, tentando redirect:", error);  
-    auth.signInWithRedirect(provider);  
-  });  
+  try {
+    // Corrige o congelamento no mobile usando redirect se for dispositivo móvel, popup no desktop
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+      await auth.signInWithRedirect(provider);
+    } else {
+      await auth.signInWithPopup(provider);
+    }
+  } catch (error) {  
+    console.error("Erro no login com Google:", error);
+    alert("Erro na autenticação: " + error.message);
+    if (typeof window.initJarvisSession === 'function') {
+      window.initJarvisSession();
+    }
+  }  
 };  
 
 window.sendMsg = function() {  
@@ -64,14 +74,14 @@ window.sendMsg = function() {
   if (typeof processQueryText === 'function') {  
     processQueryText(text);  
   } else {  
-    console.warn("[J.A.R.V.I.S.] processQueryText não definido.");  
+    console.warn("[J.A.R.V.I.S.] processQueryText não definido.");
   }  
 };  
 
 window.filterBrainNotes = function() {  
   const input = document.getElementById('brainSearchInput');  
   const term = input ? input.value.trim() : '';  
-  console.log(`[SEGUNDO CÉREBRO] Pesquisando por: "${term}"`);  
+  console.log(`[SEGUNDO CÉREBRO] Pesquisando por: "${term}"`);
   if (term.length > 0) {  
     appendMessage(`[SEGUNDO CÉREBRO] Resultados para "${term}" (em desenvolvimento)`, 'system', true);  
   } else {  
@@ -83,7 +93,7 @@ window.initJarvisSession = function() {
   const modal = document.getElementById('loginModal') || document.querySelector('.auth-modal');  
   if (modal) modal.style.display = 'none';  
   appendMessage('[SISTEMA] Sessão offline iniciada. Recursos limitados.', 'system', true);  
-  speakJARVIS('Modo offline ativado.');  
+  speakJARVIS('Modo offline ativado.');
 };  
 
 async function saveUserPreferenceToFirebase(key, value) {  
@@ -93,19 +103,19 @@ async function saveUserPreferenceToFirebase(key, value) {
       [key]: value,  
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()  
     }, { merge: true });  
-    console.log(`[MEMÓRIA] Preferência '${key}' salva.`);  
+    console.log(`[MEMÓRIA] Preferência '${key}' salva.`);
   } catch (e) {  
-    console.error("Erro ao salvar preferência:", e);  
+    console.error("Erro ao salvar preferência:", e);
   }  
 }  
 
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
+// Modelos atualizados com suporte ativo da Groq (removidos os descomissionados)
 const MODEL_FALLBACK_LIST = [  
-  'llama3-70b-8192',  
-  'llama3-8b-8192',  
-  'mixtral-8x7b-32768',  
-  'gemma-7b-it'  
+  'llama-3.3-70b-versatile',  
+  'llama-3.1-8b-instant',  
+  'mixtral-8x7b-32768'  
 ];  
 let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
@@ -158,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }  
 
   if (auth && auth.getRedirectResult) {  
-    auth.getRedirectResult().catch((error) => console.error("Erro Auth:", error));  
+    auth.getRedirectResult().catch((error) => console.error("Erro Auth:", error));
   }  
 
   if (chatInput) {  
@@ -389,7 +399,7 @@ window.toggleTtsMaster = function() {
   if (!ttsEnabled) {  
     window.stopJarvisVoice();  
   } else {  
-    speakJARVIS("Síntese vocal reativada.");  
+    speakJARVIS("Síntese vocal reativada.");
   }  
 };  
 
@@ -520,7 +530,7 @@ function setupFileUploadListener() {
         reader.onload = (event) => {  
           attachedFileContent = event.target.result;  
           appendMessage(`[SUBSISTEMA ANEXO]: Arquivo "${file.name}" carregado.`, 'system', true);  
-          speakJARVIS(`Arquivo ${file.name} carregado.`);  
+          speakJARVIS(`Arquivo ${file.name} carregado.`);
         };  
         reader.readAsText(file);  
       };  
@@ -552,7 +562,7 @@ function injectModuleSidebar() {
 window.setModule = async function(modName) {  
   activeModule = modName;  
   appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);  
-  speakJARVIS(`Módulo ${modName} ativado.`);  
+  speakJARVIS(`Módulo ${modName} ativado.`);
 };  
 
 // ----- Gamificação / Dashboard -----
@@ -568,7 +578,7 @@ window.openLifeDashboard = function() {
       <p style="color:#c9d1d9; font-size:0.75rem; margin-top:12px;">Sincronizando métricas biométricas, produtividade e conquistas diárias...</p>  
     </div>  
   `, 'bot-html', true);  
-  speakJARVIS("Acessando painel de gamificação da vida real, aguarde a sincronização de métricas.");  
+  speakJARVIS("Acessando painel de gamificação da vida real, aguarde a sincronização de métricas.");
   setTimeout(() => {  
     appendMessage(`  
       <div style="border: 1px solid #00ffcc; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,204,0.2);">  
@@ -596,7 +606,7 @@ window.toggleAutonomousMode = function() {
       btn.innerHTML = '🧠 JARV Core Autônomo';  
     }  
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo em background SUSPENSO.", 'system', true);  
-    speakJARVIS("Módulo de pesquisa autônoma suspenso.");  
+    speakJARVIS("Módulo de pesquisa autônoma suspenso.");
   } else {  
     if(btn) {  
       btn.style.background = '#0044ff';  
@@ -610,7 +620,7 @@ window.toggleAutonomousMode = function() {
     saveStore();  
     switchChat(id);  
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);  
-    speakJARVIS("Iniciando loop de conhecimento autônomo.");  
+    speakJARVIS("Iniciando loop de conhecimento autônomo.");
     autonomousInterval = setInterval(async () => {  
       const areas = ["Mecânica Quântica e Vetores", "Reparo Avançado de Software Xiaomi MIUI 15", "Biologia Molecular", "Engenharia de Prompt", "Mercado Financeiro e Fintechs"];  
       const area = areas[Math.floor(Math.random() * areas.length)];  
@@ -631,7 +641,7 @@ async function generateAutonomousReport(area) {
     const data = await response.json();  
     if (data && !data.error) botResponse = data.choices?.[0]?.message?.content || data.response;  
   } catch (err) {  
-    console.error("Erro no módulo autônomo:", err);  
+    console.error("Erro no módulo autônomo:", err);
   }  
   setOrbState(false);  
   const reportHtml = `  
@@ -660,7 +670,7 @@ window.copyToClipboard = async function(btnElement) {
       btnElement.style.color = '#58a6ff';  
     }, 2000);  
   } catch (err) {  
-    console.error('Falha ao copiar', err);  
+    console.error('Falha ao copiar', err);
   }  
 };  
 
@@ -741,7 +751,7 @@ window.switchChat = function(id) {
 window.deleteChatSession = function(id, event) {  
   event.stopPropagation();  
   if (Object.keys(chatsStore).length <= 1) {  
-    alert("Você precisa manter ao menos uma sessão ativa.");  
+    alert("Você precisa manter ao menos uma sessão ativa.");
     return;  
   }  
   delete chatsStore[id];  
@@ -758,7 +768,7 @@ function saveStore() {
   try {  
     localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));  
   } catch (e) {  
-    console.error("Erro ao salvar store de chats:", e);  
+    console.error("Erro ao salvar store de chats:", e);
   }  
 }  
 
@@ -857,13 +867,13 @@ async function processQueryText(text) {
       botReply = `Erro do Worker: ${data.error?.message || JSON.stringify(data)}`;  
     }  
   } catch (err) {  
-    console.error("Falha na requisição ao Worker:", err);  
+    console.error("Falha na requisição ao Worker:", err);
     botReply = "Falha crítica de comunicação com o Cloudflare Worker proxy.";  
   }  
 
   setOrbState(false);  
   appendMessage(botReply, 'bot', true);  
-  speakJARVIS(botReply);  
+  speakJARVIS(botReply);
 }  
 
 function initAudioAnalyzer() {  
@@ -875,7 +885,7 @@ function initAudioAnalyzer() {
     analyser.fftSize = 64;  
     dataArray = new Uint8Array(analyser.frequencyBinCount);  
   } catch (e) {  
-    console.log("AudioContext não suportado ou restrito por políticas de autoplay.");  
+    console.log("AudioContext não suportado ou restrito por políticas de autoplay.");
   }  
 }  
 
@@ -883,10 +893,10 @@ window.initJarvisVision = function() {
   jarvisVisionActive = !jarvisVisionActive;  
   if (jarvisVisionActive) {  
     appendMessage("[VISÃO COMPUTACIONAL]: Módulo de captura de tela/câmera ativado.", 'system', true);  
-    speakJARVIS("Visão computacional ativada com sucesso.");  
+    speakJARVIS("Visão computacional ativada com sucesso.");
   } else {  
     appendMessage("[VISÃO COMPUTACIONAL]: Módulo desativado.", 'system', true);  
-    speakJARVIS("Visão computacional desativada.");  
+    speakJARVIS("Visão computacional desativada.");
   }  
 };
 
@@ -895,6 +905,20 @@ window.initJarvisVision = function() {
 // Necessário para que os botões HTML (onclick) consigam acessar os métodos
 // =========================================================================
 if (typeof window !== 'undefined') {
-    if (typeof loginWithGoogle === 'function') window.loginWithGoogle = loginWithGoogle;
-    if (typeof switchModule === 'function') window.switchModule = switchModule;
+    window.loginWithGoogle = loginWithGoogle;
+    window.sendMsg = sendMsg;
+    window.filterBrainNotes = filterBrainNotes;
+    window.initJarvisSession = initJarvisSession;
+    window.toggleTtsMaster = toggleTtsMaster;
+    window.stopJarvisVoice = stopJarvisVoice;
+    window.startContinuousMic = startContinuousMic;
+    window.pauseContinuousMic = pauseContinuousMic;
+    window.openLifeDashboard = openLifeDashboard;
+    window.toggleAutonomousMode = toggleAutonomousMode;
+    window.setModule = setModule;
+    window.createNewChat = createNewChat;
+    window.switchChat = switchChat;
+    window.deleteChatSession = deleteChatSession;
+    window.initJarvisVision = initJarvisVision;
+    window.copyToClipboard = copyToClipboard;
 }
