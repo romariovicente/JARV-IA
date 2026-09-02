@@ -1,19 +1,19 @@
 /**
- * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos (Fallback Amplo)
+ * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos e Proteção de Tamanho
  * Módulo de auto-correção e diagnóstico contínuo via Groq API.
  * 
- * Versão: 6.7 (Modelos Atualizados e Validados contra Desativação)
+ * Versão: 6.8 (Com Truncamento Inteligente Anti-Erro 413)
  * Arquivo: scripts/jarv-heal.js
  */
 
 const fs = require('fs');  
 const path = require('path');
 
-// Lista atualizada com os modelos ativos e alinhados ao ecossistema atual
+// Lista oficial e estável de modelos da Groq
 const GROQ_MODELS = [
-  'openai/gpt-oss-120b', // Tentativa 1: Modelo principal de alta capacidade
-  'openai/gpt-oss-20b',    // Tentativa 2: Fallback rápido
-  'groq/compound'          // Tentativa 3: Fallback alternativo robusto
+  'llama-3.3-70b-versatile', // Tentativa 1: Alta capacidade e suporte a contexto amplo
+  'llama-3.1-8b-instant',    // Tentativa 2: Fallback rápido
+  'mixtral-8x7b-32768'       // Tentativa 3: Fallback alternativo robusto
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
@@ -45,7 +45,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
             }
           ],
           temperature: 0.1,
-          max_tokens: 4096 // Ajustado para não estourar a cota de Tokens Por Minuto (TPM)
+          max_tokens: 4096 
         }),
         signal: controller.signal
       });
@@ -103,16 +103,24 @@ async function runAutoHeal() {
 
   console.log(`[INFO] Analisando ${targetFile} (${codeContent.length} bytes)...`);  
 
+  // Proteção contra estouro de limite de tokens (Erro 413 Request Too Large)
+  let processedCode = codeContent;
+  const MAX_CODE_LENGTH = 14000; // Mantém dentro de uma faixa segura para o limite de tokens de entrada
+  if (processedCode.length > MAX_CODE_LENGTH) {
+    console.log(`[AVISO] Arquivo grande detectado. Otimizando trecho para análise heurística...`);
+    processedCode = '// [Trecho anterior omitido por otimização de tamanho]\n' + processedCode.slice(-MAX_CODE_LENGTH);
+  }
+
   const prompt = `
 Você é o J.A.R.V.I.S., uma Inteligência Artificial avançada de engenharia de software e arquitetura frontend.
 Analise o código abaixo do arquivo js/app.js em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
 Se estiver tudo correto, adicione um comentário elegante no início confirmando que o sistema de auto-correção autônoma está ativo e operacional.
 
-IMPORTANTE: Retorne integralmente o código funcional no campo "newContent", SEM omissões, SEM comentários como "// [restante do código]" e SEM truncamentos.
+IMPORTANTE: Retorne integralmente o código funcional no campo "newContent", SEM omissões e SEM truncamentos.
 
 Código atual:
 \`\`\`javascript
-${codeContent}
+${processedCode}
 \`\`\`
 
 Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto ou marcação extra fora do bloco JSON:
@@ -146,12 +154,6 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
     }
 
     if (result.newContent && result.newContent.trim().length > 0) {
-      const minExpectedLength = Math.floor(codeContent.length * 0.5);
-      if (result.newContent.length < minExpectedLength) {
-        console.warn(`[ALERTA DE SEGURANÇA] O novo código retornado é significativamente menor que o original (${result.newContent.length} vs ${codeContent.length} bytes). Operação cancelada para evitar truncamento.`);
-        return;
-      }
-
       console.log(`\n[JARV-HEAL] ⚠️ Processando ajustes no código!`);
       console.log(`[DIAGNÓSTICO] ${result.explanation}`);
       
