@@ -1,14 +1,14 @@
 // ==========================================================
-// [AUTO-HEAL SYSTEM]: Status - Ativo e Operacional
+// [AUTO-HEAL SYSTEM]: Status - Ativo e Operacional (v6.7 Core)
 // J.A.R.V.I.S. Autonomous Self-Correction Engine v6.7
-// Validado via Auto-Heal - Protocolo de Ajuste Preventivo e Estabilização de Modelos Groq
+// Modelos Groq atualizados para o ecossistema atual (GPT OSS / Compound)
 // ==========================================================
 // J.A.R.V.I.S. - Core Application Script v6.7 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
 // ==========================================================
 
 // Configuração Firebase atualizada com a chave de API ativa
 const firebaseConfig = {  
-  apiKey: "AIzaSyDlpeje_aHRoJpJNl6Yp1TzKWUM8Pt-4pw", // Chave de API atualizada e restrita (Identity Toolkit, Token Service, Firebase Management)
+  apiKey: "AIzaSyDlpeje_aHRoJpJNl6Yp1TzKWUM8Pt-4pw",  
   authDomain: "jarv-ia.firebaseapp.com",  
   projectId: "jarv-ia",  
   storageBucket: "jarv-ia.firebasestorage.app",  
@@ -48,7 +48,6 @@ window.loginWithGoogle = async function() {
     return;  
   }  
   try {
-    // Tratamento otimizado para dispositivos móveis (tenta popup seguro com fallback para redirect)
     if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
       try {
         await auth.signInWithPopup(provider);
@@ -116,11 +115,12 @@ async function saveUserPreferenceToFirebase(key, value) {
 
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
-// Modelos atualizados com suporte ativo da Groq (removidos os descomissionados)
+
+// Modelos atualizados com suporte ativo da Groq (Substituídos os legados Llama/Mixtral por GPT OSS e Compound)
 const MODEL_FALLBACK_LIST = [  
-  'llama-3.3-70b-versatile',  
-  'llama-3.1-8b-instant',  
-  'mixtral-8x7b-32768'  
+  'openai/gpt-oss-120b',  
+  'openai/gpt-oss-20b',  
+  'groq/compound'  
 ];  
 let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];  
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
@@ -199,7 +199,6 @@ function setupExecutionButtonListener() {
   }
 }
 
-// ----- Funções auxiliares com tratamento preventivo de nulos -----
 function injectAnimations() {  
   if (document.getElementById('jarvAnimations')) return;  
   const style = document.createElement('style');  
@@ -408,7 +407,6 @@ window.toggleTtsMaster = function() {
   }  
 };  
 
-// ----- Síntese de Voz (TTS chunked) -----
 function speakJARVIS(text) {  
   if (!ttsEnabled || !('speechSynthesis' in window)) return;  
   window.speechSynthesis.cancel();  
@@ -477,7 +475,6 @@ window.stopJarvisVoice = function() {
   }  
 };  
 
-// ----- Orbe -----
 function injectJarvisOrbStyles() {  
   if (document.getElementById('jarvisOrbStyle')) return;  
   const style = document.createElement('style');  
@@ -523,7 +520,6 @@ function setOrbState(isActive) {
   }  
 }  
 
-// ----- Upload de Arquivos -----
 function setupFileUploadListener() {  
   setTimeout(() => {  
     const fileInput = document.getElementById('jarvFileUpload');  
@@ -543,7 +539,6 @@ function setupFileUploadListener() {
   }, 500);  
 }  
 
-// ----- Módulos (Sidebar) -----
 function injectModuleSidebar() {  
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
   if (document.getElementById('exclusiveModulesContainer')) return;  
@@ -570,7 +565,6 @@ window.setModule = async function(modName) {
   speakJARVIS(`Módulo ${modName} ativado.`);
 };  
 
-// ----- Gamificação / Dashboard -----
 window.openLifeDashboard = function() {  
   appendMessage(`  
     <div style="border: 1px solid #ff0077; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,119,0.3);">  
@@ -599,7 +593,6 @@ window.openLifeDashboard = function() {
   }, 2500);  
 };  
 
-// ----- Módulo Autônomo -----
 window.toggleAutonomousMode = function() {  
   const btn = document.getElementById('btn_mod_autonomous');  
   if (autonomousInterval) {  
@@ -679,7 +672,6 @@ window.copyToClipboard = async function(btnElement) {
   }  
 };  
 
-// ----- Histórico de Chat e Gestão de Sessões -----
 function injectChatHistoryUI() {  
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
   if (document.getElementById('jarvChatHistoryContainer')) return;  
@@ -907,7 +899,6 @@ window.initJarvisVision = function() {
 
 // =========================================================================
 // EXPOSIÇÃO GLOBAL DE FUNÇÕES (J.A.R.V.I.S. Core Protocol)
-// Necessário para que os botões HTML (onclick) consigam acessar os métodos
 // =========================================================================
 if (typeof window !== 'undefined') {
     window.loginWithGoogle = loginWithGoogle;
