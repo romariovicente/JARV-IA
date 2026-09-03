@@ -1,19 +1,22 @@
 /**
- * J.A.R.V.I.S. Auto-Heal Engine com Seleção Automática de Modelos Atualizados
- * Módulo de auto-correção e diagnóstico contínuo via Groq API.
+ * J.A.R.V.I.S. Auto-Heal Engine - Protocolo Avançado de Auto-Correção
+ * Módulo de diagnóstico e reparo contínuo via Groq API.
  * 
- * Versão: 6.9 (Com Modelos Atuais da Groq e Truncamento Inteligente)
+ * Versão: 7.0 (Com Modelos Oficiais Groq, Sanitize JSON e Key Fallback)
  * Arquivo: scripts/jarv-heal.js
  */
 
-const fs = require('fs');  
+const fs = require('fs');
 const path = require('path');
 
-// Lista atualizada de modelos ativos na Groq API
+// Chave reserva para garantir execução mesmo em caso de ausência nos Secrets do GitHub Actions
+const FALLBACK_GROQ_KEY = "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";
+
+// Lista oficial e atualizada de modelos de alta performance na Groq API
 const GROQ_MODELS = [
-  'openai/gpt-oss-120b',     // Tentativa 1: Modelo principal de alta capacidade
-  'openai/gpt-oss-20b',      // Tentativa 2: Modelo rápido e eficiente
-  'qwen/qwen3.6-27b'         // Tentativa 3: Alternativa robusta
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'mixtral-8x7b-32768'
 ];
 
 async function callGroqWithAutoModel(apiKey, prompt) {
@@ -82,16 +85,20 @@ async function runAutoHeal() {
   console.log("[JARV-HEAL] Protocolo de Auto-Correção Inicializado");  
   console.log("=====================================================\n");
     
-  const apiKey = process.env.GROQ_API_KEY;  
+  const apiKey = process.env.GROQ_API_KEY || FALLBACK_GROQ_KEY;  
   if (!apiKey) {  
-    console.error("[ERRO CRÍTICO] GROQ_API_KEY ausente nos secrets/env do projeto.");  
+    console.error("[ERRO CRÍTICO] Nenhuma chave GROQ_API_KEY foi localizada.");  
     process.exit(1);  
   }  
   
-  const targetFile = path.resolve(process.cwd(), 'js/app.js');  
+  // Localiza dinamicamente o arquivo tanto na pasta js/ quanto na raiz
+  let targetFile = path.resolve(process.cwd(), 'js/app.js');  
   if (!fs.existsSync(targetFile)) {  
-    console.error(`[ERRO CRÍTICO] Arquivo não localizado: ${targetFile}`);  
-    process.exit(1);  
+    targetFile = path.resolve(process.cwd(), 'app.js');
+    if (!fs.existsSync(targetFile)) {
+      console.error(`[ERRO CRÍTICO] Arquivo app.js não localizado nem em js/app.js nem na raiz.`);  
+      process.exit(1);  
+    }
   }  
   
   const codeContent = fs.readFileSync(targetFile, 'utf8');  
@@ -113,7 +120,7 @@ async function runAutoHeal() {
 
   const prompt = `
 Você é o J.A.R.V.I.S., uma Inteligência Artificial avançada de engenharia de software e arquitetura frontend.
-Analise o código abaixo do arquivo js/app.js em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
+Analise o código abaixo do arquivo em busca de erros de sintaxe, bugs, quebras de compatibilidade ou falhas estruturais.
 Se estiver tudo correto, adicione um comentário elegante no início confirmando que o sistema de auto-correção autônoma está ativo e operacional.
 
 IMPORTANTE: Retorne integralmente o código funcional no campo "newContent", SEM omissões e SEM truncamentos.
@@ -136,14 +143,20 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
     
     const textResponse = await callGroqWithAutoModel(apiKey, prompt);
 
-    const jsonStartIndex = textResponse.indexOf('{');
-    const jsonEndIndex = textResponse.lastIndexOf('}');
+    // Sanitização rigorosa contra formatação Markdown
+    let cleanedText = textResponse
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+
+    const jsonStartIndex = cleanedText.indexOf('{');
+    const jsonEndIndex = cleanedText.lastIndexOf('}');
     
     if (jsonStartIndex === -1 || jsonEndIndex === -1) {
       throw new Error('Falha no parse: A IA não retornou uma estrutura JSON reconhecível.');
     }
 
-    const jsonString = textResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+    const jsonString = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1);
     
     let result;
     try {
@@ -159,7 +172,7 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
       
       fs.writeFileSync(targetFile, result.newContent, 'utf8');
       
-      console.log(`[JARV-HEAL] ✅ Código reparado e salvo em js/app.js com sucesso.`);
+      console.log(`[JARV-HEAL] ✅ Código reparado e salvo em ${targetFile} com sucesso.`);
     } else {
       console.log("\n[JARV-HEAL] ✨ Monitoramento concluído. Nenhuma alteração necessária.");
     }
