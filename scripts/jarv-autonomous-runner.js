@@ -1,6 +1,6 @@
 /**
  * J.A.R.V.I.S. Autonomous 24/7 Runner com Salvamento em Markdown
- * Expandido para abranger o ecossistema completo do conhecimento e evolução humana.
+ * Versão Expandida: Ciência da Computação, Técnico de Enfermagem, Enfermagem, Medicina, Matemática e Seus Sistemas de Teste.
  */
 
 const fs = require('fs');
@@ -51,40 +51,35 @@ async function runBackgroundEvolution() {
   console.log("=====================================================\n");
 
   const researchTopics = [
-    // Inteligência Artificial & Computação Avançada
-    "Engenharia de Prompt Avançada, RAG e Raciocínio Multi-Step em IAs",
-    "Computação Quântica e Criptografia Pós-Quântica",
-    "Redes Neurais Artificiais e Arquiteturas de Agentes Autônomos",
-    "Nanotecnologia e Materiais Inteligentes do Futuro",
-    
-    // Saúde, Enfermagem & Biociências
-    "Cálculo de Medicamentos, Farmacologia Clínica e Segurança na Infusão",
-    "Enfermagem Avançada e Protocolos SAE (Sistematização da Assistência de Enfermagem)",
-    "Neurociências e Interfaces Cérebro-Computador (BCI)",
-    "Medicina de Precisão e Genômica Computacional",
+    // --- CIÊNCIA DA COMPUTAÇÃO E SEUS SISTEMAS DE TESTE ---
+    "Ciência da Computação: Algoritmos Avançados, Estruturas de Dados e Arquitetura de Sistemas",
+    "Engenharia de Software e Métodos de Teste: Testes Unitários, de Integração, QA e Carga",
+    "Verificação Formal de Algoritmos, Análise Estática de Código e Segurança da Informação",
 
-    // Engenharia, Software & Segurança
-    "Arquitetura de Sistemas Web Escaláveis e Computação em Nuvem",
-    "Segurança da Informação, Ethical Hacking e Hardening em Kali Linux",
-    "Robótica Avançada e Automação de Sistemas Físico-Cibernéticos",
+    // --- TÉCNICO DE ENFERMAGEM, ENFERMAGEM E SEUS SISTEMAS DE TESTE/VALIDAÇÃO ---
+    "Enfermagem Avançada: Sistematização da Assistência de Enfermagem (SAE) e Cuidados Críticos",
+    "Técnico de Enfermagem: Cálculo Preciso de Medicamentos, Farmacologia e Segurança do Paciente",
+    "Auditoria em Enfermagem, Validação de Prontuários e Protocolos de Controle de Infecção (CCIH)",
 
-    // Ciências Formais & Sociais
-    "Matemática Aplicada, Lógica Formal e Teoria dos Jogos",
-    "Psicologia Cognitiva e Modelagem Computacional da Mente Humana",
-    "Economia Comportamental e Sistemas de Decisão Baseados em Dados",
+    // --- MEDICINA E SEUS SISTEMAS DE TESTE/VALIDAÇÃO ---
+    "Medicina Clínica: Diagnóstico Avançado, Fisiopatologia e Farmacoterapia de Precisão",
+    "Medicina Baseada em Evidências: Ensaios Clínicos Randomizados (RCTs) e Revisões Sistemáticas",
+    "Ética Médica, Gestão de Riscos Clínicos e Auditoria de Prontuários Médicos",
 
-    // Filosofia, Epistemologia e Meta-Sistemas de Teste
-    "Epistemologia, Filosofia da Ciência e Ética em Inteligência Artificial",
-    "Método Científico Automatizado e Epistemologia Computacional",
-    "Frameworks de Benchmarking e Avaliação Cognitiva de Modelos",
-    "Cibernética e Teoria dos Sistemas Complexos"
+    // --- MATEMÁTICA E SEUS SISTEMAS DE TESTE/VALIDAÇÃO ---
+    "Matemática Pura e Aplicada: Modelagem Numérica, Cálculo Avançado e Estatística",
+    "Lógica Matemática, Teoria da Prova e Métodos Formais de Validação de Conhecimento",
+
+    // --- META-ÁREAS GLOBAIS DE SUPORTE E EVOLUÇÃO ---
+    "Epistemologia, Filosofia da Ciência e Avaliação Cognitiva de Modelos de IA",
+    "Cibernética, Teoria dos Sistemas Complexos e Engenharia de Agentes Autônomos"
   ];
 
   const topic = researchTopics[Math.floor(Math.random() * researchTopics.length)];
   console.log(`[TÓPICO SELECIONADO]: ${topic}`);
 
   const messages = [
-    { role: 'system', content: 'Você é o J.A.R.V.I.S. em modo de expansão autônoma de conhecimento universal. Crie um relatório técnico e científico aprofundado, contendo estado da arte, testes de hipóteses, métricas de evolução e aplicações práticas para estruturação de base de conhecimento de alto nível.' },
+    { role: 'system', content: 'Você é o J.A.R.V.I.S. em modo de expansão autônoma de conhecimento universal e metodologias de teste. Crie um relatório técnico, científico e acadêmico aprofundado, contendo o estado da arte, diretrizes práticas, rigor técnico, simulações de teste e métricas de evolução para a área especificada, servindo de base para estudos diários e estruturação de livro.' },
     { role: 'user', content: `Execute a pesquisa aprofundada e gere o relatório analítico sobre: ${topic}` }
   ];
 
@@ -142,8 +137,8 @@ async function runBackgroundEvolution() {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 
-  const fileContent = `# Relatório Autônomo J.A.R.V.I.S. - Ecossistema de Conhecimento
-* **Área de Inteligência:** ${topic}
+  const fileContent = `# Relatório Autônomo J.A.R.V.I.S. - Ecossistema de Conhecimento & Testes
+* **Área / Foco de Teste:** ${topic}
 * **Modelo Utilizado:** ${activeModel}
 * **Data/Hora:** ${now.toLocaleString('pt-BR')}
 
