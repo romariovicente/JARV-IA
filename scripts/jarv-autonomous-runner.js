@@ -1,5 +1,5 @@
 /**
- * J.A.R.V.I.S. Autonomous 24/7 Runner com Salvamento em Markdown
+ * J.A.R.V.I.S. Autonomous 24/7 Runner com Sincronização em Diário Unificado
  * Versão Expandida: Ciência da Computação, Técnico de Enfermagem, Enfermagem, Medicina, Matemática e Seus Sistemas de Teste.
  */
 
@@ -132,9 +132,9 @@ async function runBackgroundEvolution() {
   const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
   const fileName = `relatorio-${dateStr}-${timeStr}.md`;
   
-  const dirPath = path.join(__dirname, '..', 'IA', 'IA_Logs_e_Memoria');
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+  const logsDirPath = path.join(__dirname, '..', 'IA', 'IA_Logs_e_Memoria');
+  if (!fs.existsSync(logsDirPath)) {
+    fs.mkdirSync(logsDirPath, { recursive: true });
   }
 
   const fileContent = `# Relatório Autônomo J.A.R.V.I.S. - Ecossistema de Conhecimento & Testes
@@ -147,14 +147,38 @@ async function runBackgroundEvolution() {
 ${generatedReport}
 `;
 
-  const filePath = path.join(dirPath, fileName);
-  const latestPath = path.join(dirPath, 'latest-report.md');
+  const filePath = path.join(logsDirPath, fileName);
+  const latestPath = path.join(logsDirPath, 'latest-report.md');
 
   fs.writeFileSync(filePath, fileContent, 'utf8');
   fs.writeFileSync(latestPath, fileContent, 'utf8');
-
   console.log(`[SALVO] Relatório gravado com sucesso em: ${filePath}`);
-  console.log(`[SALVO] Atualizado link principal em: ${latestPath}`);
+
+  // --- SINCRONIZAÇÃO COM O DIÁRIO UNIFICADO (Sem perder histórico anterior) ---
+  const iaDirPath = path.join(__dirname, '..', 'IA');
+  const unifiedDiaryPath = path.join(iaDirPath, 'diario-unificado.md');
+
+  let existingDiaryContent = "";
+  if (fs.existsSync(unifiedDiaryPath)) {
+    existingDiaryContent = fs.readFileSync(unifiedDiaryPath, 'utf8');
+  } else {
+    existingDiaryContent = `# J.A.R.V.I.S. - Diário Unificado & Memória Central\n*Status: Sincronização automática ativa.*\n\n`;
+  }
+
+  const newDiaryEntry = `
+## 🧠 Novo Registro Autônomo: ${topic}
+* **Data/Hora:** ${now.toLocaleString('pt-BR')}
+* **Modelo:** ${activeModel}
+
+${generatedReport}
+
+---
+`;
+
+  // Anexa o novo relatório mantendo o conteúdo anterior acumulado no topo/corpo
+  const updatedDiaryContent = existingDiaryContent + "\n" + newDiaryEntry;
+  fs.writeFileSync(unifiedDiaryPath, updatedDiaryContent, 'utf8');
+  console.log(`[SINCRONIZADO] Diário Unificado atualizado com sucesso em: ${unifiedDiaryPath}`);
 }
 
 runBackgroundEvolution().catch(err => {
