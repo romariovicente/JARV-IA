@@ -36,22 +36,28 @@ jobs:
           git config --global user.name 'jarv-autonomous-agent'
           git config --global user.email 'jarv@ai.bot'
           
-          # 2. Cria uma branch dinâmica usando o número da Issue
-          BRANCH_NAME="fix/auto-heal-issue-${{ github.event.issue.number }}"
-          git checkout -b $BRANCH_NAME
-          
-          # 3. Adiciona as correções e faz o commit semântico
+          # 2. Adiciona as alterações para verificação
           git add .
-          git commit -m "fix: auto-correção do J.A.R.V.I.S. - Closes #${{ github.event.issue.number }}" || echo "Nenhuma anomalia precisou ser corrigida."
-          git push origin $BRANCH_NAME
           
-          # 4. Abre o Pull Request automaticamente para sua revisão
-          gh pr create \
-            --title "fix: Correção Autônoma da Issue #${{ github.event.issue.number }}" \
-            --body "🤖 **J.A.R.V.I.S. Auto-Heal Engine** atuou nesta PR.
-          
-          O módulo de auto-correção foi acionado pela Issue #${{ github.event.issue.number }}. O arquivo \`js/app.js\` foi analisado via Groq API (fallback em cascata) e a anomalia foi isolada e corrigida.
-          
-          **Supervisor**, aguardando sua auditoria e aprovação para consolidar o código na \`main\`." \
-            --base main \
-            --head $BRANCH_NAME
+          # 3. Verifica se houve modificações reais pelo auto-heal
+          if git diff --staged --quiet; then
+            echo "✨ Nenhuma anomalia precisou ser corrigida. Nenhum PR será aberto."
+          else
+            # Cria branch dinâmica e comita
+            BRANCH_NAME="fix/auto-heal-issue-${{ github.event.issue.number }}"
+            git checkout -b $BRANCH_NAME
+            
+            git commit -m "fix: auto-correção do J.A.R.V.I.S. - Closes #${{ github.event.issue.number }}"
+            git push origin $BRANCH_NAME
+            
+            # 4. Abre o Pull Request automaticamente para sua revisão
+            gh pr create \
+              --title "fix: Correção Autônoma da Issue #${{ github.event.issue.number }}" \
+              --body "🤖 **J.A.R.V.I.S. Auto-Heal Engine** atuou nesta PR.
+            
+            O módulo de auto-correção foi acionado pela Issue #${{ github.event.issue.number }}. O arquivo \`js/app.js\` foi analisado via Groq API (fallback em cascata) e a anomalia foi isolada e corrigida.
+            
+            **Supervisor**, aguardando sua auditoria e aprovação para consolidar o código na \`main\`." \
+              --base main \
+              --head $BRANCH_NAME
+          fi
