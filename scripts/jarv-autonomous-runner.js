@@ -1,14 +1,13 @@
 /**
- * J.A.R.V.I.S. Autonomous 24/7 Runner com Auto-Descoberta Inteligente
- * Filtra apenas modelos de linguagem reais e evita modelos de segurança/utilitários.
+ * J.A.R.V.I.S. Autonomous 24/7 Runner com Auto-Descoberta Robusta
+ * Lista e testa dinamicamente todos os modelos disponíveis na conta da Groq.
  */
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "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";
 
-// Função para buscar dinamicamente apenas os modelos de chat ativos na Groq
 async function fetchActiveGroqModels() {
   try {
-    console.log("[AUTO-DISCOVERY] Buscando modelos de chat ativos na API da Groq...");
+    console.log("[AUTO-DISCOVERY] Buscando modelos ativos na API da Groq...");
     const response = await fetch('https://api.groq.com/openai/v1/models', {
       method: 'GET',
       headers: {
@@ -24,23 +23,27 @@ async function fetchActiveGroqModels() {
     const data = await response.json();
     const models = data.data || [];
     
-    // Filtra apenas modelos de linguagem de chat reais, excluindo guardas e utilitários
-    const chatModels = models
-      .map(m => m.id)
-      .filter(id => {
-        const lower = id.toLowerCase();
-        const isChat = lower.includes('llama') || lower.includes('mixtral') || lower.includes('gemma') || lower.includes('deepseek');
-        const isExcluded = lower.includes('guard') || lower.includes('whisper') || lower.includes('embed') || lower.includes('vision');
-        return isChat && !isExcluded;
-      });
-    
-    console.log(`[AUTO-DISCOVERY] Modelos de chat válidos encontrados:`, chatModels);
+    console.log("[AUTO-DISCOVERY] Modelos brutos retornados pela API:", models.map(m => m.id));
+
+    // Filtra apenas excluindo utilitários pesados (como guardas/whisper/embeddings)
+    let chatModels = models.map(m => m.id).filter(id => {
+      const lower = id.toLowerCase();
+      return !lower.includes('guard') && !lower.includes('whisper') && !lower.includes('embed');
+    });
+
+    if (chatModels.length === 0) {
+      chatModels = models.map(m => m.id);
+    }
+
+    console.log(`[AUTO-DISCOVERY] Modelos prontos para teste:`, chatModels);
     return chatModels;
   } catch (err) {
-    console.warn(`[AVISO] Falha na auto-descoberta: ${err.message}. Usando lista de fallback segura...`);
+    console.warn(`[AVISO] Falha na auto-descoberta: ${err.message}. Usando lista de fallback robusta...`);
     return [
-      'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant'
+      'llama-3.1-70b-versatile',
+      'llama-3.1-8b-instant',
+      'llama-3.2-3b-preview',
+      'mixtral-8x7b-32768'
     ];
   }
 }
@@ -67,13 +70,18 @@ async function runBackgroundEvolution() {
 
   let modelList = await fetchActiveGroqModels();
   if (!modelList || modelList.length === 0) {
-    modelList = ['llama-3.3-70b-versatile'];
+    modelList = [
+      'llama-3.1-70b-versatile',
+      'llama-3.1-8b-instant',
+      'llama-3.2-3b-preview',
+      'mixtral-8x7b-32768'
+    ];
   }
 
   let generatedReport = null;
   let activeModel = null;
 
-  // Loop de Fallback Automático testando os modelos válidos
+  // Loop de Fallback inteligente testando um por um até obter sucesso
   for (const model of modelList) {
     try {
       console.log(`[TENTATIVA] Acionando modelo Groq: ${model}...`);
@@ -88,7 +96,7 @@ async function runBackgroundEvolution() {
           model: model,
           messages: messages,
           temperature: 0.3,
-          max_tokens: 1024 // Ajustado para segurança de contexto
+          max_tokens: 1024
         })
       });
 
@@ -111,7 +119,7 @@ async function runBackgroundEvolution() {
   }
 
   if (!generatedReport) {
-    console.error("[FALHA NO CICLO AUTÔNOMO]: Todos os modelos válidos da Groq falharam.");
+    console.error("[FALHA NO CICLO AUTÔNOMO]: Todos os modelos testados falharam.");
     process.exit(1);
   }
 
