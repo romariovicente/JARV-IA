@@ -1,13 +1,14 @@
 /**
- * J.A.R.V.I.S. Autonomous 24/7 Runner com Auto-Descoberta Robusta
- * Lista e testa dinamicamente todos os modelos disponíveis na conta da Groq.
+ * J.A.R.V.I.S. Autonomous 24/7 Runner com Salvamento em Markdown
  */
+
+const fs = require('fs');
+const path = require('path');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "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";
 
 async function fetchActiveGroqModels() {
   try {
-    console.log("[AUTO-DISCOVERY] Buscando modelos ativos na API da Groq...");
     const response = await fetch('https://api.groq.com/openai/v1/models', {
       method: 'GET',
       headers: {
@@ -23,9 +24,6 @@ async function fetchActiveGroqModels() {
     const data = await response.json();
     const models = data.data || [];
     
-    console.log("[AUTO-DISCOVERY] Modelos brutos retornados pela API:", models.map(m => m.id));
-
-    // Filtra apenas excluindo utilitários pesados (como guardas/whisper/embeddings)
     let chatModels = models.map(m => m.id).filter(id => {
       const lower = id.toLowerCase();
       return !lower.includes('guard') && !lower.includes('whisper') && !lower.includes('embed');
@@ -35,10 +33,8 @@ async function fetchActiveGroqModels() {
       chatModels = models.map(m => m.id);
     }
 
-    console.log(`[AUTO-DISCOVERY] Modelos prontos para teste:`, chatModels);
     return chatModels;
   } catch (err) {
-    console.warn(`[AVISO] Falha na auto-descoberta: ${err.message}. Usando lista de fallback robusta...`);
     return [
       'llama-3.1-70b-versatile',
       'llama-3.1-8b-instant',
@@ -69,23 +65,12 @@ async function runBackgroundEvolution() {
   ];
 
   let modelList = await fetchActiveGroqModels();
-  if (!modelList || modelList.length === 0) {
-    modelList = [
-      'llama-3.1-70b-versatile',
-      'llama-3.1-8b-instant',
-      'llama-3.2-3b-preview',
-      'mixtral-8x7b-32768'
-    ];
-  }
-
   let generatedReport = null;
   let activeModel = null;
 
-  // Loop de Fallback inteligente testando um por um até obter sucesso
   for (const model of modelList) {
     try {
       console.log(`[TENTATIVA] Acionando modelo Groq: ${model}...`);
-
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -101,8 +86,7 @@ async function runBackgroundEvolution() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
 
       const data = await response.json();
@@ -114,7 +98,7 @@ async function runBackgroundEvolution() {
         break;
       }
     } catch (error) {
-      console.warn(`[AVISO] Falha com o modelo ${model}: ${error.message}. Alternando para o próximo modelo...`);
+      console.warn(`[AVISO] Falha com o modelo ${model}: ${error.message}. Alternando...`);
     }
   }
 
@@ -123,9 +107,35 @@ async function runBackgroundEvolution() {
     process.exit(1);
   }
 
-  console.log(`\n[RELATÓRIO GERADO COM SUCESSO (${activeModel})]:\n`);
-  console.log(generatedReport);
-  console.log("\n[J.A.R.V.I.S. BACKGROUND] Ciclo concluído. O conhecimento foi integrado ao ecossistema.");
+  // Salvando o relatório em arquivos Markdown
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+  const fileName = `relatorio-${dateStr}-${timeStr}.md`;
+  
+  const dirPath = path.join(__dirname, '..', 'IA');
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+
+  const fileContent = `# Relatório Autônomo J.A.R.V.I.S.
+* **Tópico:** ${topic}
+* **Modelo Utilizado:** ${activeModel}
+* **Data/Hora:** ${now.toLocaleString('pt-BR')}
+
+---
+
+${generatedReport}
+`;
+
+  const filePath = path.join(dirPath, fileName);
+  const latestPath = path.join(dirPath, 'latest-report.md');
+
+  fs.writeFileSync(filePath, fileContent, 'utf8');
+  fs.writeFileSync(latestPath, fileContent, 'utf8');
+
+  console.log(`[SALVO] Relatório gravado com sucesso em: ${filePath}`);
+  console.log(`[SALVO] Atualizado link principal em: ${latestPath}`);
 }
 
 runBackgroundEvolution().catch(err => {
