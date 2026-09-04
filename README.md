@@ -1,4 +1,4 @@
-# AGENTS.md - Diretrizes de Desenvolvimento e Governança para Agentes de IA
+# README.md — J.A.R.V.I.S. v6.0 (Core Protocol & Development Guidelines)
 
 Este documento estabelece o padrão obrigatório de engenharia, arquitetura, design e governança que qualquer agente de inteligência artificial ou colaborador humano deve seguir obrigatoriamente ao desenvolver, corrigir ou expandir o projeto **J.A.R.V.I.S. v6.0**.
 
