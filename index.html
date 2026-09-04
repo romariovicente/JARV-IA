@@ -98,6 +98,11 @@
           <i class="fa-solid fa-microchip"></i> Autonomous Core
         </button>
 
+        <!-- NOVO BOTÃO DE MÓDULO DE RELATÓRIOS AUTÔNOMOS -->
+        <button class="jarv-nav-item" id="btn_mod_reports" onclick="safeCall('switchModule', 'reports', event); safeCall('loadLatestAutonomousReport');">
+          <i class="fa-solid fa-file-lines"></i> Relatórios IA
+        </button>
+
         <button class="jarv-nav-item" id="btn_mod_quiz" onclick="safeCall('switchModule', 'quiz', event)">
           <i class="fa-solid fa-wrench"></i> Suporte Técnico & Quiz
         </button>
@@ -140,6 +145,22 @@
           <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoramento em tempo real via Firebase.</p>
         </div>
         <div id="terminal-feed" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+
+      <!-- NOVO PAINEL DE VISUALIZAÇÃO DE RELATÓRIOS -->
+      <div id="reportsModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="color: var(--accent-cyan); margin-bottom: 5px;"><i class="fa-solid fa-file-shield"></i> Último Relatório Autônomo 24/7</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Gerado automaticamente pelo J.A.R.V.I.S. Autonomous Engine.</p>
+          </div>
+          <button onclick="safeCall('loadLatestAutonomousReport')" style="background: #00ffff; color: #000; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">
+            <i class="fa-solid fa-rotate"></i> Atualizar Relatório
+          </button>
+        </div>
+        <div id="autonomousReportContent" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; color: #fff; font-family: monospace; white-space: pre-wrap; line-height: 1.5; font-size: 0.9rem;">
+          Carregando dados da memória de longo prazo...
+        </div>
       </div>
 
       <div id="quizModulePanel" style="display: none; flex: 1; flex-direction: column; gap: 15px; z-index: 2; overflow-y: auto; padding: 10px;">
@@ -192,6 +213,23 @@
       </button>
     </div>
   </div>
+
+  <!-- SCRIPT AUXILIAR PARA CARREGAR O RELATÓRIO NO FRONT-END -->
+  <script>
+    window.loadLatestAutonomousReport = async function() {
+      const container = document.getElementById('autonomousReportContent');
+      if (!container) return;
+      container.innerText = "Buscando último relatório gerado em IA/IA_Logs_e_Memoria/latest-report.md...";
+      try {
+        const response = await fetch('IA/IA_Logs_e_Memoria/latest-report.md?t=' + Date.now());
+        if (!response.ok) throw new Error('Relatório autônomo não encontrado ou inacessível.');
+        const text = await response.text();
+        container.innerText = text;
+      } catch (err) {
+        container.innerText = "⚠️ Erro ao carregar o relatório: " + err.message + "\nCertifique-se de que o J.A.R.V.I.S. já executou pelo menos um ciclo autônomo.";
+      }
+    };
+  </script>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
