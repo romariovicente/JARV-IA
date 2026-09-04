@@ -20,9 +20,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Instalar Dependências
-        run: npm install
-
       - name: Executar Motor Autônomo J.A.R.V.I.S.
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
