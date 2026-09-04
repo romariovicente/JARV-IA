@@ -2,7 +2,7 @@
  * J.A.R.V.I.S. Auto-Heal Engine - Protocolo Avançado de Auto-Correção
  * Módulo de diagnóstico e reparo contínuo via Groq API.
  * 
- * Versão: 7.0 (Com Modelos Oficiais Groq, Sanitize JSON e Key Fallback)
+ * Versão: 7.1 (Com Modelos Oficiais Groq, Sanitize JSON, Key Fallback e Reconstrução de Arquivos Grandes)
  * Arquivo: scripts/jarv-heal.js
  */
 
@@ -69,7 +69,7 @@ async function callGroqWithAutoModel(apiKey, prompt) {
         return textResponse;
       }
     } catch (err) {
-      if (err.name === 'AbortError') {
+      if (err.name === 'AbortError' || err.name === 'TimeoutError') {
         console.warn(`[JARV-HEAL] ⏳ Timeout no modelo ${model}. Acionando fallback...`);
       } else {
         console.warn(`[JARV-HEAL] ⚠️ Erro no modelo ${model}: ${err.message}. Acionando fallback...`);
@@ -143,9 +143,10 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
     
     const textResponse = await callGroqWithAutoModel(apiKey, prompt);
 
-    // Sanitização rigorosa contra formatação Markdown
-    let cleanedText = textResponse
+    // Sanitização rigorosa contra formatação Markdown (abrange cenários onde a IA usa tags javascript por engano)
+    const cleanedText = textResponse
       .replace(/```json/gi, '')
+      .replace(/```javascript/gi, '')
       .replace(/```/g, '')
       .trim();
 
@@ -163,18 +164,28 @@ Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo, sem NENHUM texto 
       result = JSON.parse(jsonString);
     } catch (parseError) {
       console.error("[ERRO PARSE] Estrutura JSON corrompida pela IA.");
+      console.debug("Conteúdo recebido:", jsonString);
       throw new Error(parseError.message);
     }
 
-    if (result.newContent && result.newContent.trim().length > 0) {
+    // Valida se há conteúdo novo e se ele difere do original para evitar I/O desnecessário
+    if (result.newContent && result.newContent.trim().length > 0 && result.newContent !== processedCode) {
       console.log(`\n[JARV-HEAL] ⚠️ Processando ajustes no código!`);
       console.log(`[DIAGNÓSTICO] ${result.explanation}`);
       
-      fs.writeFileSync(targetFile, result.newContent, 'utf8');
+      let finalCode = result.newContent;
+
+      // Reconstrução: Garante que a primeira metade do arquivo não seja deletada se houve truncamento inicial
+      if (codeContent.length > MAX_CODE_LENGTH) {
+        const omittedPart = codeContent.slice(0, codeContent.length - MAX_CODE_LENGTH);
+        finalCode = omittedPart + finalCode.replace('// [Trecho anterior omitido por otimização de tamanho]\n', '');
+      }
+      
+      fs.writeFileSync(targetFile, finalCode, 'utf8');
       
       console.log(`[JARV-HEAL] ✅ Código reparado e salvo em ${targetFile} com sucesso.`);
     } else {
-      console.log("\n[JARV-HEAL] ✨ Monitoramento concluído. Nenhuma alteração necessária.");
+      console.log("\n[JARV-HEAL] ✨ Monitoramento concluído. Nenhuma alteração necessária ou código já perfeitamente otimizado.");
     }
 
   } catch (error) {
