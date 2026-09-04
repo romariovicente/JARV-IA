@@ -1,16 +1,44 @@
 /**
- * J.A.R.V.I.S. Autonomous 24/7 Runner com Fallback de Modelos
- * Executa testes de inteligência e gera relatórios de evolução contínua em background.
+ * J.A.R.V.I.S. Autonomous 24/7 Runner com Auto-Descoberta de Modelos da Groq
+ * Busca dinamicamente os modelos ativos na API da Groq para evitar erros de modelos descontinuados.
  */
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "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";
 
-// Lista atualizada com modelos estáveis e amplamente suportados na Groq
-const MODEL_FALLBACK_LIST = [
-  'llama3-70b-8192',
-  'llama3-8b-8192',
-  'mixtral-8x7b-32768'
-];
+// Função para buscar dinamicamente os modelos ativos na conta da Groq
+async function fetchActiveGroqModels() {
+  try {
+    console.log("[AUTO-DISCOVERY] Buscando modelos ativos na API da Groq...");
+    const response = await fetch('https://api.groq.com/openai/v1/models', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    }
+
+    const data = await response.json();
+    const models = data.data || [];
+    
+    // Filtra apenas modelos de linguagem/texto disponíveis
+    const chatModels = models
+      .map(m => m.id)
+      .filter(id => id.includes('llama') || id.includes('mixtral') || id.includes('gemma') || id.includes('compound'));
+    
+    console.log(`[AUTO-DISCOVERY] Modelos ativos encontrados:`, chatModels);
+    return chatModels;
+  } catch (err) {
+    console.warn(`[AVISO] Falha na auto-descoberta: ${err.message}. Usando lista de fallback de segurança...`);
+    return [
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant'
+    ];
+  }
+}
 
 async function runBackgroundEvolution() {
   console.log("=====================================================");
@@ -32,11 +60,17 @@ async function runBackgroundEvolution() {
     { role: 'user', content: `Execute a pesquisa aprofundada e gere o relatório analítico sobre: ${topic}` }
   ];
 
+  // Passo 1: Descobre dinamicamente os modelos ativos
+  let modelList = await fetchActiveGroqModels();
+  if (!modelList || modelList.length === 0) {
+    modelList = ['llama-3.3-70b-versatile'];
+  }
+
   let generatedReport = null;
   let activeModel = null;
 
-  // Sistema de Fallback Automático entre os modelos
-  for (const model of MODEL_FALLBACK_LIST) {
+  // Passo 2: Loop de Fallback Automático testando os modelos encontrados
+  for (const model of modelList) {
     try {
       console.log(`[TENTATIVA] Acionando modelo Groq: ${model}...`);
 
@@ -68,12 +102,12 @@ async function runBackgroundEvolution() {
         break;
       }
     } catch (error) {
-      console.warn(`[AVISO] Falha com o modelo ${model}: ${error.message}. Alternando para o próximo modelo do fallback...`);
+      console.warn(`[AVISO] Falha com o modelo ${model}: ${error.message}. Alternando para o próximo modelo...`);
     }
   }
 
   if (!generatedReport) {
-    console.error("[FALHA NO CICLO AUTÔNOMO]: Todos os modelos da lista de fallback da Groq falharam.");
+    console.error("[FALHA NO CICLO AUTÔNOMO]: Todos os modelos ativos da Groq falharam.");
     process.exit(1);
   }
 
