@@ -1,5 +1,6 @@
 /**
  * J.A.R.V.I.S. Autonomous 24/7 Runner com Salvamento em Markdown
+ * Expandido para abranger o ecossistema completo do conhecimento e evolução humana.
  */
 
 const fs = require('fs');
@@ -50,17 +51,40 @@ async function runBackgroundEvolution() {
   console.log("=====================================================\n");
 
   const researchTopics = [
-    "Testes de estresse e otimização de performance em LLMs locais",
-    "Novas diretrizes de enfermagem em unidades de terapia intensiva",
-    "Análise de vulnerabilidades zero-day e contramedidas automatizadas",
-    "Engenharia de prompt avançada para raciocínio multi-step"
+    // Inteligência Artificial & Computação Avançada
+    "Engenharia de Prompt Avançada, RAG e Raciocínio Multi-Step em IAs",
+    "Computação Quântica e Criptografia Pós-Quântica",
+    "Redes Neurais Artificiais e Arquiteturas de Agentes Autônomos",
+    "Nanotecnologia e Materiais Inteligentes do Futuro",
+    
+    // Saúde, Enfermagem & Biociências
+    "Cálculo de Medicamentos, Farmacologia Clínica e Segurança na Infusão",
+    "Enfermagem Avançada e Protocolos SAE (Sistematização da Assistência de Enfermagem)",
+    "Neurociências e Interfaces Cérebro-Computador (BCI)",
+    "Medicina de Precisão e Genômica Computacional",
+
+    // Engenharia, Software & Segurança
+    "Arquitetura de Sistemas Web Escaláveis e Computação em Nuvem",
+    "Segurança da Informação, Ethical Hacking e Hardening em Kali Linux",
+    "Robótica Avançada e Automação de Sistemas Físico-Cibernéticos",
+
+    // Ciências Formais & Sociais
+    "Matemática Aplicada, Lógica Formal e Teoria dos Jogos",
+    "Psicologia Cognitiva e Modelagem Computacional da Mente Humana",
+    "Economia Comportamental e Sistemas de Decisão Baseados em Dados",
+
+    // Filosofia, Epistemologia e Meta-Sistemas de Teste
+    "Epistemologia, Filosofia da Ciência e Ética em Inteligência Artificial",
+    "Método Científico Automatizado e Epistemologia Computacional",
+    "Frameworks de Benchmarking e Avaliação Cognitiva de Modelos",
+    "Cibernética e Teoria dos Sistemas Complexos"
   ];
 
   const topic = researchTopics[Math.floor(Math.random() * researchTopics.length)];
   console.log(`[TÓPICO SELECIONADO]: ${topic}`);
 
   const messages = [
-    { role: 'system', content: 'Você é o J.A.R.V.I.S. em modo de expansão autônoma de conhecimento. Crie um relatório técnico aprofundado, com testes de hipóteses e métricas de evolução para o tópico solicitado.' },
+    { role: 'system', content: 'Você é o J.A.R.V.I.S. em modo de expansão autônoma de conhecimento universal. Crie um relatório técnico e científico aprofundado, contendo estado da arte, testes de hipóteses, métricas de evolução e aplicações práticas para estruturação de base de conhecimento de alto nível.' },
     { role: 'user', content: `Execute a pesquisa aprofundada e gere o relatório analítico sobre: ${topic}` }
   ];
 
@@ -81,7 +105,7 @@ async function runBackgroundEvolution() {
           model: model,
           messages: messages,
           temperature: 0.3,
-          max_tokens: 1024
+          max_tokens: 1536
         })
       });
 
@@ -118,8 +142,8 @@ async function runBackgroundEvolution() {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 
-  const fileContent = `# Relatório Autônomo J.A.R.V.I.S.
-* **Tópico:** ${topic}
+  const fileContent = `# Relatório Autônomo J.A.R.V.I.S. - Ecossistema de Conhecimento
+* **Área de Inteligência:** ${topic}
 * **Modelo Utilizado:** ${activeModel}
 * **Data/Hora:** ${now.toLocaleString('pt-BR')}
 
