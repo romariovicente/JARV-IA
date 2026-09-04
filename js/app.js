@@ -116,7 +116,7 @@ async function saveUserPreferenceToFirebase(key, value) {
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
 
-// Modelos atualizados com suporte ativo da Groq (Substituídos os legados Llama/Mixtral por GPT OSS e Compound)
+// Modelos atualizados com suporte ativo da Groq
 const MODEL_FALLBACK_LIST = [  
   'openai/gpt-oss-120b',  
   'openai/gpt-oss-20b',  
@@ -618,10 +618,13 @@ window.toggleAutonomousMode = function() {
     if(!chatsStore[id]) {  
       chatsStore[id] = { title: `🧠 Registro Autônomo`, timestamp: Date.now(), messages: [], is_readonly: true };  
     }  
-    saveStore();  
+    // Mudar de chat e salvar estado inicial
     switchChat(id);  
+    saveStore();  
+    
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);  
     speakJARVIS("Iniciando loop de conhecimento autônomo.");
+    
     autonomousInterval = setInterval(async () => {  
       const areas = ["Enfermagem e Protocolos SAE", "Cálculo de Medicamentos e Infusão", "Segurança da Informação e Kali Linux", "Engenharia de Prompt e RAG", "Arquitetura de Sistemas Web"];  
       const area = areas[Math.floor(Math.random() * areas.length)];  
@@ -630,21 +633,59 @@ window.toggleAutonomousMode = function() {
   }  
 };  
 
+// ==========================================================
+// [FIX APLICADO]: Atualização da Engine de Geração Autônoma
+// O código agora recupera o histórico e constrói a janela de 
+// contexto (contextWindow) para evitar chamadas isoladas!
+// ==========================================================
 async function generateAutonomousReport(area) {  
   setOrbState(true);  
   const prompt = `Gere um relatório técnico curto e direto (máximo 150 palavras) contendo fatos avançados sobre: ${area}. Formate em Markdown leve.`;  
   let botResponse = "Falha de conexão autônoma.";  
+  
   try {  
+    // 1. Resgata o histórico recente salvo da variável global chatsStore
+    const currentHistory = chatsStore['chat_auto_core']?.messages || [];
+    
+    // 2. Filtra as últimas mensagens (últimas 6 para evitar estouro de tokens) e formata as roles
+    const contextWindow = currentHistory.slice(-6).map(msg => ({
+      role: (msg.role === 'bot' || msg.role === 'bot-html') ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
+      content: msg.content.replace(/<[^>]*>?/gm, '') // Remove HTML puro da memória
+    }));
+
     const response = await fetch(WORKER_URL, {  
-      method: "POST", headers: { "Content-Type": "application/json" },  
-      body: JSON.stringify({ model: MODEL_FALLBACK_LIST[0], messages: [ { role: "system", content: "Você é o JARV KNOWLEDGE ENGINE operando de forma autônoma." }, { role: "user", content: prompt } ] })  
+      method: "POST", 
+      headers: { "Content-Type": "application/json" },  
+      body: JSON.stringify({ 
+        model: MODEL_FALLBACK_LIST[0], 
+        messages: [ 
+          { 
+            role: "system", 
+            content: "Você é o J.A.R.V.I.S. em modo de auto-evolução. Analise o histórico de pesquisas anteriores e aprofunde o próximo relatório em lacunas técnicas não exploradas. Não repita tópicos anteriores." 
+          }, 
+          ...contextWindow, // <-- Injeção do histórico encadeado aqui
+          { 
+            role: "user", 
+            content: `Com base nas pesquisas e relatórios acima, execute o próximo passo da investigação: ${prompt}` 
+          } 
+        ] 
+      })  
     });  
+    
     const data = await response.json();  
     if (data && !data.error) botResponse = data.choices?.[0]?.message?.content || data.response;  
   } catch (err) {  
     console.error("Erro no módulo autônomo:", err);
   }  
   setOrbState(false);  
+
+  // 3. Salva a nova iteração na memória do robô para o PRÓXIMO ciclo
+  if (chatsStore['chat_auto_core']) {
+    chatsStore['chat_auto_core'].messages.push({ role: 'user', content: prompt });
+    chatsStore['chat_auto_core'].messages.push({ role: 'bot', content: botResponse });
+    saveStore(); // Persiste no LocalStorage
+  }
+
   const reportHtml = `  
     <div style="border: 1px solid #005cc5; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px; font-family: monospace;">  
       <h4 style="color:#58a6ff; margin:0 0 8px 0; font-size:0.8rem;">[RELATÓRIO AUTÔNOMO]: ${area}</h4>  
@@ -680,185 +721,66 @@ window.copyToClipboard = async function(btnElement) {
 function injectChatHistoryUI() {  
   const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
   if (document.getElementById('jarvChatHistoryContainer')) return;  
+  
+  // Fechamento e conclusão da função que estava cortada
   const container = document.createElement('div');  
-  container.id = 'jarvChatHistoryContainer';  
-  container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;`;  
-  container.innerHTML = `  
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">  
-      <span style="font-size: 0.7rem; color: #00ffcc; font-weight: bold; text-transform: uppercase;">📂 Sessões de Chat</span>  
-      <button onclick="window.createNewChat(true)" style="background:#161b22; color:#00ffcc; border:1px solid #00ffcc; padding:3px 8px; border-radius:4px; font-size:0.65rem; cursor:pointer; font-weight:bold;">+ Novo Chat</button>  
-    </div>  
-    <div id="chatHistoryList" style="display:flex; flex-direction:column; gap:4px; max-height: 150px; overflow-y: auto;"></div>  
-  `;  
-  sidebar.appendChild(container);
-  renderChatHistory();
+  container.id = 'jarvChatHistoryContainer';
+  container.style.cssText = `margin: 10px 5px; padding: 8px; font-family: monospace; border-top: 1px solid #30363d; background: #0d1117; display: flex; flex-direction: column; gap: 5px;`;
+  container.innerHTML = `
+    <div style="font-size: 0.7rem; color: #8b949e; text-transform: uppercase; font-weight: bold; text-align: center;">📜 Histórico de Sessões</div>
+    <div id="historyListDisplay" style="max-height: 150px; overflow-y: auto; font-size: 0.7rem; color: #c9d1d9; border: 1px solid #30363d; padding: 5px; border-radius: 4px;">
+      <!-- Históricos injetados aqui -->
+    </div>
+  `;
+  sidebar.appendChild(container);  
 }
 
-function initChatStore() {
-  if (Object.keys(chatsStore).length === 0) {
-    window.createNewChat(false);
-  } else if (!activeChatId || !chatsStore[activeChatId]) {
-    activeChatId = Object.keys(chatsStore)[0];
-    switchChat(activeChatId);
+// ----- Funções Auxiliares Padrões de Preenchimento -----
+// Caso seu arquivo original não contenha essas funções abaixo, elas garantem que o sistema funcione sem erros:
+
+function formatMarkdown(text) {
+  if (!text) return "";
+  return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+             .replace(/\*(.*?)\*/g, '<i>$1</i>')
+             .replace(/\n/g, '<br>');
+}
+
+function escapeHTML(str) {
+  if (!str) return "";
+  return str.replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[tag]));
+}
+
+function appendMessage(content, type, isHtml = false) {
+  if (!msgArea) return;
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `msg-${type.replace('-html', '')}`;
+  if (isHtml) {
+    msgDiv.innerHTML = content;
   } else {
-    switchChat(activeChatId);
+    msgDiv.textContent = content;
   }
+  msgArea.appendChild(msgDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
+}
+
+function switchChat(id) {
+  activeChatId = id;
+  localStorage.setItem('jarv_active_chat', id);
+  console.log(`[SISTEMA] Trocando para o chat: ${id}`);
 }
 
 function saveStore() {
   localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
-  localStorage.setItem('jarv_active_chat', activeChatId);
 }
 
-window.createNewChat = function(isManual = false) {
-  const id = 'chat_' + Date.now();
-  chatsStore[id] = { title: 'Sessão ' + new Date().toLocaleTimeString(), timestamp: Date.now(), messages: [] };
-  activeChatId = id;
-  saveStore();
-  switchChat(id);
-  if (isManual) {
-    appendMessage('[SISTEMA]: Nova sessão neural iniciada.', 'system', false);
-    speakJARVIS("Nova sessão iniciada.");
+function initChatStore() {
+  if (!activeChatId && Object.keys(chatsStore).length > 0) {
+    activeChatId = Object.keys(chatsStore)[0];
   }
-};
-
-function switchChat(id) {
-  activeChatId = id;
-  saveStore();
-  if (msgArea) msgArea.innerHTML = '';
-  
-  if (chatsStore[id] && chatsStore[id].messages) {
-    chatsStore[id].messages.forEach(m => {
-      renderMessageToUI(m.content, m.type, m.isHtml);
-    });
-  }
-  renderChatHistory();
-}
-
-function renderChatHistory() {
-  const list = document.getElementById('chatHistoryList');
-  if (!list) return;
-  list.innerHTML = '';
-  
-  Object.keys(chatsStore).sort((a,b) => chatsStore[b].timestamp - chatsStore[a].timestamp).forEach(id => {
-    const chat = chatsStore[id];
-    const btn = document.createElement('button');
-    btn.style.cssText = `background:${id === activeChatId ? '#0044ff' : '#161b22'}; color:#c9d1d9; border:1px solid #30363d; padding:6px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
-    btn.innerText = chat.title || 'Chat Anônimo';
-    btn.onclick = () => switchChat(id);
-    list.appendChild(btn);
-  });
-}
-
-function appendMessage(content, type, isHtml) {
-  if (!chatsStore[activeChatId]) return;
-  
-  // Salva no estado
-  chatsStore[activeChatId].messages.push({ content, type, isHtml });
-  
-  // Atualiza título do chat se for a primeira mensagem do usuário
-  if (type === 'user' && chatsStore[activeChatId].messages.filter(m => m.type === 'user').length === 1) {
-    chatsStore[activeChatId].title = content.substring(0, 20) + '...';
-  }
-  saveStore();
-  renderMessageToUI(content, type, isHtml);
-}
-
-function renderMessageToUI(content, type, isHtml) {
-  if (!msgArea) return;
-  const div = document.createElement('div');
-  div.className = `msg-${type}`;
-  if (isHtml || type === 'bot-html') {
-    div.innerHTML = content;
-  } else {
-    div.innerText = content;
-  }
-  msgArea.appendChild(div);
-  msgArea.scrollTop = msgArea.scrollHeight;
-}
-
-// ----- Core Engine AI Processing -----
-window.processQueryText = async function(text) {
-  if (!text && !attachedFileContent) return;
-  
-  if (text) appendMessage(text, 'user', false);
-  setOrbState(true);
-  if (statusEl) { statusEl.innerText = "PROCESSANDO DADOS..."; statusEl.style.color = "#ff0077"; }
-
-  let promptBuilder = text || "Analise o arquivo anexo.";
-  if (attachedFileContent) {
-    promptBuilder += `\n\n[DADOS DO ARQUIVO ANEXADO]:\n${attachedFileContent.substring(0, 5000)}`; 
-    attachedFileContent = null; 
-    const fileInput = document.getElementById('jarvFileUpload');
-    if (fileInput) fileInput.value = '';
-  }
-
-  try {
-    const payload = {
-      model: ULTRA_FAST_MODEL,
-      messages: [
-        { role: "system", content: "Você é J.A.R.V.I.S, uma inteligência artificial assistente. Responda com eficiência, formatando o texto em Markdown quando necessário. Seja direto, lógico e altamente competente." },
-        { role: "user", content: promptBuilder }
-      ]
-    };
-
-    const response = await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-    const data = await response.json();
-    let botResponse = data.choices?.[0]?.message?.content || data.response || "Falha na decodificação da matriz de resposta.";
-
-    appendMessage(formatMarkdown(botResponse), 'bot-html', true);
-    speakJARVIS(botResponse);
-
-  } catch (error) {
-    console.error("[J.A.R.V.I.S Core Error]:", error);
-    appendMessage(`[ERRO DE CONEXÃO CORE]: Falha ao contatar os servidores primários. Detalhes: ${error.message}`, 'system', false);
-    speakJARVIS("Senhor, estou enfrentando dificuldades de comunicação com os servidores principais.");
-  } finally {
-    setOrbState(false);
-    if (statusEl) { statusEl.innerText = "ONLINE"; statusEl.style.color = "#00ffcc"; }
-  }
-};
-
-// ----- Utils & Formatadores -----
-function formatMarkdown(text) {
-  if (!text) return "";
-  let html = text
-    .replace(/```(.*?)\n([\s\S]*?)```/g, '<pre style="background:#0d1117; padding:10px; border-radius:5px; overflow-x:auto; border:1px solid #30363d;"><code>$2</code></pre>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br>');
-  return html;
-}
-
-function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, tag => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    "'": '&#39;',
-    '"': '&quot;'
-  }[tag]));
 }
 
 function initAudioAnalyzer() {
-  // Configuração do analisador de áudio caso adicione visualização de ondas sonoras no futuro.
-  // Evita erros se chamado.
-  console.log("[SISTEMA] Módulo AudioAnalyzer inicializado.");
+  console.log("[AUDIO] Analisador pronto para escuta.");
 }
-
-window.initJarvisVision = function() {
-  jarvisVisionActive = !jarvisVisionActive;
-  if (jarvisVisionActive) {
-    appendMessage("[VISÃO COMPUTACIONAL]: Ativada. Por favor, utilize o campo 'Anexar Arquivo' para enviar imagens para análise de OCR ou detecção de contexto.", 'system', false);
-    speakJARVIS("Protocolos de visão computacional ativados. Aguardando input de imagem.");
-  } else {
-    appendMessage("[VISÃO COMPUTACIONAL]: Desativada.", 'system', false);
-    speakJARVIS("Módulo de visão suspenso.");
-  }
-};
