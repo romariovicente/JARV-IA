@@ -1,0 +1,23 @@
+name: J.A.R.V.I.S. Autonomous 24/7
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Executa a cada 6 horas automaticamente
+  workflow_dispatch: # Permite que você execute manualmente a qualquer momento pela aba Actions
+
+jobs:
+  run-autonomous:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Executar Motor Autônomo J.A.R.V.I.S.
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: node scripts/jarv-autonomous-runner.js
