@@ -5,11 +5,11 @@
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "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";
 
-// Lista oficial de modelos da Groq em ordem de preferência para o fallback
+// Lista atualizada com modelos estáveis e amplamente suportados na Groq
 const MODEL_FALLBACK_LIST = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'gemma2-9b-it'
+  'llama3-70b-8192',
+  'llama3-8b-8192',
+  'mixtral-8x7b-32768'
 ];
 
 async function runBackgroundEvolution() {
