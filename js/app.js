@@ -101,6 +101,23 @@ window.initJarvisSession = function() {
   speakJARVIS('Modo offline ativado.');
 };  
 
+// ----- Controle de Módulos com Limpeza de Acúmulo (Correção de Visualização) -----
+window.switchModule = function(modName, event) {
+  if (event && event.currentTarget) {
+    document.querySelectorAll('.sidebar-nav .jarv-nav-item, .subsystem-list .jarv-nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+  
+  const msgAreaElement = document.getElementById('msgArea') || document.querySelector('.jarv-chat-area');
+  if (msgAreaElement && (modName === 'master' || modName === 'chat')) {
+    msgAreaElement.innerHTML = ''; // Limpa para evitar sobreposição
+  }
+
+  activeModule = modName;
+  appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);
+  speakJARVIS(`Módulo ${modName} ativado e acoplado ao fluxo principal.`);
+};
+
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
 
@@ -535,22 +552,19 @@ function injectModuleSidebar() {
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">  
       <button onclick="window.openLifeDashboard()" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#ff0077; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🎮 Minha Vida é um Jogo</button>  
       <button onclick="window.toggleAutonomousMode()" id="btn_mod_autonomous" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#00ffff; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🧠 JARV Core Autônomo</button>  
-      <button onclick="window.setModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>  
-      <button onclick="window.setModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>  
-      <button onclick="window.setModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador Imagem 3D</button>  
-      <button onclick="window.setModule('videoGen')" class="mod-btn" id="btn_mod_videoGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎬 Gerador Vídeo 3D</button>  
+      <button onclick="window.switchModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>  
+      <button onclick="window.switchModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>  
+      <button onclick="window.switchModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador Imagem 3D</button>  
+      <button onclick="window.switchModule('videoGen')" class="mod-btn" id="btn_mod_videoGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎬 Gerador Vídeo 3D</button>  
     </div>  
   `;  
   sidebar.appendChild(container);  
 }  
 
-window.setModule = async function(modName) {  
-  activeModule = modName;  
-  appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);  
-  speakJARVIS(`Módulo ${modName} ativado e acoplado ao fluxo principal.`);
-};  
-
 window.openLifeDashboard = function() {  
+  if (msgArea) {
+    msgArea.innerHTML = ''; // Limpa a área principal antes de renderizar
+  }
   appendMessage(`  
     <div style="border: 1px solid #ff0077; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,119,0.3);">  
       <h3 style="color:#ff0077; margin:0 0 12px 0; text-transform: uppercase; font-size: 0.9rem;">🎮 Dashboard: Minha Vida é um Jogo</h3>  
@@ -603,6 +617,7 @@ window.toggleAutonomousMode = function() {
     switchChat(id);  
     saveStore();  
       
+    if (msgArea) msgArea.innerHTML = ''; // Limpa para iniciar o feed autônomo sem resíduos
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);  
     speakJARVIS("Iniciando loop de conhecimento autônomo.");
       
@@ -708,7 +723,6 @@ window.saveStore = function() {
 window.processQueryText = window.processQueryText || function(text) {
   appendMessage(text, 'user');
   speakJARVIS("Estou processando a solicitação: " + text);
-  // NOTA: A lógica principal de envio para a sua IA (Groq/OpenAI) vai aqui
 };
 
 window.appendMessage = window.appendMessage || function(msg, sender, isHtml = false) {
@@ -731,6 +745,7 @@ window.initChatStore = window.initChatStore || async function() {
 window.switchChat = window.switchChat || function(chatId) {
    activeChatId = chatId;
    localStorage.setItem('jarv_active_chat', chatId);
+   if (msgArea) msgArea.innerHTML = ''; // Limpeza ao trocar de chat/sessão
    console.log("[SISTEMA] Chat alternado para ID: " + chatId);
 };
 
