@@ -3,10 +3,10 @@ name: J.A.R.V.I.S. Autonomous 24/7
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # Executa a cada 6 horas (ou conforme sua preferência)
+    - cron: '0 */6 * * *' # Executa a cada 6 horas
 
 permissions:
-  contents: write # Permite que o workflow grave alterações no repositório
+  contents: write # Permite que o workflow grave e envie alterações no repositório
 
 jobs:
   run-autonomous:
