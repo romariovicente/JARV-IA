@@ -1,7 +1,7 @@
 # PRD — Documento de Requisitos do Produto: J.A.R.V.I.S. (v6.0 Core Protocol)
 
 ## 1. Visão Geral do Produto
-O **J.A.R.V.I.S. v6.0** é um sistema operacional web (SPA/PWA) com estética cibernética e arquitetura de inteligência artificial multimodelo. O sistema atua como central de operações, integrando execução autônoma de tarefas, monitoramento em tempo real, suporte técnico especializado para bancada de hardware/software e auto-recuperação contínua do código fonte.
+O **J.A.R.V.I.S. v6.0** é um sistema operacional web (SPA/PWA) com estética cibernética e arquitetura de inteligência artificial multimodelo. O sistema atua como central de operações, integrando execução autônoma de tarefas, monitoramento em tempo real, suporte técnico especializado para bancada de hardware/software e auto-recuperação contínua do código-fonte.
 
 ---
 
@@ -24,17 +24,17 @@ O **J.A.R.V.I.S. v6.0** é um sistema operacional web (SPA/PWA) com estética ci
 * **Sincronização Realtime:** Integração com Firebase Firestore através do método `onSnapshot` para atualização instantânea dos logs de execução autônoma.
 * **Terminal Feed:** Painel dedicado para exibição estruturada das relatorias e tarefas concluídas pelos agentes de segundo plano.
 
-### 2.5 Suporte Técnico & Quiz MIUI 15
-* **Base de Conhecimento Prática:** Módulo focado no diagnóstico e reparo de dispositivos móveis Xiaomi (ex: modelo 23053RN02L rodando MIUI 15).
-* **Guia Interativo:** Testes de bancada, rotinas para contorno de restrições de software, execução de comandos MTP e diretrizes para ferramentas de Unlock Tools.
+### 2.5 Suporte Técnico & Bancada de Hardware/Software
+* **Base de Conhecimento Prática:** Módulo focado no diagnóstico e reparo de dispositivos móveis (ex: modelos Android rodando MIUI 15 e utilitários de bancada).
+* **Guia Interativo:** Testes de bancada, rotinas para contorno de restrições de software, execução de comandos MTP e diretrizes para ferramentas de desbloqueio e manutenção.
 
 ### 2.6 Autenticação Firebase & Escopos Google
 * **Login Social:** Autenticação via Google OAuth 2.0 através do SDK do Firebase (`firebase-auth.js`).
 * **Integração de APIs:** Conexão com escopos expandidos para Google Calendar, Gmail Agent e gerenciamento de permissões.
-* **Modo Offline:** Suporte a login temporário de fallback para operação sem conexão com os serviços do Firebase.
+* **Modo Offline:** Suporte a login temporário de fallback para operação sem conexão direta com os serviços do Firebase.
 
 ### 2.7 Engine de Auto-Heal (Groq API)
-* **Diagnóstico e Correção de Código:** Script em Node.js (`scripts/jarv-heal.js`) responsável por analisar `js/app.js` e aplicar correções automáticas de bugs.
+* **Diagnóstico e Correção de Código:** Script em Node.js (`scripts/jarv-heal.js`) responsável por analisar o código-fonte e aplicar correções automáticas de bugs.
 * **Cascata de Fallback (LLMs):** Roteamento inteligente de requisições na ordem:
   1. `llama-3.3-70b-versatile` (Modelo Primário)
   2. `llama-3.1-70b-versatile` (Modelo Secundário)
@@ -42,7 +42,7 @@ O **J.A.R.V.I.S. v6.0** é um sistema operacional web (SPA/PWA) com estética ci
 
 ---
 
-## 3. Diretrizes de Engenharia e Arquitetura (Alinhadas ao AGENTS.md)
+## 3. Diretrizes de Engenharia e Arquitetura
 
 ### 3.1 Performance, Skeletons e Motion Principles
 * **Componentes Shimmer:** Uso obrigatório de esqueletos animados durante a busca ou carregamento de notas do Segundo Cérebro e chamadas de API.
@@ -51,12 +51,12 @@ O **J.A.R.V.I.S. v6.0** é um sistema operacional web (SPA/PWA) com estética ci
 
 ### 3.2 Resiliência e Tratamento de Erros
 * **Auditoria Contínua:** Módulo `diagnostics.js` posicionado no topo da árvore de scripts para capturar exceções não tratadas globalmente.
-* **Sanitização de Respostas:** Remoção automática de delimitadores de bloco Markdown (` ```json `) antes da serialização/parsing de respostas enviadas por modelos de linguagem.
+* **Sanitização de Respostas:** Remoção automática de delimitadores de bloco Markdown (ex: ```json) antes da serialização ou parsing de dados retornados por modelos de linguagem.
 * **Tratamento de Exceções de Conexão:** Fallback automático em caso de falha de modelos da Groq ou indisponibilidade da API do Firebase.
 
 ### 3.3 Compatibilidade PWA e Gerenciamento de Cache
 * **Service Worker v6.0:** Controle dinâmico de cache para ativos estáticos, com lógica de desregistro automático de instâncias de Service Workers legadas.
-* **Manifesto PWA:** Arquivo `manifest.json` atualizado com parâmetros `standalone`, escopo `./` e suporte a ícones otimizados (`purpose: "any maskable"`).
+* **Manifesto PWA:** Arquivo `manifest.json` configurado com parâmetros `standalone`, escopo `./` e suporte a ícones otimizados (`purpose: "any maskable"`).
 
 ---
 
@@ -64,7 +64,8 @@ O **J.A.R.V.I.S. v6.0** é um sistema operacional web (SPA/PWA) com estética ci
 
 | Requisito | Critério de Aceite |
 | :--- | :--- |
-| **Segurança** | Nenhuma API key sensível hardcoded no repositório público (utilização de Secrets). |
+| **Segurança** | Nenhuma API key sensível hardcoded no repositório público (utilização estrita de variáveis de ambiente e Secrets). |
 | **Compatibilidade** | Suporte total aos navegadores modernos baseados em Chromium, Firefox e Safari. |
 | **Acessibilidade** | Atalhos globais de teclado (ex: tecla Espaço para ativamento de entrada por voz). |
 | **Observabilidade** | Geração de logs claros no console com prefixos categorizados (ex: `[JARV-HEAL]`, `[DIAGNOSTICS]`). |
+| **Desempenho** | Tempo de carregamento inicial (First Contentful Paint) otimizado abaixo de 1.5s em conexões de banda larga móvel. |
