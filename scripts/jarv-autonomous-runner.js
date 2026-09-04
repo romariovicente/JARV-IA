@@ -107,13 +107,13 @@ async function runBackgroundEvolution() {
     process.exit(1);
   }
 
-  // Salvando o relatório em arquivos Markdown
+  // Salvando o relatório na pasta correta IA/IA_Logs_e_Memoria
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
   const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
   const fileName = `relatorio-${dateStr}-${timeStr}.md`;
   
-  const dirPath = path.join(__dirname, '..', 'IA');
+  const dirPath = path.join(__dirname, '..', 'IA', 'IA_Logs_e_Memoria');
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
