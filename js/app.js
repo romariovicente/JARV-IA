@@ -42,82 +42,6 @@ if (typeof firebase !== 'undefined') {
   });  
 }  
 
-// ----- Funções globais expostas -----
-window.loginWithGoogle = async function() {  
-  if (!auth || !provider) {  
-    alert("Firebase Auth não inicializado.");
-    return;  
-  }  
-  try {
-    if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-      try {
-        await auth.signInWithPopup(provider);
-      } catch (popupErr) {
-        console.warn("Popup bloqueado ou não suportado no mobile, alternando para redirect:", popupErr);
-        await auth.signInWithRedirect(provider);
-      }
-    } else {
-      await auth.signInWithPopup(provider);
-    }
-  } catch (error) {  
-    console.error("Erro no login com Google:", error);
-    alert("Erro na autenticação: " + error.message);
-    if (typeof window.initJarvisSession === 'function') {
-      window.initJarvisSession();
-    }
-  }  
-};  
-
-window.sendMsg = function() {  
-  if (!chatInput) {  
-    chatInput = document.getElementById('chatInput') || document.querySelector('input[type="text"], textarea');  
-  }  
-  if (!chatInput) return;  
-  const text = chatInput.value.trim();  
-  if (!text && !attachedFileContent) return;  
-  chatInput.value = '';  
-  if (typeof processQueryText === 'function') {  
-    processQueryText(text);  
-  } else {  
-    console.warn("[J.A.R.V.I.S.] processQueryText não definido.");
-  }  
-};  
-
-window.filterBrainNotes = function() {  
-  const input = document.getElementById('brainSearchInput');  
-  const term = input ? input.value.trim() : '';  
-  console.log(`[SEGUNDO CÉREBRO] Pesquisando por: "${term}"`);
-  if (term.length > 0) {  
-    appendMessage(`[SEGUNDO CÉREBRO] Resultados para "${term}" (em desenvolvimento)`, 'system', true);  
-  } else {  
-    appendMessage('[SEGUNDO CÉREBRO] Lista de notas restaurada.', 'system', true);  
-  }  
-};  
-
-window.initJarvisSession = function() {  
-  const modal = document.getElementById('loginModal') || document.querySelector('.auth-modal');  
-  if (modal) modal.style.display = 'none';  
-  appendMessage('[SISTEMA] Sessão offline iniciada. Recursos limitados.', 'system', true);  
-  speakJARVIS('Modo offline ativado.');
-};  
-
-// ----- Controle de Módulos com Limpeza de Acúmulo (Correção de Visualização) -----
-window.switchModule = function(modName, event) {
-  if (event && event.currentTarget) {
-    document.querySelectorAll('.sidebar-nav .jarv-nav-item, .subsystem-list .jarv-nav-item').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-  }
-  
-  const msgAreaElement = document.getElementById('msgArea') || document.querySelector('.jarv-chat-area');
-  if (msgAreaElement && (modName === 'master' || modName === 'chat')) {
-    msgAreaElement.innerHTML = ''; // Limpa para evitar sobreposição
-  }
-
-  activeModule = modName;
-  appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);
-  speakJARVIS(`Módulo ${modName} ativado e acoplado ao fluxo principal.`);
-};
-
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
 
@@ -131,10 +55,12 @@ localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
 let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : true;  
-let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v7')) || {};  
-let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
+let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v7')) || {
+  'chat_default': { title: 'Sessão Principal', timestamp: Date.now(), messages: [] }
+};  
+let activeChatId = localStorage.getItem('jarv_active_chat') || 'chat_default';  
 
-let activeModule = null;  
+let activeModule = 'chat';  
 let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
 let recognition = null;  
@@ -214,7 +140,7 @@ function injectAnimations() {
       animation: pulse-shimmer 2s infinite linear;  
     }
     .msg-user { align-self: flex-end; background: #0044ff; color: #fff; padding: 10px; border-radius: 8px 8px 0 8px; margin: 5px 0; max-width: 80%; border: 1px solid #0055ff; word-break: break-word; }
-    .msg-bot { align-self: flex-start; background: #161b22; color: #c9d1d9; padding: 10px; border-radius: 8px 8px 8px 0; margin: 5px 0; max-width: 90%; border: 1px solid #30363d; font-family: monospace; word-break: break-word; }
+    .msg-bot { align-self: flex-start; background: #161b22; color: #c9d1d9; padding: 10px; border-radius: 8px 8px 8px 0; margin: 5px 0; max-width: 90%; border: 1px solid #30363d; font-family: monospace; word-break: break-word; white-space: pre-wrap; }
     .msg-system { align-self: center; background: transparent; color: #8b949e; padding: 5px; font-size: 0.7rem; font-family: monospace; font-style: italic; }
   `;  
   document.head.appendChild(style);  
@@ -261,6 +187,146 @@ function injectAnonymousLogoAndStyles() {
   `;  
   sidebarArea.insertBefore(logoDiv, sidebarArea.firstChild);  
 }  
+
+// ----- Funções globais expostas -----
+window.loginWithGoogle = async function() {  
+  if (!auth || !provider) {  
+    alert("Firebase Auth não inicializado.");
+    return;  
+  }  
+  try {
+    if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (popupErr) {
+        console.warn("Popup bloqueado ou não suportado no mobile, alternando para redirect:", popupErr);
+        await auth.signInWithRedirect(provider);
+      }
+    } else {
+      await auth.signInWithPopup(provider);
+    }
+  } catch (error) {  
+    console.error("Erro no login com Google:", error);
+    alert("Erro na autenticação: " + error.message);
+    if (typeof window.initJarvisSession === 'function') {
+      window.initJarvisSession();
+    }
+  }  
+};  
+
+window.sendMsg = function() {  
+  if (!chatInput) {  
+    chatInput = document.getElementById('chatInput') || document.querySelector('input[type="text"], textarea');  
+  }  
+  if (!chatInput) return;  
+  const text = chatInput.value.trim();  
+  if (!text && !attachedFileContent) return;  
+  chatInput.value = '';  
+  if (typeof processQueryText === 'function') {  
+    processQueryText(text);  
+  } else {  
+    console.warn("[J.A.R.V.I.S.] processQueryText não definido.");
+  }  
+};  
+
+window.filterBrainNotes = function() {  
+  const input = document.getElementById('brainSearchInput');  
+  const term = input ? input.value.trim() : '';  
+  console.log(`[SEGUNDO CÉREBRO] Pesquisando por: "${term}"`);
+  if (term.length > 0) {  
+    appendMessage(`[SEGUNDO CÉREBRO] Resultados para "${term}" (em desenvolvimento)`, 'system', true);  
+  } else {  
+    appendMessage('[SEGUNDO CÉREBRO] Lista de notas restaurada.', 'system', true);  
+  }  
+};  
+
+window.initJarvisSession = function() {  
+  const modal = document.getElementById('loginModal') || document.querySelector('.auth-modal');  
+  if (modal) modal.style.display = 'none';  
+  appendMessage('[SISTEMA] Sessão offline iniciada. Recursos limitados.', 'system', true);  
+  speakJARVIS('Modo offline ativado.');
+};  
+
+// ----- Controle de Módulos com Limpeza de Acúmulo (Correção de Visualização) -----
+window.switchModule = function(modName, event) {
+  if (event && event.currentTarget) {
+    document.querySelectorAll('.sidebar-nav .jarv-nav-item, .subsystem-list .jarv-nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+  
+  const msgAreaElement = document.getElementById('msgArea') || document.querySelector('.jarv-chat-area');
+  if (msgAreaElement && (modName === 'master' || modName === 'chat' || modName === 'academy' || modName === 'globe')) {
+    msgAreaElement.innerHTML = ''; // Limpa para evitar sobreposição
+  }
+
+  activeModule = modName;
+  appendMessage(`[MÓDULO ATIVADO]: ${modName.toUpperCase()}`, 'system', true);
+  speakJARVIS(`Módulo ${modName} ativado e acoplado ao fluxo principal.`);
+};
+
+// ==========================================================
+// [CORE ENGINE]: Processamento de Consultas com IA (Groq / Worker)
+// ==========================================================
+window.processQueryText = async function(text) {
+  if (!chatsStore[activeChatId]) {
+    chatsStore[activeChatId] = { title: text.substring(0, 25) || 'Nova Sessão', timestamp: Date.now(), messages: [] };
+  }
+
+  let fullPrompt = text;
+  if (attachedFileContent) {
+    fullPrompt = `[DADOS DE ARQUIVO ANEXADO]:\n${attachedFileContent}\n\n[SOLICITAÇÃO DO OPERADOR]:\n${text}`;
+    attachedFileContent = null; // Limpa após envio
+    const fileInput = document.getElementById('jarvFileUpload');
+    if (fileInput) fileInput.value = '';
+  }
+
+  appendMessage(text, 'user');
+  chatsStore[activeChatId].messages.push({ role: 'user', content: fullPrompt });
+  saveStore();
+
+  setOrbState(true);
+  let botReply = "Erro ao processar requisição no ecossistema neural.";
+
+  try {
+    const currentHistory = chatsStore[activeChatId].messages.slice(-10).map(msg => ({
+      role: (msg.role === 'bot' || msg.role === 'bot-html') ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
+      content: msg.content.replace(/<[^>]*>?/gm, '')
+    }));
+
+    const response = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ULTRA_FAST_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "Você é o J.A.R.V.I.S., assistente autônomo avançado e inteligência artificial de alta performance de Romário. Seja direto, técnico, preciso e opere com excelência em engenharia, programação, enfermagem e automação."
+          },
+          ...currentHistory
+        ]
+      })
+    });
+
+    const data = await response.json();
+    if (data && !data.error) {
+      botReply = data.choices?.[0]?.message?.content || data.response || "Resposta vazia do modelo.";
+    } else {
+      botReply = `[ERRO DO WORKER]: ${data.error?.message || JSON.stringify(data)}`;
+    }
+  } catch (err) {
+    console.error("Erro na comunicação com o Cloudflare Worker:", err);
+    botReply = `[ERRO DE CONEXÃO]: ${err.message}`;
+  }
+
+  setOrbState(false);
+  appendMessage(botReply, 'bot');
+  chatsStore[activeChatId].messages.push({ role: 'bot', content: botReply });
+  saveStore();
+  saveStoreToCloudAndLocal();
+
+  speakJARVIS(botReply);
+};
 
 // ----- Sistema de Voz -----
 function setupVoiceRecognition() {  
@@ -614,7 +680,7 @@ window.toggleAutonomousMode = function() {
     if(!chatsStore[id]) {  
       chatsStore[id] = { title: `🧠 Registro Autônomo`, timestamp: Date.now(), messages: [], is_readonly: true };  
     }  
-    switchChat(id);  
+    window.switchChat(id);  
     saveStore();  
       
     if (msgArea) msgArea.innerHTML = ''; // Limpa para iniciar o feed autônomo sem resíduos
@@ -630,7 +696,7 @@ window.toggleAutonomousMode = function() {
 };  
 
 // ==========================================================
-// [FIX APLICADO]: Engine de Geração Autônoma com Contexto Encadeado
+// Engine de Geração Autônoma com Contexto Encadeado
 // ==========================================================
 async function generateAutonomousReport(area) {  
   setOrbState(true);  
@@ -648,7 +714,7 @@ async function generateAutonomousReport(area) {
       method: "POST", 
       headers: { "Content-Type": "application/json" },  
       body: JSON.stringify({ 
-        model: MODEL_FALLBACK_LIST[0], 
+        model: ULTRA_FAST_MODEL, 
         messages: [  
           {  
             role: "system", 
@@ -714,18 +780,16 @@ async function saveStoreToCloudAndLocal() {
 }
 
 // ==========================================================
-// FUNÇÕES AUXILIARES / STUBS PARA GARANTIR ESTABILIDADE
+// FUNÇÕES AUXILIARES DE GERENCIAMENTO E ESTABILIDADE
 // ==========================================================
 window.saveStore = function() {
-  saveStoreToCloudAndLocal();
+  localStorage.setItem('jarv_chats_v7', JSON.stringify(chatsStore));
 };
 
-window.processQueryText = window.processQueryText || function(text) {
-  appendMessage(text, 'user');
-  speakJARVIS("Estou processando a solicitação: " + text);
-};
-
-window.appendMessage = window.appendMessage || function(msg, sender, isHtml = false) {
+window.appendMessage = function(msg, sender, isHtml = false) {
+  if (!msgArea) {
+    msgArea = document.querySelector('.jarv-chat-area') || document.getElementById('msgArea') || document.body;
+  }
   if (!msgArea) return;
   const div = document.createElement('div');
   div.className = `msg-${sender}`;
@@ -735,24 +799,48 @@ window.appendMessage = window.appendMessage || function(msg, sender, isHtml = fa
     div.innerText = msg;
   }
   msgArea.appendChild(div);
-  msgArea.scrollTop = msgArea.scrollHeight; // Auto-scroll
+  msgArea.scrollTop = msgArea.scrollHeight;
 };
 
-window.initChatStore = window.initChatStore || async function() {
-   console.log("[SISTEMA] initChatStore carregado.");
+window.initChatStore = async function() {
+  if (auth && auth.currentUser && db) {
+    try {
+      const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+      if (doc.exists && doc.data().chats) {
+        chatsStore = doc.data().chats;
+        console.log("[FIREBASE] Chats carregados da nuvem.");
+      }
+    } catch (e) {
+      console.error("[FIREBASE] Erro ao carregar chats da nuvem:", e);
+    }
+  }
+  if (!chatsStore[activeChatId]) {
+    activeChatId = Object.keys(chatsStore)[0] || 'chat_default';
+  }
+  window.switchChat(activeChatId);
 };
 
-window.switchChat = window.switchChat || function(chatId) {
-   activeChatId = chatId;
-   localStorage.setItem('jarv_active_chat', chatId);
-   if (msgArea) msgArea.innerHTML = ''; // Limpeza ao trocar de chat/sessão
-   console.log("[SISTEMA] Chat alternado para ID: " + chatId);
+window.switchChat = function(chatId) {
+  activeChatId = chatId;
+  localStorage.setItem('jarv_active_chat', chatId);
+  if (msgArea) msgArea.innerHTML = '';
+  
+  if (chatsStore[chatId] && chatsStore[chatId].messages) {
+    chatsStore[chatId].messages.forEach(m => {
+      const isHtml = m.role === 'bot-html' || m.content.trim().startsWith('<div');
+      appendMessage(m.content, m.role, isHtml);
+    });
+  }
+  console.log("[SISTEMA] Chat alternado para ID: " + chatId);
 };
 
-window.injectChatHistoryUI = window.injectChatHistoryUI || function() {
-   // Stub para histórico de UI
+window.injectChatHistoryUI = function() {
+  const container = document.getElementById('jarvChatHistoryContainer') || document.querySelector('.sidebar');
+  if (!container) return;
+  // Renderizador automático de histórico de conversas na barra lateral se aplicável
 };
 
-window.initJarvisVision = window.initJarvisVision || function() {
-   speakJARVIS("Módulo de Visão Computacional sendo carregado...");
+window.initJarvisVision = function() {
+  speakJARVIS("Módulo de Visão Computacional sendo calibrado...");
+  appendMessage("[VISÃO COMPUTACIONAL]: Pronto para analisar capturas e elementos visuais da tela.", 'system', true);
 };
