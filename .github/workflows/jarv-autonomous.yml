@@ -1,9 +1,12 @@
 name: J.A.R.V.I.S. Autonomous 24/7
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # Executa a cada 6 horas automaticamente
-  workflow_dispatch: # Permite que você execute manualmente a qualquer momento pela aba Actions
+    - cron: '0 */6 * * *' # Executa a cada 6 horas (ou conforme sua preferência)
+
+permissions:
+  contents: write # Permite que o workflow grave alterações no repositório
 
 jobs:
   run-autonomous:
@@ -18,9 +21,17 @@ jobs:
           node-version: '20'
 
       - name: Instalar Dependências
-        run: npm install node-fetch
+        run: npm install
 
       - name: Executar Motor Autônomo J.A.R.V.I.S.
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: node scripts/jarv-autonomous-runner.js
+
+      - name: Commit e Push do Novo Relatório
+        run: |
+          git config --global user.name "J.A.R.V.I.S. Autonomous Bot"
+          git config --global user.email "jarvis-bot@users.noreply.github.com"
+          git add IA/
+          git diff --staged --quiet || git commit -m "🤖 [J.A.R.V.I.S.] Novo relatório autônomo gerado [skip ci]"
+          git push
