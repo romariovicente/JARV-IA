@@ -1,9 +1,9 @@
 name: J.A.R.V.I.S. Autonomous 24/7
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Permite disparo manual no painel do GitHub Actions
   schedule:
-    - cron: '0 */6 * * *' # Executa a cada 6 horas
+    - cron: '0 */6 * * *' # Executa a cada 6 horas automaticamente
 
 permissions:
   contents: write # Permite que o workflow grave e envie alterações no repositório
@@ -29,6 +29,15 @@ jobs:
         run: |
           git config --global user.name "J.A.R.V.I.S. Autonomous Bot"
           git config --global user.email "jarvis-bot@users.noreply.github.com"
+          
+          # Adiciona todos os arquivos novos ou modificados dentro da pasta IA/
           git add IA/
-          git diff --staged --quiet || git commit -m "🤖 [J.A.R.V.I.S.] Novo relatório autônomo gerado [skip ci]"
-          git push
+          
+          # Verifica se há novos arquivos, comita, atualiza e envia (push)
+          if git diff --staged --quiet; then
+            echo "Nenhuma alteração detectada. Nada a commitar."
+          else
+            git commit -m "🤖 [J.A.R.V.I.S.] Novo relatório autônomo gerado [skip ci]"
+            git pull origin main --rebase # Evita conflitos caso você tenha editado o site enquanto o robô rodava
+            git push
+          fi
