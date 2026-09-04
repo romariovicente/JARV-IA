@@ -25,19 +25,19 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: node scripts/jarv-autonomous-runner.js
 
-      - name: Commit e Push do Novo Relatório
+      - name: Commit e Push do Diário Unificado
         run: |
           git config --global user.name "J.A.R.V.I.S. Autonomous Bot"
           git config --global user.email "jarvis-bot@users.noreply.github.com"
           
-          # Adiciona todos os arquivos novos ou modificados dentro da pasta IA/
+          # Adiciona todos os arquivos novos ou modificados dentro da pasta IA/ (incluindo o diario-unificado.md)
           git add IA/
           
           # Verifica se há novos arquivos, comita, atualiza e envia (push)
           if git diff --staged --quiet; then
             echo "Nenhuma alteração detectada. Nada a commitar."
           else
-            git commit -m "🤖 [J.A.R.V.I.S.] Novo relatório autônomo gerado [skip ci]"
+            git commit -m "🤖 [J.A.R.V.I.S.] Sincronização e atualização do Diário Unificado [skip ci]"
             git pull origin main --rebase # Evita conflitos caso você tenha editado o site enquanto o robô rodava
             git push
           fi
