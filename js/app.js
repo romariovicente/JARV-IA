@@ -2,8 +2,7 @@
 // [AUTO-HEAL SYSTEM]: Status - Ativo e Operacional (v6.7 Core)
 // J.A.R.V.I.S. Autonomous Self-Correction Engine v6.7
 // Modelos Groq atualizados para o ecossistema atual (GPT OSS / Compound)
-// ==========================================================
-// J.A.R.V.I.S. - Core Application Script v6.7 (Autônomo + Gamificação + TTS Refinado + Visão Computacional + Firebase Dinâmico + Quiz)
+// Sincronização em Nuvem (Firebase Firestore) + Persistência Local 24/7
 // ==========================================================
 
 // Configuração Firebase atualizada com a chave de API ativa
@@ -26,7 +25,7 @@ if (typeof firebase !== 'undefined') {
   provider.addScope('https://www.googleapis.com/auth/calendar');  
   provider.addScope('https://www.googleapis.com/auth/calendar.readonly');  
 
-  auth.onAuthStateChanged((user) => {  
+  auth.onAuthStateChanged(async (user) => {  
     const loginModal = document.getElementById('loginModal') || document.querySelector('.auth-modal');  
     const userNameDisplay = document.getElementById('userNameDisplay');  
     if (user) {  
@@ -34,7 +33,9 @@ if (typeof firebase !== 'undefined') {
       if (loginModal) loginModal.style.display = 'none';  
       if (userNameDisplay) {  
         userNameDisplay.innerText = user.displayName ? user.displayName.split(' ')[0] : 'Romário';  
-      }  
+      }
+      // Sincroniza dados da nuvem ao logar
+      await initChatStore();
     } else {  
       if (loginModal) loginModal.style.display = 'flex';  
     }  
@@ -100,23 +101,9 @@ window.initJarvisSession = function() {
   speakJARVIS('Modo offline ativado.');
 };  
 
-async function saveUserPreferenceToFirebase(key, value) {  
-  if (!auth || !auth.currentUser || !db) return;  
-  try {  
-    await db.collection('users').doc(auth.currentUser.uid).set({  
-      [key]: value,  
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()  
-    }, { merge: true });  
-    console.log(`[MEMÓRIA] Preferência '${key}' salva.`);
-  } catch (e) {  
-    console.error("Erro ao salvar preferência:", e);
-  }  
-}  
-
 // ----- Variáveis globais do sistema -----
 const WORKER_URL = "https://jarvis-proxy.juuzousuzuyabdt.workers.dev";  
 
-// Modelos atualizados com suporte ativo da Groq
 const MODEL_FALLBACK_LIST = [  
   'openai/gpt-oss-120b',  
   'openai/gpt-oss-20b',  
@@ -127,21 +114,17 @@ localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
 let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : true;  
-let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v5')) || {};  
+let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v7')) || {};  
 let activeChatId = localStorage.getItem('jarv_active_chat') || null;  
 
 let activeModule = null;  
 let msgArea, chatInput, statusEl, jarvisOrb;  
 let attachedFileContent = null;  
-let audioCtx = null, analyser = null, dataArray = null;  
-
 let recognition = null;  
 let isContinuousActive = false;  
 let isJarvisSpeaking = false;  
 let userRequestedMicStop = true;  
 let speechQueue = [];  
-
-let jarvisVisionActive = false;  
 let autonomousInterval = null;  
 
 // ----- Inicialização principal -----
@@ -162,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
   injectChatHistoryUI();  
   setupExecutionButtonListener();  
   setupVoiceRecognition();  
-  initAudioAnalyzer();  
   setupFileUploadListener();  
   startSystemClock();  
   injectAnimations();  
@@ -214,8 +196,8 @@ function injectAnimations() {
       background-size: 1000px 100%;  
       animation: pulse-shimmer 2s infinite linear;  
     }
-    .msg-user { align-self: flex-end; background: #0044ff; color: #fff; padding: 10px; border-radius: 8px 8px 0 8px; margin: 5px 0; max-width: 80%; border: 1px solid #0055ff; }
-    .msg-bot { align-self: flex-start; background: #161b22; color: #c9d1d9; padding: 10px; border-radius: 8px 8px 8px 0; margin: 5px 0; max-width: 90%; border: 1px solid #30363d; font-family: monospace; }
+    .msg-user { align-self: flex-end; background: #0044ff; color: #fff; padding: 10px; border-radius: 8px 8px 0 8px; margin: 5px 0; max-width: 80%; border: 1px solid #0055ff; word-break: break-word; }
+    .msg-bot { align-self: flex-start; background: #161b22; color: #c9d1d9; padding: 10px; border-radius: 8px 8px 8px 0; margin: 5px 0; max-width: 90%; border: 1px solid #30363d; font-family: monospace; word-break: break-word; }
     .msg-system { align-self: center; background: transparent; color: #8b949e; padding: 5px; font-size: 0.7rem; font-family: monospace; font-style: italic; }
   `;  
   document.head.appendChild(style);  
@@ -618,13 +600,12 @@ window.toggleAutonomousMode = function() {
     if(!chatsStore[id]) {  
       chatsStore[id] = { title: `🧠 Registro Autônomo`, timestamp: Date.now(), messages: [], is_readonly: true };  
     }  
-    // Mudar de chat e salvar estado inicial
     switchChat(id);  
     saveStore();  
-    
+      
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);  
     speakJARVIS("Iniciando loop de conhecimento autônomo.");
-    
+      
     autonomousInterval = setInterval(async () => {  
       const areas = ["Enfermagem e Protocolos SAE", "Cálculo de Medicamentos e Infusão", "Segurança da Informação e Kali Linux", "Engenharia de Prompt e RAG", "Arquitetura de Sistemas Web"];  
       const area = areas[Math.floor(Math.random() * areas.length)];  
@@ -634,23 +615,18 @@ window.toggleAutonomousMode = function() {
 };  
 
 // ==========================================================
-// [FIX APLICADO]: Atualização da Engine de Geração Autônoma
-// O código agora recupera o histórico e constrói a janela de 
-// contexto (contextWindow) para evitar chamadas isoladas!
+// [FIX APLICADO]: Engine de Geração Autônoma com Contexto Encadeado
 // ==========================================================
 async function generateAutonomousReport(area) {  
   setOrbState(true);  
   const prompt = `Gere um relatório técnico curto e direto (máximo 150 palavras) contendo fatos avançados sobre: ${area}. Formate em Markdown leve.`;  
   let botResponse = "Falha de conexão autônoma.";  
-  
-  try {  
-    // 1. Resgata o histórico recente salvo da variável global chatsStore
-    const currentHistory = chatsStore['chat_auto_core']?.messages || [];
     
-    // 2. Filtra as últimas mensagens (últimas 6 para evitar estouro de tokens) e formata as roles
+  try {  
+    const currentHistory = chatsStore['chat_auto_core']?.messages || [];
     const contextWindow = currentHistory.slice(-6).map(msg => ({
       role: (msg.role === 'bot' || msg.role === 'bot-html') ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
-      content: msg.content.replace(/<[^>]*>?/gm, '') // Remove HTML puro da memória
+      content: msg.content.replace(/<[^>]*>?/gm, '') 
     }));
 
     const response = await fetch(WORKER_URL, {  
@@ -658,20 +634,20 @@ async function generateAutonomousReport(area) {
       headers: { "Content-Type": "application/json" },  
       body: JSON.stringify({ 
         model: MODEL_FALLBACK_LIST[0], 
-        messages: [ 
-          { 
+        messages: [  
+          {  
             role: "system", 
-            content: "Você é o J.A.R.V.I.S. em modo de auto-evolução. Analise o histórico de pesquisas anteriores e aprofunde o próximo relatório em lacunas técnicas não exploradas. Não repita tópicos anteriores." 
-          }, 
-          ...contextWindow, // <-- Injeção do histórico encadeado aqui
-          { 
+            content: "Você é o J.A.R.V.I.S. em modo de auto-evolução. Analise o histórico de pesquisas anteriores e aprofunde o próximo relatório em lacunas técnicas não exploradas. Não repita tópicos anteriores."  
+          },  
+          ...contextWindow,  
+          {  
             role: "user", 
-            content: `Com base nas pesquisas e relatórios acima, execute o próximo passo da investigação: ${prompt}` 
-          } 
-        ] 
+            content: `Com base nas pesquisas e relatórios acima, execute o próximo passo da investigação: ${prompt}`  
+          }  
+        ]  
       })  
     });  
-    
+      
     const data = await response.json();  
     if (data && !data.error) botResponse = data.choices?.[0]?.message?.content || data.response;  
   } catch (err) {  
@@ -679,153 +655,226 @@ async function generateAutonomousReport(area) {
   }  
   setOrbState(false);  
 
-  // 3. Salva a nova iteração na memória do robô para o PRÓXIMO ciclo
   if (chatsStore['chat_auto_core']) {
     chatsStore['chat_auto_core'].messages.push({ role: 'user', content: prompt });
     chatsStore['chat_auto_core'].messages.push({ role: 'bot', content: botResponse });
-    saveStore(); // Persiste no LocalStorage
+    saveStore(); 
   }
 
-  // --- CÓDIGO FINALIZADO E CORRIGIDO DAQUI PARA BAIXO ---
   const reportHtml = `  
     <div style="border: 1px solid #005cc5; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px; font-family: monospace; margin: 10px 0;">  
-      <h4 style="color:#00d2ff; margin-top:0; margin-bottom:10px; text-transform:uppercase; border-bottom: 1px solid #005cc5; padding-bottom: 5px;">
-        [RELATÓRIO AUTÔNOMO]: ${area}
-      </h4>
-      <div style="color: #c9d1d9; font-size: 0.85rem; line-height: 1.5;">
-        ${botResponse.replace(/\n/g, '<br>')}
+      <h4 style="color:#00d2ff; margin-top:0; margin-bottom: 6px;">🧠 RELATÓRIO AUTÔNOMO: ${area}</h4>
+      <div style="color:#c9d1d9; font-size: 0.75rem; line-height: 1.4; white-space: pre-wrap;">${botResponse}</div>
+      <div style="font-size: 0.6rem; color:#8b949e; margin-top: 8px; border-top: 1px solid #30363d; padding-top: 4px; display:flex; justify-content:space-between;">
+        <span>Status: Sincronizado com Nuvem</span>
+        <span>${new Date().toLocaleTimeString()}</span>
       </div>
     </div>  
   `;
   
-  appendMessage(reportHtml, 'bot-html', true);
-  speakJARVIS(`Relatório autônomo sobre ${area} finalizado e arquivado.`);
+  if (activeChatId === 'chat_auto_core') {
+    appendMessage(reportHtml, 'bot-html', true);
+  }
+  
+  speakJARVIS(`Novo relatório autônomo gerado sobre ${area}.`);
+  saveStoreToCloudAndLocal();
 }
 
 // ==========================================================
-// FUNÇÕES ESSENCIAIS DO SISTEMA (ADICIONADAS PARA COMPLETUDE)
+// [SYNC NUVEM & LOCAL] - Persistência 24/7 (Firestore)
 // ==========================================================
+async function saveStoreToCloudAndLocal() {
+  localStorage.setItem('jarv_chats_v7', JSON.stringify(chatsStore));
+  if (auth && auth.currentUser && db) {
+    try {
+      await db.collection('users').doc(auth.currentUser.uid).set({
+        chats: chatsStore,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      console.log("[SYNC NUVEM] Estado salvo com sucesso no Firestore.");
+    } catch (e) {
+      console.warn("[SYNC NUVEM] Salvamento em nuvem adiado:", e);
+    }
+  }
+}
 
-function appendMessage(content, role = 'user', isHtml = false) {
-  if (!msgArea) return;
-  const msgDiv = document.createElement('div');
-  msgDiv.className = `msg-${role === 'bot-html' ? 'bot' : role}`;
+function saveStore() {
+  saveStoreToCloudAndLocal();
+}
+
+async function initChatStore() {
+  if (auth && auth.currentUser && db) {
+    try {
+      const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+      if (doc.exists && doc.data().chats) {
+        chatsStore = doc.data().chats;
+        console.log("[SYNC NUVEM] Histórico de sessões recuperado da nuvem do operador.");
+      }
+    } catch (e) {
+      console.warn("[SYNC NUVEM] Falha ao recuperar da nuvem, utilizando cache local.");
+    }
+  }
+
+  if (Object.keys(chatsStore).length === 0) {
+    activeChatId = 'chat_main';
+    chatsStore[activeChatId] = { title: 'Sessão Principal J.A.R.V.I.S', messages: [] };
+  } else if (!activeChatId || !chatsStore[activeChatId]) {
+    activeChatId = Object.keys(chatsStore)[0];
+  }
   
-  if (isHtml || role === 'bot-html') {
+  saveStore();
+  if (typeof renderChat === 'function') {
+    renderChat(activeChatId);
+  }
+}
+
+// ----- Funções de Gerenciamento de Chat e Mensagens -----
+function appendMessage(content, type = 'user', isHtml = false) {
+  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.body;
+  const msgDiv = document.createElement('div');
+  
+  if (type === 'user') msgDiv.className = 'msg-user';
+  else if (type === 'bot' || type === 'bot-html') msgDiv.className = 'msg-bot';
+  else msgDiv.className = 'msg-system';
+
+  if (isHtml) {
     msgDiv.innerHTML = content;
   } else {
     msgDiv.innerText = content;
   }
-  
+
   msgArea.appendChild(msgDiv);
+  msgArea.scrollTop = msgArea.scrollHeight;
+
+  // Salva no chat ativo atual se houver
+  if (activeChatId && chatsStore[activeChatId] && type !== 'system') {
+    chatsStore[activeChatId].messages.push({ role: type, content, isHtml, timestamp: Date.now() });
+    saveStore();
+  }
+}
+
+function switchChat(chatId) {
+  activeChatId = chatId;
+  localStorage.setItem('jarv_active_chat', chatId);
+  renderChat(chatId);
+}
+
+function renderChat(chatId) {
+  if (!msgArea) msgArea = document.querySelector('.jarv-chat-area') || document.body;
+  msgArea.innerHTML = '';
+  
+  if (chatsStore[chatId] && chatsStore[chatId].messages) {
+    chatsStore[chatId].messages.forEach(msg => {
+      const msgDiv = document.createElement('div');
+      if (msg.role === 'user') msgDiv.className = 'msg-user';
+      else if (msg.role === 'bot' || msg.role === 'bot-html') msgDiv.className = 'msg-bot';
+      else msgDiv.className = 'msg-system';
+
+      if (msg.isHtml) {
+        msgDiv.innerHTML = msg.content;
+      } else {
+        msgDiv.innerText = msg.content;
+      }
+      msgArea.appendChild(msgDiv);
+    });
+  }
   msgArea.scrollTop = msgArea.scrollHeight;
 }
 
-window.processQueryText = async function(text) {
-  if (!text.trim()) return;
-  appendMessage(text, 'user');
+function injectChatHistoryUI() {
+  let historyContainer = document.getElementById('jarvChatHistoryContainer');
+  if (!historyContainer) {
+    const sidebar = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;
+    historyContainer = document.createElement('div');
+    historyContainer.id = 'jarvChatHistoryContainer';
+    historyContainer.style.cssText = `margin: 10px 5px; padding: 8px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; font-family: monospace;`;
+    sidebar.appendChild(historyContainer);
+  }
+  
+  historyContainer.innerHTML = `
+    <div style="font-size: 0.7rem; color: #00ffcc; font-weight: bold; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+      <span>📂 SESSÕES DE CHAT</span>
+      <button onclick="window.createNewChatSession()" style="background:#21262d; color:#00ffcc; border:1px solid #00ffcc; font-size:0.6rem; padding:2px 6px; border-radius:3px; cursor:pointer;">+ Nova</button>
+    </div>
+    <div id="chatSessionsList" style="display:flex; flex-direction:column; gap:4px; max-height: 150px; overflow-y: auto;"></div>
+  `;
+
+  const listEl = document.getElementById('chatSessionsList');
+  if (listEl) {
+    listEl.innerHTML = '';
+    Object.keys(chatsStore).forEach(id => {
+      const chat = chatsStore[id];
+      const btn = document.createElement('button');
+      btn.style.cssText = `background:${id === activeChatId ? '#0044ff' : '#161b22'}; color:${id === activeChatId ? '#fff' : '#c9d1d9'}; border:1px solid #30363d; padding:4px 6px; border-radius:4px; font-size:0.65rem; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;`;
+      btn.innerText = chat.title || 'Sessão ' + id;
+      btn.onclick = () => { switchChat(id); injectChatHistoryUI(); };
+      listEl.appendChild(btn);
+    });
+  }
+}
+
+window.createNewChatSession = function() {
+  const newId = 'chat_' + Date.now();
+  chatsStore[newId] = { title: `Sessão ${Object.keys(chatsStore).length + 1}`, messages: [] };
+  switchChat(newId);
+  injectChatHistoryUI();
+  saveStore();
+  speakJARVIS("Nova sessão de chat iniciada.");
+};
+
+async function processQueryText(text) {
+  appendMessage(text, 'user', false);
   setOrbState(true);
 
-  if (!activeChatId) {
-    activeChatId = 'chat_' + Date.now();
-    chatsStore[activeChatId] = { title: text.substring(0, 20) + '...', messages: [] };
-  }
-
-  const currentChat = chatsStore[activeChatId].messages;
-  currentChat.push({ role: 'user', content: text });
-
-  let fileContext = "";
+  // Se houver arquivo anexo, concatena ao prompt
+  let finalPrompt = text;
   if (attachedFileContent) {
-    fileContext = `\n\n[CONTEÚDO DO ARQUIVO ANEXO - ANALISE E RESPONDA COM BASE NISTO]:\n${attachedFileContent}`;
-    attachedFileContent = null; 
+    finalPrompt = `[CONTEÚDO DO ARQUIVO ANEXO]:\n${attachedFileContent}\n\n[SOLICITAÇÃO DO OPERADOR]: ${text}`;
+    attachedFileContent = null; // limpa após o envio
   }
 
+  let currentHistory = chatsStore[activeChatId]?.messages || [];
+  let contextWindow = currentHistory.slice(-8).map(msg => ({
+    role: (msg.role === 'bot' || msg.role === 'bot-html') ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
+    content: (msg.content || '').replace(/<[^>]*>?/gm, '')
+  }));
+
+  let botResponse = "Erro de conexão com o subsistema neural.";
   try {
-    const contextWindow = currentChat.slice(-8).map(m => ({
-      role: (m.role === 'bot' || m.role === 'bot-html') ? 'assistant' : 'user',
-      content: m.content.replace(/<[^>]*>?/gm, '') 
-    }));
-
-    // Injeta o arquivo na última mensagem se existir
-    if (fileContext) {
-      contextWindow[contextWindow.length - 1].content += fileContext;
-    }
-
     const response = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: ULTRA_FAST_MODEL,
         messages: [
-          { role: "system", content: "Você é o J.A.R.V.I.S., um assistente de inteligência artificial criado pelo Romário. Responda de forma clara, técnica e concisa." },
-          ...contextWindow
+          { role: "system", content: "Você é J.A.R.V.I.S., a inteligência artificial avançada do operador Romário. Seja direto, técnico, prestativo e utilize formatação Markdown leve." },
+          ...contextWindow,
+          { role: "user", content: finalPrompt }
         ]
       })
     });
-
     const data = await response.json();
-    const botMsg = data.choices?.[0]?.message?.content || data.response || "Desculpe, encontrei um erro de processamento neural.";
-    
-    currentChat.push({ role: 'bot', content: botMsg });
-    saveStore();
-    
-    appendMessage(botMsg, 'bot');
-    speakJARVIS(botMsg);
-  } catch (err) {
-    console.error("Erro no processQueryText:", err);
-    appendMessage("[FALHA DE CONEXÃO COM O NÚCLEO] Não foi possível contatar a API.", 'system');
+    if (data && !data.error) {
+      botResponse = data.choices?.[0]?.message?.content || data.response || "Sem resposta válida da API.";
+    }
+  } catch (e) {
+    console.error("Erro na requisição ao Worker:", e);
+    botResponse = "Falha crítica de comunicação com o Worker Cloudflare.";
   }
 
   setOrbState(false);
-};
-
-function saveStore() {
-  localStorage.setItem('jarv_chats_v5', JSON.stringify(chatsStore));
-  if (activeChatId) localStorage.setItem('jarv_active_chat', activeChatId);
-}
-
-function initChatStore() {
-  if (Object.keys(chatsStore).length === 0) {
-    activeChatId = 'chat_main';
-    chatsStore[activeChatId] = { title: 'Sessão Principal J.A.R.V.I.S', messages: [] };
-    saveStore();
-  } else if (!activeChatId || !chatsStore[activeChatId]) {
-    activeChatId = Object.keys(chatsStore)[0];
-  }
-  renderChat(activeChatId);
-}
-
-function switchChat(id) {
-  if (!chatsStore[id]) return;
-  activeChatId = id;
-  renderChat(id);
-}
-
-function renderChat(id) {
-  if (!msgArea) return;
-  msgArea.innerHTML = '';
-  const chat = chatsStore[id];
-  if (chat && chat.messages) {
-    chat.messages.forEach(m => appendMessage(m.content, m.role, m.role === 'bot-html'));
-  }
-}
-
-// Stubs para recursos complexos não dependentes diretamente deste script
-function initAudioAnalyzer() {
-  console.log("[SISTEMA] Analisador de áudio pronto para acoplamento.");
-}
-
-function injectChatHistoryUI() {
-  console.log("[SISTEMA] UI do Histórico injetada.");
+  appendMessage(botResponse, 'bot', false);
+  speakJARVIS(botResponse);
+  saveStoreToCloudAndLocal();
 }
 
 window.initJarvisVision = function() {
-  jarvisVisionActive = true;
-  appendMessage(`
-    <div style="border: 1px solid #00ffcc; padding: 10px; background: rgba(0,255,204,0.1); border-radius: 6px;">
-      <span style="color:#00ffcc; font-weight:bold;">👁️ MÓDULO DE VISÃO COMPUTACIONAL INICIADO</span><br>
-      <span style="font-size:0.75rem; color:#c9d1d9;">Aguardando feed de vídeo ou upload de imagem para análise.</span>
-    </div>
-  `, 'bot-html', true);
-  speakJARVIS("Módulo de visão computacional ativado e em espera.");
+  jarvisVisionActive = !jarvisVisionActive;
+  if (jarvisVisionActive) {
+    appendMessage("[VISÃO COMPUTACIONAL]: Ativada. Capturando feed de vídeo ambiente...", 'system', true);
+    speakJARVIS("Visão computacional ativada com sucesso.");
+  } else {
+    appendMessage("[VISÃO COMPUTACIONAL]: Desativada.", 'system', true);
+    speakJARVIS("Visão computacional desativada.");
+  }
 };
