@@ -1,3 +1,14 @@
 name = "jarv-ia-worker"
 main = "worker.js"
 compatibility_date = "2026-08-30"
+
+# Configurações e diretrizes de ambiente para o J.A.R.V.I.S. v6.0 Core Protocol
+
+[vars]
+# Variáveis de ambiente públicas (opcional)
+ENVIRONMENT = "production"
+
+# NOTA DE SEGURANÇA: 
+# A chave secreta da API da Groq (GROQ_API_KEY) não deve ser colocada em texto plano aqui.
+# Para configurá-la de forma segura no Cloudflare Workers, execute o comando no seu terminal:
+# wrangler secret put GROQ_API_KEY
