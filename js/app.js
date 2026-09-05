@@ -92,6 +92,9 @@ document.addEventListener("DOMContentLoaded", () => {
   startSystemClock();  
   injectAnimations();  
 
+  // Inicializa o Front-End do Segundo Cérebro se houver painel correspondente
+  initBrainUI();
+
   if (statusEl) {  
     statusEl.innerText = "ONLINE";  
     statusEl.style.color = "#00ffcc";  
@@ -172,7 +175,7 @@ function startSystemClock() {
 
 function injectAnonymousLogoAndStyles() {  
   if (document.getElementById('anonymousBranding')) return;  
-  const sidebarArea = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.querySelector('header') || document.body;  
+  const sidebarArea = document.querySelector('.subsystem-list') || document.querySelector('aside') || document.body;  
   const logoDiv = document.createElement('div');  
   logoDiv.id = 'anonymousBranding';  
   logoDiv.style.cssText = `display: flex; align-items: center; gap: 10px; padding: 10px; margin: 8px 5px; background: #000000; border: 1.5px solid #00ffcc; border-radius: 8px; font-family: monospace; box-shadow: 0 0 15px rgba(0,255,204,0.25);`;  
@@ -187,6 +190,83 @@ function injectAnonymousLogoAndStyles() {
   `;  
   sidebarArea.insertBefore(logoDiv, sidebarArea.firstChild);  
 }  
+
+// ==========================================================
+// [MÓDULO SEGUNDO CÉREBRO]: Exibição Dinâmica & Busca Instantânea
+// ==========================================================
+let allBrainNotes = [];
+
+function initBrainUI() {
+  const searchInput = document.getElementById('brainSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = allBrainNotes.filter(note => 
+        (note.title && note.title.toLowerCase().includes(query)) || 
+        (note.snippet && note.snippet.toLowerCase().includes(query)) ||
+        (note.theme && note.theme.toLowerCase().includes(query))
+      );
+      renderBrainNotes(filtered);
+    });
+  }
+
+  // Tenta carregar notas se o painel estiver presente
+  if (document.getElementById('brainModulePanel') || document.getElementById('brainNotesList')) {
+    loadBrainNotes();
+  }
+}
+
+async function loadBrainNotes() {
+  const container = document.getElementById('brainNotesList');
+  if (!container) return;
+  
+  container.innerHTML = '<div style="color: var(--cyan, #00ffcc); padding: 10px; font-family: monospace; font-size: 0.8rem;">Carregando base de conhecimento do Segundo Cérebro...</div>';
+
+  try {
+    const response = await fetch('IA/Segundo_Cérebro/brain-index.json');
+    if (!response.ok) throw new Error('Índice não encontrado');
+    
+    allBrainNotes = await response.json();
+    renderBrainNotes(allBrainNotes);
+  } catch (error) {
+    container.innerHTML = '<div style="color: #ff5555; padding: 10px; font-family: monospace; font-size: 0.8rem;">Nenhuma nota indexada encontrada no momento. Aguardando primeira ingestão.</div>';
+    allBrainNotes = [];
+  }
+}
+
+function renderBrainNotes(notes) {
+  const container = document.getElementById('brainNotesList');
+  if (!container) return;
+  
+  if (!notes || notes.length === 0) {
+    container.innerHTML = '<div style="color: #8b949e; padding: 10px; font-family: monospace; font-size: 0.8rem;">Nenhum registro correspondente na base.</div>';
+    return;
+  }
+
+  container.innerHTML = notes.map(note => `
+    <div class="brain-card" style="background: var(--bg-card, #111); border: 1px solid var(--cyan-glow, #00f0ff); padding: 12px; border-radius: 6px; margin-bottom: 8px; font-family: monospace;">
+      <div style="font-weight: bold; color: var(--cyan, #00f0ff); font-size: 14px; margin-bottom: 4px;">${note.title || 'Sem Título'}</div>
+      <div style="font-size: 11px; color: #8b949e; margin-bottom: 6px;">📅 ${note.date || 'Data N/D'} | 🏷️ ${note.theme || 'Geral'}</div>
+      <div style="font-size: 12px; color: #c9d1d9; line-height: 1.4;">${note.snippet || ''}</div>
+    </div>
+  `).join('');
+}
+
+// Mantido para compatibilidade com chamadas globais
+window.filterBrainNotes = function() {  
+  const input = document.getElementById('brainSearchInput');  
+  const term = input ? input.value.trim().toLowerCase() : '';  
+  if (term.length > 0) {  
+    const filtered = allBrainNotes.filter(note => 
+      (note.title && note.title.toLowerCase().includes(term)) || 
+      (note.snippet && note.snippet.toLowerCase().includes(term)) ||
+      (note.theme && note.theme.toLowerCase().includes(term))
+    );
+    renderBrainNotes(filtered);
+  } else {  
+    renderBrainNotes(allBrainNotes);
+  }  
+};
 
 // ----- Funções globais expostas -----
 window.loginWithGoogle = async function() {  
@@ -226,17 +306,6 @@ window.sendMsg = function() {
     processQueryText(text);  
   } else {  
     console.warn("[J.A.R.V.I.S.] processQueryText não definido.");
-  }  
-};  
-
-window.filterBrainNotes = function() {  
-  const input = document.getElementById('brainSearchInput');  
-  const term = input ? input.value.trim() : '';  
-  console.log(`[SEGUNDO CÉREBRO] Pesquisando por: "${term}"`);
-  if (term.length > 0) {  
-    appendMessage(`[SEGUNDO CÉREBRO] Resultados para "${term}" (em desenvolvimento)`, 'system', true);  
-  } else {  
-    appendMessage('[SEGUNDO CÉREBRO] Lista de notas restaurada.', 'system', true);  
   }  
 };  
 
