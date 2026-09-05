@@ -1,24 +1,26 @@
 import os
 import datetime
 import glob
+import json
 
 RAW_DIR = "IA/Raw_Inputs"
 NOTES_DIR = "IA/Segundo_Cérebro/Notes"
+INDEX_PATH = "IA/Segundo_Cérebro/brain-index.json"
 
 def process_notes():
-    # Garante que o diretório de destino existe
     os.makedirs(NOTES_DIR, exist_ok=True)
     
     if not os.path.exists(RAW_DIR):
         print(f"Diretório de entrada {RAW_DIR} não encontrado.")
         return
 
-    # Busca arquivos Markdown (.md) e Texto (.txt) na pasta de entradas brutas
     raw_files = glob.glob(os.path.join(RAW_DIR, "*.md")) + glob.glob(os.path.join(RAW_DIR, "*.txt"))
     
     if not raw_files:
         print("Nenhum arquivo novo para processar.")
         return
+
+    notes_registry = []
 
     for filepath in raw_files:
         filename = os.path.basename(filepath)
@@ -27,13 +29,11 @@ def process_notes():
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
         
-        # Metadados gerados automaticamente
         today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         title = name_without_ext.replace('-', ' ').title()
         theme = "Segundo Cérebro / Automação"
         keywords = ["jarvis", "automacao", "indexacao"]
         
-        # Constrói o Frontmatter (metadados estruturados) + Conteúdo formatado
         frontmatter = f"""---
 title: "{title}"
 date: "{today}"
@@ -47,14 +47,40 @@ keywords: {keywords}
         output_filename = f"{name_without_ext}.md"
         output_path = os.path.join(NOTES_DIR, output_filename)
         
-        # Salva a nota processada na pasta do Segundo Cérebro
         with open(output_path, "w", encoding="utf-8") as out_f:
             out_f.write(processed_content)
             
-        print(f"Processado com sucesso: {filename} -> {output_path}")
+        # Adiciona ao registro para o índice JSON
+        notes_registry.path = output_path
+        notes_registry.append({
+            "title": title,
+            "filename": output_filename,
+            "date": today,
+            "theme": theme,
+            "snippet": content[:150] + "..."
+        })
         
-        # Opcional: Remove o arquivo bruto original após o processamento bem-sucedido
-        # os.remove(filepath)
+        print(f"Processado com sucesso: {filename} -> {output_path}")
+
+    # Salva o arquivo de índice consolidado para o Front-End
+    existing_index = []
+    if os.path.exists(INDEX_PATH):
+        try:
+            with open(INDEX_PATH, "r", encoding="utf-8") as idx_f:
+                existing_index = json.load(idx_f)
+        except:
+            pass
+            
+    # Mescla evitando duplicadas por filename
+    existing_filenames = {item["filename"] for item in existing_index}
+    for note in notes_registry:
+        if note["filename"] not in existing_filenames:
+            existing_index.append(note)
+
+    with open(INDEX_PATH, "w", encoding="utf-8") as idx_f:
+        json.dump(existing_index, idx_f, ensure_ascii=False, indent=4)
+        
+    print(f"Índice do Segundo Cérebro atualizado: {INDEX_PATH}")
 
 if __name__ == "__main__":
     process_notes()
