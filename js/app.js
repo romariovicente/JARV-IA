@@ -54,7 +54,11 @@ let ULTRA_FAST_MODEL = MODEL_FALLBACK_LIST[0];
 localStorage.setItem('jarv_model', ULTRA_FAST_MODEL);  
 
 let currentLang = localStorage.getItem('jarv_lang') || 'pt-BR';  
-let ttsEnabled = localStorage.getItem('jarv_tts_enabled') === 'true' ? true : true;  
+
+// Correção do TTS para respeitar a preferência salva
+let savedTts = localStorage.getItem('jarv_tts_enabled');
+let ttsEnabled = savedTts === null ? true : savedTts === 'true';  
+
 let chatsStore = JSON.parse(localStorage.getItem('jarv_chats_v7')) || {
   'chat_default': { title: 'Sessão Principal', timestamp: Date.now(), messages: [] }
 };  
@@ -85,7 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initChatStore();  
 
   injectModuleSidebar();  
-  injectChatHistoryUI();  
   setupExecutionButtonListener();  
   setupVoiceRecognition();  
   setupFileUploadListener();  
@@ -143,8 +146,8 @@ function injectAnimations() {
       animation: pulse-shimmer 2s infinite linear;  
     }
     .msg-user { align-self: flex-end; background: #0044ff; color: #fff; padding: 10px; border-radius: 8px 8px 0 8px; margin: 5px 0; max-width: 80%; border: 1px solid #0055ff; word-break: break-word; }
-    .msg-bot { align-self: flex-start; background: #161b22; color: #c9d1d9; padding: 10px; border-radius: 8px 8px 8px 0; margin: 5px 0; max-width: 90%; border: 1px solid #30363d; font-family: monospace; word-break: break-word; white-space: pre-wrap; }
-    .msg-system { align-self: center; background: transparent; color: #8b949e; padding: 5px; font-size: 0.7rem; font-family: monospace; font-style: italic; }
+    .msg-bot { align-self: flex-start; background: #161b22; color: #c9d1d9; padding: 10px; border-radius: 8px 8px 8px 0; margin: 5px 0; max-width: 90%; border: 1px solid #30363d; font-family: monospace; word-break: break-word; white-space: pre-wrap; line-height: 1.5; }
+    .msg-system { align-self: center; background: transparent; color: #8b949e; padding: 5px; font-size: 0.7rem; font-family: monospace; font-style: italic; margin: 5px 0; text-align: center; }
   `;  
   document.head.appendChild(style);  
 }  
@@ -210,7 +213,6 @@ function initBrainUI() {
     });
   }
 
-  // Tenta carregar notas se o painel estiver presente
   if (document.getElementById('brainModulePanel') || document.getElementById('brainNotesList')) {
     loadBrainNotes();
   }
@@ -252,7 +254,6 @@ function renderBrainNotes(notes) {
   `).join('');
 }
 
-// Mantido para compatibilidade com chamadas globais
 window.filterBrainNotes = function() {  
   const input = document.getElementById('brainSearchInput');  
   const term = input ? input.value.trim().toLowerCase() : '';  
@@ -279,7 +280,7 @@ window.loginWithGoogle = async function() {
       try {
         await auth.signInWithPopup(provider);
       } catch (popupErr) {
-        console.warn("Popup bloqueado ou não suportado no mobile, alternando para redirect:", popupErr);
+        console.warn("Popup bloqueado no mobile, alternando para redirect:", popupErr);
         await auth.signInWithRedirect(provider);
       }
     } else {
@@ -302,6 +303,7 @@ window.sendMsg = function() {
   const text = chatInput.value.trim();  
   if (!text && !attachedFileContent) return;  
   chatInput.value = '';  
+  
   if (typeof processQueryText === 'function') {  
     processQueryText(text);  
   } else {  
@@ -316,16 +318,16 @@ window.initJarvisSession = function() {
   speakJARVIS('Modo offline ativado.');
 };  
 
-// ----- Controle de Módulos com Limpeza de Acúmulo (Correção de Visualização) -----
+// ----- Controle de Módulos com Limpeza de Acúmulo -----
 window.switchModule = function(modName, event) {
   if (event && event.currentTarget) {
-    document.querySelectorAll('.sidebar-nav .jarv-nav-item, .subsystem-list .jarv-nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-nav .jarv-nav-item, .subsystem-list .jarv-nav-item, .mod-btn').forEach(el => el.classList.remove('active'));
     event.currentTarget.classList.add('active');
   }
   
   const msgAreaElement = document.getElementById('msgArea') || document.querySelector('.jarv-chat-area');
   if (msgAreaElement && (modName === 'master' || modName === 'chat' || modName === 'academy' || modName === 'globe')) {
-    msgAreaElement.innerHTML = ''; // Limpa para evitar sobreposição
+    msgAreaElement.innerHTML = ''; 
   }
 
   activeModule = modName;
@@ -338,13 +340,17 @@ window.switchModule = function(modName, event) {
 // ==========================================================
 window.processQueryText = async function(text) {
   if (!chatsStore[activeChatId]) {
-    chatsStore[activeChatId] = { title: text.substring(0, 25) || 'Nova Sessão', timestamp: Date.now(), messages: [] };
+    chatsStore[activeChatId] = { title: (text.substring(0, 25) || 'Nova Sessão'), timestamp: Date.now(), messages: [] };
+    window.injectChatHistoryUI();
+  } else if (chatsStore[activeChatId].title === 'Nova Sessão' && text.trim().length > 0) {
+    chatsStore[activeChatId].title = text.substring(0, 25) + "...";
+    window.injectChatHistoryUI();
   }
 
   let fullPrompt = text;
   if (attachedFileContent) {
     fullPrompt = `[DADOS DE ARQUIVO ANEXADO]:\n${attachedFileContent}\n\n[SOLICITAÇÃO DO OPERADOR]:\n${text}`;
-    attachedFileContent = null; // Limpa após envio
+    attachedFileContent = null;
     const fileInput = document.getElementById('jarvFileUpload');
     if (fileInput) fileInput.value = '';
   }
@@ -370,7 +376,7 @@ window.processQueryText = async function(text) {
         messages: [
           {
             role: "system",
-            content: "Você é o J.A.R.V.I.S., assistente autônomo avançado e inteligência artificial de alta performance de Romário. Seja direto, técnico, preciso e opere com excelência em engenharia, programação, enfermagem e automação."
+            content: "Você é o J.A.R.V.I.S., assistente autônomo avançado e inteligência artificial de alta performance de Romário. Seja direto, técnico, preciso e opere com excelência em engenharia, programação, enfermagem (use abreviação c/ PM ou s.p.m) e automação."
           },
           ...currentHistory
         ]
@@ -687,10 +693,10 @@ function injectModuleSidebar() {
     <div id="moduleButtonsList" style="display:flex; flex-direction:column; gap:4px;">  
       <button onclick="window.openLifeDashboard()" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#ff0077; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🎮 Minha Vida é um Jogo</button>  
       <button onclick="window.toggleAutonomousMode()" id="btn_mod_autonomous" class="mod-btn" style="background:#161b22; border:1px solid #30363d; color:#00ffff; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left; font-weight:bold;">🧠 JARV Core Autônomo</button>  
-      <button onclick="window.switchModule('academy')" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>  
-      <button onclick="window.switchModule('globe')" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>  
-      <button onclick="window.switchModule('imageGen')" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador Imagem 3D</button>  
-      <button onclick="window.switchModule('videoGen')" class="mod-btn" id="btn_mod_videoGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎬 Gerador Vídeo 3D</button>  
+      <button onclick="window.switchModule('academy', event)" class="mod-btn" id="btn_mod_academy" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎓 Academia Hacker & CC50</button>  
+      <button onclick="window.switchModule('globe', event)" class="mod-btn" id="btn_mod_globe" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🌐 Globo Ciberameaças</button>  
+      <button onclick="window.switchModule('imageGen', event)" class="mod-btn" id="btn_mod_imageGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🖼️ Gerador Imagem 3D</button>  
+      <button onclick="window.switchModule('videoGen', event)" class="mod-btn" id="btn_mod_videoGen" style="background:#161b22; border:1px solid #30363d; color:#c9d1d9; padding:5px; border-radius:4px; font-size:0.7rem; cursor:pointer; text-align:left;">🎬 Gerador Vídeo 3D</button>  
     </div>  
   `;  
   sidebar.appendChild(container);  
@@ -698,7 +704,7 @@ function injectModuleSidebar() {
 
 window.openLifeDashboard = function() {  
   if (msgArea) {
-    msgArea.innerHTML = ''; // Limpa a área principal antes de renderizar
+    msgArea.innerHTML = ''; 
   }
   appendMessage(`  
     <div style="border: 1px solid #ff0077; padding: 12px; background: rgba(13,17,23,0.9); border-radius: 8px; box-shadow: 0 0 15px rgba(255,0,119,0.3);">  
@@ -752,7 +758,7 @@ window.toggleAutonomousMode = function() {
     window.switchChat(id);  
     saveStore();  
       
-    if (msgArea) msgArea.innerHTML = ''; // Limpa para iniciar o feed autônomo sem resíduos
+    if (msgArea) msgArea.innerHTML = ''; 
     appendMessage("[JARV EXECUTION ENGINE]: Processamento autônomo INICIADO. Coletando dados para expansão neural...", 'system', true);  
     speakJARVIS("Iniciando loop de conhecimento autônomo.");
       
@@ -814,7 +820,7 @@ async function generateAutonomousReport(area) {
   const reportHtml = `  
     <div style="border: 1px solid #005cc5; padding: 12px; background: rgba(13,17,23,0.95); border-radius: 8px; font-family: monospace; margin: 10px 0;">  
       <h4 style="color:#00d2ff; margin-top:0; margin-bottom: 6px;">🧠 RELATÓRIO AUTÔNOMO: ${area}</h4>
-      <div style="color:#c9d1d9; font-size: 0.75rem; line-height: 1.4; white-space: pre-wrap;">${botResponse}</div>
+      <div style="color:#c9d1d9; font-size: 0.75rem; line-height: 1.4; white-space: pre-wrap;">${botResponse.replace(/\n/g, '<br>')}</div>
       <div style="font-size: 0.6rem; color:#8b949e; margin-top: 8px; border-top: 1px solid #30363d; padding-top: 4px; display:flex; justify-content:space-between;">
         <span>Status: Sincronizado com Nuvem</span>
         <span>${new Date().toLocaleTimeString()}</span>
@@ -865,7 +871,8 @@ window.appendMessage = function(msg, sender, isHtml = false) {
   if (isHtml) {
     div.innerHTML = msg;
   } else {
-    div.innerText = msg;
+    // Processamento básico para quebras de linha para texto puro
+    div.innerHTML = msg.replace(/\n/g, '<br>');
   }
   msgArea.appendChild(div);
   msgArea.scrollTop = msgArea.scrollHeight;
@@ -887,6 +894,7 @@ window.initChatStore = async function() {
     activeChatId = Object.keys(chatsStore)[0] || 'chat_default';
   }
   window.switchChat(activeChatId);
+  window.injectChatHistoryUI();
 };
 
 window.switchChat = function(chatId) {
@@ -901,12 +909,55 @@ window.switchChat = function(chatId) {
     });
   }
   console.log("[SISTEMA] Chat alternado para ID: " + chatId);
+  window.injectChatHistoryUI(); // Atualiza painel para destacar a sessão ativa
 };
 
+// Implementação COMPLETA e dinâmica da UI do Histórico
 window.injectChatHistoryUI = function() {
-  const container = document.getElementById('jarvChatHistoryContainer') || document.querySelector('.sidebar');
+  const container = document.getElementById('jarvChatHistoryContainer') || document.querySelector('.subsystem-list') || document.querySelector('aside');
   if (!container) return;
-  // Renderizador automático de histórico de conversas na barra lateral se aplicável
+
+  const existingHistory = document.getElementById('dynamicChatHistory');
+  if (existingHistory) existingHistory.remove();
+
+  const historyDiv = document.createElement('div');
+  historyDiv.id = 'dynamicChatHistory';
+  historyDiv.style.cssText = `margin: 10px 5px; padding: 8px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; display: flex; flex-direction: column; gap: 6px; max-height: 250px; overflow-y: auto;`;
+
+  historyDiv.innerHTML = `<div style="font-size: 0.7rem; color: #00ffcc; text-transform: uppercase; font-weight: bold; text-align: center; margin-bottom: 5px;">📜 Histórico de Sessões</div>`;
+
+  const newChatBtn = document.createElement('button');
+  newChatBtn.innerText = '➕ Nova Sessão';
+  newChatBtn.style.cssText = `background: #238636; color: #ffffff; border: 1px solid #2ea043; padding: 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; margin-bottom: 5px; font-weight: bold;`;
+  newChatBtn.onclick = () => {
+    const newId = 'chat_' + Date.now();
+    chatsStore[newId] = { title: 'Nova Sessão', timestamp: Date.now(), messages: [] };
+    window.switchChat(newId);
+    saveStoreToCloudAndLocal();
+  };
+  historyDiv.appendChild(newChatBtn);
+
+  // Ordena os chats pelo mais recente
+  const sortedChatIds = Object.keys(chatsStore).sort((a, b) => chatsStore[b].timestamp - chatsStore[a].timestamp);
+
+  sortedChatIds.forEach(id => {
+    const chat = chatsStore[id];
+    const btn = document.createElement('button');
+    const isActive = id === activeChatId;
+    btn.innerText = `💬 ${chat.title}`;
+    btn.title = chat.title;
+    btn.style.cssText = `background: ${isActive ? '#1f6feb' : '#161b22'}; color: #c9d1d9; border: 1px solid ${isActive ? '#388bfd' : '#30363d'}; padding: 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
+    btn.onclick = () => window.switchChat(id);
+    historyDiv.appendChild(btn);
+  });
+
+  // Insere no topo ou logo após o Branding Anônimo
+  const branding = document.getElementById('anonymousBranding');
+  if (branding && branding.nextSibling) {
+    container.insertBefore(historyDiv, branding.nextSibling);
+  } else {
+    container.appendChild(historyDiv);
+  }
 };
 
 window.initJarvisVision = function() {
