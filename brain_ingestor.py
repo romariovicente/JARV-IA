@@ -1,71 +1,60 @@
 import os
+import datetime
 import glob
-from datetime import datetime
 
-# Diretórios de trabalho do ecossistema
-RAW_INPUT_DIR = "IA/Raw_Inputs/"
-BRAIN_STORAGE_DIR = "IA/Segundo_Cérebro/Notes/"
+RAW_DIR = "IA/Raw_Inputs"
+NOTES_DIR = "IA/Segundo_Cérebro/Notes"
 
-def ensure_directories():
-    os.makedirs(RAW_INPUT_DIR, exist_ok=True)
-    os.makedirs(BRAIN_STORAGE_DIR, exist_ok=True)
-
-def process_raw_files():
-    ensure_directories()
-    search_path = os.path.join(RAW_INPUT_DIR, "*.*")
-    files = glob.glob(search_path)
+def process_notes():
+    # Garante que o diretório de destino existe
+    os.makedirs(NOTES_DIR, exist_ok=True)
     
-    if not files:
-        print("[JARV-CORE] Nenhum arquivo novo encontrado na fila de entrada.")
+    if not os.path.exists(RAW_DIR):
+        print(f"Diretório de entrada {RAW_DIR} não encontrado.")
         return
 
-    print(f"[JARV-CORE] Processando {len(files)} novo(s) item(ns) para o Segundo Cérebro...")
+    # Busca arquivos Markdown (.md) e Texto (.txt) na pasta de entradas brutas
+    raw_files = glob.glob(os.path.join(RAW_DIR, "*.md")) + glob.glob(os.path.join(RAW_DIR, "*.txt"))
+    
+    if not raw_files:
+        print("Nenhum arquivo novo para processar.")
+        return
 
-    for file_path in files:
-        filename = os.path.basename(file_path)
-        name_without_ext, ext = os.path.splitext(filename)
+    for filepath in raw_files:
+        filename = os.path.basename(filepath)
+        name_without_ext = os.path.splitext(filename)[0]
         
-        # Leitura do conteúdo (compatível com textos/markdown)
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        except Exception as e:
-            print(f"⚠️ Erro ao ler o arquivo {filename}: {e}")
-            continue
-
-        # Geração de metadados automáticos
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        word_count = len(content.split())
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
         
-        # Estruturação da nota processada (Formato Markdown rico para indexação)
-        structured_note = f"""---
-title: "{name_without_ext}"
-date_ingested: "{timestamp}"
-source_format: "{ext}"
-words: {word_count}
-status: "Indexed"
+        # Metadados gerados automaticamente
+        today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        title = name_without_ext.replace('-', ' ').title()
+        theme = "Segundo Cérebro / Automação"
+        keywords = ["jarvis", "automacao", "indexacao"]
+        
+        # Constrói o Frontmatter (metadados estruturados) + Conteúdo formatado
+        frontmatter = f"""---
+title: "{title}"
+date: "{today}"
+theme: "{theme}"
+keywords: {keywords}
 ---
 
-# Nota Indexada: {name_without_ext}
-
-> **Metadados do Ingestor Automático**
-> * **Data de Ingestão:** {timestamp}
-> * **Origem:** Pipeline Python / Ingestão Contínua
-
-## Conteúdo Bruto / Resumo Analítico
-{content}
 """
+        processed_content = frontmatter + "# Sumário Executivo\n\n" + content.strip() + "\n\n---\n*Nota indexada automaticamente pelo J.A.R.V.I.S. Brain Ingestor*"
 
         output_filename = f"{name_without_ext}.md"
-        output_path = os.path.join(BRAIN_STORAGE_DIR, output_filename)
-
-        with open(output_path, "w", encoding="utf-8") as out_f:
-            out_f.write(structured_note)
-
-        print(f"✅ Processado e salvo com sucesso: {output_filename}")
+        output_path = os.path.join(NOTES_DIR, output_filename)
         
-        # Opcional: remover arquivo bruto após o processamento bem-sucedido
-        # os.remove(file_path)
+        # Salva a nota processada na pasta do Segundo Cérebro
+        with open(output_path, "w", encoding="utf-8") as out_f:
+            out_f.write(processed_content)
+            
+        print(f"Processado com sucesso: {filename} -> {output_path}")
+        
+        # Opcional: Remove o arquivo bruto original após o processamento bem-sucedido
+        # os.remove(filepath)
 
 if __name__ == "__main__":
-    process_raw_files()
+    process_notes()
