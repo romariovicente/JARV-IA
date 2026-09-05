@@ -1,4 +1,4 @@
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <script src="diagnostics.js"></script>
@@ -271,7 +271,7 @@ html_content = """<!DOCTYPE html>
         const text = await response.text();
         container.innerText = text;
       } catch (err) {
-        container.innerText = "⚠️ Erro ao carregar o relatório: " + err.message + "\\nCertifique-se de que o J.A.R.V.I.S. já executou pelo menos um ciclo autônomo.";
+        container.innerText = "⚠️ Erro ao carregar o relatório: " + err.message + "\nCertifique-se de que o J.A.R.V.I.S. já executou pelo menos um ciclo autônomo.";
       }
     };
   </script>
@@ -283,8 +283,3 @@ html_content = """<!DOCTYPE html>
   <script src="js/app.js" defer></script>
 </body>
 </html>
-"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-print("index.html gerado com sucesso!")
