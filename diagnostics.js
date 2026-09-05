@@ -1,6 +1,6 @@
 /**
- * J.A.R.V.I.S. Diagnostics Engine v6.0
- * Módulo de captura global de exceções e auditoria de UI.
+ * J.A.R.V.I.S. v6.0 Core Protocol - Diagnostics Engine
+ * Módulo de captura global de exceções, auditoria de UI e observabilidade em tempo de execução.
  */
 
 class SiteDiagnostics {
@@ -24,23 +24,29 @@ class SiteDiagnostics {
 
   catchErrors() {
     window.addEventListener('error', (event) => {
-      this.addError({
+      const errorData = {
         type: 'Runtime Error',
         message: event.message || 'Erro ao carregar recurso',
         source: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : (event.target?.src || event.target?.href || 'Desconhecido'),
         stack: event.error?.stack || 'Sem stack trace disponível',
         time: new Date().toLocaleTimeString()
-      });
+      };
+      
+      console.error(`[DIAGNOSTICS] Runtime Error capturado:`, errorData.message, `\nOrigem:`, errorData.source);
+      this.addError(errorData);
     }, true);
 
     window.addEventListener('unhandledrejection', (event) => {
-      this.addError({
+      const errorData = {
         type: 'Unhandled Rejection',
         message: event.reason?.message || String(event.reason),
         source: window.location.pathname,
         stack: event.reason?.stack || 'Sem stack trace disponível',
         time: new Date().toLocaleTimeString()
-      });
+      };
+
+      console.error(`[DIAGNOSTICS] Unhandled Rejection capturada:`, errorData.message);
+      this.addError(errorData);
     });
   }
 
@@ -65,7 +71,7 @@ class SiteDiagnostics {
 
     const container = document.createElement('div');
     container.id = 'site-diagnostics-panel';
-    // Alterado para posicionar no topo direito e liberar a área de input/botão inferior
+    // Posicionado no topo direito para liberar a área de input/botões inferiores
     container.style.cssText = `
       position: fixed;
       top: 70px;
@@ -87,7 +93,7 @@ class SiteDiagnostics {
 
     container.innerHTML = `
       <div id="diag-header" style="background: #11111b; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #00ffff;">
-        <span style="font-weight: bold; color: #ff5555;">🚨 Diagnóstico J.A.R.V.I.S. (<span id="diag-count">0</span>)</span>
+        <span style="font-weight: bold; color: #ff5555;">🚨 J.A.R.V.I.S. Diags (<span id="diag-count">0</span>)</span>
         <div>
           <button id="diag-clear" style="background: #222; color: #00ffff; border: 1px solid #00ffff; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 10px;">Limpar</button>
           <button id="diag-toggle" style="background: none; color: #00ffff; border: none; cursor: pointer;">▼</button>
@@ -112,6 +118,7 @@ class SiteDiagnostics {
     });
 
     this.render();
+    console.log('[DIAGNOSTICS] Módulo de auditoria e captura global ativado com sucesso (v6.0).');
   }
 
   escapeHTML(str) {
@@ -151,4 +158,5 @@ class SiteDiagnostics {
   }
 }
 
+// Inicialização automática do motor de diagnóstico
 window.siteDiagnostics = new SiteDiagnostics();
