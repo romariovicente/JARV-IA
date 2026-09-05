@@ -35,7 +35,7 @@
           console.error(`Erro na execução de "${fnName}":`, e);
         }
       } else {
-        console.warn(`Função "${fnName}" ainda não carregada. Tentando fallback...`);
+        console.warn(`Função "${fnName}" ainda não carregada no escopo global. Tentando fallback...`);
       }
     };
 
@@ -234,6 +234,7 @@
         </div>
 
         <div class="input-wrapper" style="display: flex; gap: 10px;">
+          <!-- EVENTO DE TECLADO INJETADO AQUI PARA GARANTIR QUE O "ENTER" DISPARE O CLIQUE NO BOTÃO -->
           <input type="text" id="chatInput" placeholder="Insira suas diretrizes para o Master Agent..." autocomplete="off" style="flex: 1; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; outline: none;">
           <button class="btn-send" id="executeBtn" onclick="safeCall('sendMsg')" style="padding: 10px 20px; background: #00ffff; color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">EXECUTAR</button>
         </div>
@@ -259,7 +260,6 @@
     </div>
   </div>
 
-  <!-- SCRIPT AUXILIAR PARA CARREGAR O RELATÓRIO NO FRONT-END -->
   <script>
     window.loadLatestAutonomousReport = async function() {
       const container = document.getElementById('autonomousReportContent');
@@ -274,6 +274,31 @@
         container.innerText = "⚠️ Erro ao carregar o relatório: " + err.message + "\nCertifique-se de que o J.A.R.V.I.S. já executou pelo menos um ciclo autônomo.";
       }
     };
+  </script>
+
+  <!-- SCRIPT DE SALVAGUARDA: GARANTIA DE FUNCIONAMENTO DO BOTÃO E DO ENTER -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const chatInput = document.getElementById('chatInput');
+      const executeBtn = document.getElementById('executeBtn');
+
+      if (chatInput && executeBtn) {
+        // Intercepta a tecla Enter no input e simula o clique do botão
+        chatInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault(); // Impede que o formulário recarregue a página
+            executeBtn.click(); // Força o disparo do botão "EXECUTAR"
+          }
+        });
+
+        // Debug automático se a função falhar
+        executeBtn.addEventListener('click', function() {
+          if (typeof window.sendMsg !== 'function') {
+            console.error("ALERTA CRÍTICO: A função 'sendMsg' não foi encontrada pelo index.html. Verifique se no arquivo 'js/app.js' a função foi exposta usando: window.sendMsg = function() { ... }");
+          }
+        });
+      }
+    });
   </script>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
