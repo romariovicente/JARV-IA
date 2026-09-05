@@ -1,6 +1,7 @@
 /**
  * J.A.R.V.I.S. Autonomous 24/7 Runner com Sincronização em Diário Unificado
- * Versão Expandida & Varredura Completa da Matriz: Ciência da Computação, Técnico de Enfermagem, Enfermagem, Medicina, Matemática e Seus Sistemas de Teste.
+ * Versão Expandida & Varredura Completa da Matriz (Com Proteção Anti Rate-Limit)
+ * Áreas: Ciência da Computação, Técnico de Enfermagem, Enfermagem, Medicina, Matemática e Seus Sistemas de Teste.
  */
 
 const fs = require('fs');
@@ -184,8 +185,10 @@ ${generatedReport}
     fs.writeFileSync(unifiedDiaryPath, existingDiaryContent, 'utf8');
     console.log(`[SINCRONIZADO] Diário Unificado atualizado com o tópico ${index}`);
 
-    // Pausa breve de 3 segundos entre cada tópico para evitar esgotar o limite de requisições (rate-limit) da API
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // PAUSA PROTETORA ANTI RATE-LIMIT (20 SEGUNDOS)
+    // Isso garante que a API da Groq não bloqueie as requisições por excesso de velocidade.
+    console.log(`[COOLDOWN] Aguardando 20 segundos para evitar bloqueio da API...`);
+    await new Promise(resolve => setTimeout(resolve, 20000));
   }
 
   console.log("\n=====================================================");
