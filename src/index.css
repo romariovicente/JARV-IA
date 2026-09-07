@@ -1,0 +1,30 @@
+* {
+  box-sizing: border-box !important;
+}
+html, body, #root {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #030712 !important;
+  color: #fff !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+#root > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+}
+main, section, div {
+  max-width: 100% !important;
+}
+/* Forçar grids e flex containers internos a preencherem o espaço */
+.flex, [class*="flex"], grid, [class*="grid"] {
+  min-height: auto !important;
+}
