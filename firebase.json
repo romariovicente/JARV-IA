@@ -3,13 +3,20 @@
     "source": "functions"
   },
   "hosting": {
-    "public": "frontend/dist",
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/api/world-clock",
+        "function": {
+          "functionId": "worldClock",
+          "region": "southamerica-east1"
+        }
+      },
       {
         "source": "/api/chat",
         "function": {

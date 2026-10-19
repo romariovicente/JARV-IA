@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-19",
+  "issue": "https://github.com/romariovicente/JARV-IA/issues/2",
+  "clockConfigMatchesPreparatorio": true,
+  "solarConfigMatchesPreparatorio": true,
+  "planetCount": 8,
+  "configVersion": "PREP_SOLAR_SKY_20261005",
+  "publicConfigSha256": "1cf264e956c27007083ff1afc0ac13a6aee83f80d5ac164a60585100d1888e8e",
+  "productionEntry": "index.html -> src/main.jsx -> src/App.jsx",
+  "npmCheck": "passed: entry validation, 15 tests, Vite production build",
+  "visualQA": "production painter rendered offline and inspected; browser deployment not yet validated",
+  "serverClockDeployment": "not deployed; explicit device-clock fallback",
+  "pagesDeployment": "prepared; requires validated PR merge and Pages Actions source",
+  "autoHealSecretGuard": "embedded fallback removed; no-secret execution tested; previously published key needs revocation",
+  "lintLimitation": "Biome/Commitlint were specified in README but not installed/configured in existing checkout; syntax checks and meaningful Node tests were run, not a claimed Biome pass"
+}

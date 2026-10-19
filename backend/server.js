@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import worldClock from '../functions/world-clock.cjs';
 
 dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.get('/api/world-clock', worldClock.handleWorldClockRequest);
 
 const MODELS_TO_TRY = [
   'llama-3.1-8b-instant',
@@ -75,4 +77,4 @@ app.post('/api/chat', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, '0.0.0.0', () => console.log(`AI Gateway rodando na porta ${PORT} com fallback avançado`));
+const server = app.listen(PORT, '0.0.0.0', () => console.log(`AI Gateway rodando na porta ${server.address().port} com fallback avançado`));
