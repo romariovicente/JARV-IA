@@ -1,4 +1,8 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { handleWorldClockRequest } = require('./world-clock.cjs');
+
+// Public clock/configuration only. No API key or user data is returned.
+exports.worldClock = onRequest({ region: 'southamerica-east1', cors: true }, handleWorldClockRequest);
 
 exports.chat = onRequest(
   {

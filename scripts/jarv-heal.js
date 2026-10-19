@@ -2,15 +2,14 @@
  * J.A.R.V.I.S. Auto-Heal Engine - Protocolo Avançado de Auto-Correção
  * Módulo de diagnóstico e reparo contínuo via Groq API.
  * 
- * Versão: 7.1 (Com Modelos Oficiais Groq, Sanitize JSON, Key Fallback e Reconstrução de Arquivos Grandes)
+ * Versão: 7.1 (Com Modelos Oficiais Groq, Sanitize JSON, Secrets de Ambiente e Reconstrução de Arquivos Grandes)
  * Arquivo: scripts/jarv-heal.js
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-// Chave reserva para garantir execução mesmo em caso de ausência nos Secrets do GitHub Actions
-const FALLBACK_GROQ_KEY = "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";
+// Credenciais somente pelo secret GROQ_API_KEY do ambiente.
 
 // Lista oficial e atualizada de modelos de alta performance na Groq API
 const GROQ_MODELS = [
@@ -85,7 +84,7 @@ async function runAutoHeal() {
   console.log("[JARV-HEAL] Protocolo de Auto-Correção Inicializado");  
   console.log("=====================================================\n");
     
-  const apiKey = process.env.GROQ_API_KEY || FALLBACK_GROQ_KEY;  
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {  
     console.error("[ERRO CRÍTICO] Nenhuma chave GROQ_API_KEY foi localizada.");  
     process.exit(1);  

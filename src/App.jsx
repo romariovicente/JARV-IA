@@ -1,4 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useWorldClock } from './useWorldClock.js';
+import SolarProjection from './SolarProjection.jsx';
+import { clockSourceLabel } from '../shared/world-clock-client.js';
+import { SOLAR_VIEWS } from '../shared/solar-projection.js';
+import { WORLD_CLOCK_CONFIG } from '../shared/world-clock.js';
 
 export default function App() {
   const [messages, setMessages] = useState([
@@ -7,11 +12,11 @@ export default function App() {
   ]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentTime, setCurrentTime] = useState('14:28:37');
+  const { clock, clockClient } = useWorldClock();
+  const currentTime = clock.timeText;
   const [activeTab, setActiveTab] = useState('CORE');
   const [viewMode, setViewMode] = useState('ORBITAL');
   const [scale, setScale] = useState(1);
-  const canvasRef = useRef(null);
 
   // Auto-scaling for desktop layout on mobile/tablet
   useEffect(() => {
@@ -26,159 +31,6 @@ export default function App() {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now.toTimeString().split(' ')[0]);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Holographic Canvas Render (Exact Reference Match)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
-    let angle = 0;
-
-    const render = () => {
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const radius = Math.min(cx, cy) * 0.52;
-
-      // Deep Space Starfield
-      ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-      for (let i = 0; i < 70; i++) {
-        let px = (Math.sin(i * 123 + angle * 0.1) * 0.5 + 0.5) * canvas.width;
-        let py = (Math.cos(i * 45 + angle * 0.05) * 0.5 + 0.5) * canvas.height;
-        ctx.fillRect(px, py, i % 3 === 0 ? 2 : 1, i % 3 === 0 ? 2 : 1);
-      }
-
-      // Top Sun / Star Glow
-      const sunGrad = ctx.createRadialGradient(cx + radius * 0.2, cy - radius * 1.2, 5, cx + radius * 0.2, cy - radius * 1.2, 60);
-      sunGrad.addColorStop(0, '#ffaa00');
-      sunGrad.addColorStop(0.5, 'rgba(255, 100, 0, 0.3)');
-      sunGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = sunGrad;
-      ctx.beginPath();
-      ctx.arc(cx + radius * 0.2, cy - radius * 1.2, 60, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Saturn Planet (Upper Left)
-      ctx.save();
-      ctx.translate(cx - radius * 1.6, cy - radius * 0.3);
-      ctx.rotate(-0.3);
-      // Saturn ring back
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 45, 12, 0, Math.PI, Math.PI * 2);
-      ctx.strokeStyle = '#d4a373';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      // Saturn body
-      ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
-      const satGrad = ctx.createRadialGradient(-6, -6, 2, 0, 0, 22);
-      satGrad.addColorStop(0, '#e9d8a6');
-      satGrad.addColorStop(0.7, '#b5838d');
-      satGrad.addColorStop(1, '#6d597a');
-      ctx.fillStyle = satGrad;
-      ctx.fill();
-      // Saturn ring front
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 45, 12, 0, 0, Math.PI);
-      ctx.strokeStyle = '#e9d8a6';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-
-      // Other distant planets / moons
-      ctx.beginPath();
-      ctx.arc(cx + radius * 1.5, cy + radius * 0.5, 16, 0, Math.PI * 2);
-      ctx.fillStyle = '#495057';
-      ctx.fill();
-
-      // Orbital Ellipses with Neon Glow
-      [
-        { scaleX: 1.4, scaleY: 0.4, rot: -0.2, color: 'rgba(0, 255, 255, 0.4)' },
-        { scaleX: 1.7, scaleY: 0.5, rot: 0.3, color: 'rgba(255, 0, 255, 0.35)' },
-        { scaleX: 1.2, scaleY: 0.6, rot: 0.8, color: 'rgba(0, 255, 204, 0.3)' }
-      ].forEach((orb) => {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(orb.rot + angle * 0.05);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, radius * orb.scaleX, radius * orb.scaleY, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = orb.color;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
-      });
-
-      // Central Holographic Sphere
-      const sphereGrad = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.1, cx, cy, radius);
-      sphereGrad.addColorStop(0, '#00ffff');
-      sphereGrad.addColorStop(0.4, '#0066cc');
-      sphereGrad.addColorStop(0.8, '#001133');
-      sphereGrad.addColorStop(1, '#000511');
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fillStyle = sphereGrad;
-      ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#00ffff';
-      ctx.shadowColor = '#00ffff';
-      ctx.shadowBlur = 15;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Latitude/Longitude Grid Lines on Sphere
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.35)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let i = -2; i <= 2; i++) {
-        let offsetY = (radius / 2.5) * i;
-        let w = Math.sqrt(Math.max(0, radius * radius - offsetY * offsetY));
-        ctx.ellipse(cx, cy + offsetY, w, radius * 0.12, 0, 0, Math.PI * 2);
-      }
-      ctx.stroke();
-
-      // Kali Dragon / JARVIS Core Branding inside sphere
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 22px monospace';
-      ctx.textAlign = 'center';
-      ctx.shadowColor = '#00ffff';
-      ctx.shadowBlur = 12;
-      ctx.fillText('J.A.R.V.I.S.', cx, cy - 10);
-      
-      ctx.font = 'bold 11px monospace';
-      ctx.fillStyle = '#00ffcc';
-      ctx.fillText('AI SYSTEM CORE', cx, cy + 16);
-      ctx.shadowBlur = 0;
-
-      // Orbiting Satellites / Nodes
-      const sat1X = cx + Math.cos(angle * 1.5) * (radius * 1.35);
-      const sat1Y = cy + Math.sin(angle * 1.5) * (radius * 0.45);
-      ctx.beginPath();
-      ctx.arc(sat1X, sat1Y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#ff00ff';
-      ctx.shadowColor = '#ff00ff';
-      ctx.shadowBlur = 10;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      angle += 0.012;
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
-    return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
   const handleSend = async (e) => {
@@ -369,23 +221,24 @@ export default function App() {
 
             {/* 3D Holographic Stage */}
             <div style={{ position: 'relative', height: '330px', background: 'radial-gradient(circle at center, #0a1930 0%, #030712 100%)', border: '1px solid rgba(0,255,255,0.3)', borderRadius: '8px', overflow: 'hidden' }}>
-              <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+              <SolarProjection clockClient={clockClient} viewMode={viewMode} />
               
               {/* Overlay Info Top/Bottom */}
               <div style={{ position: 'absolute', top: '10px', left: '12px', fontSize: '0.62rem', background: 'rgba(5,11,24,0.85)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(0,255,255,0.2)' }}>
-                PLANETA JARVIS • NÚCLEO OPERACIONAL | STATUS: <span style={{ color: '#00ffcc' }}>ONLINE</span> | ENERGIA: <strong style={{ color: '#00ffff' }}>92%</strong>
+                SISTEMA SOLAR · TERRA / ARAPIRACA<br/>{clockSourceLabel(clock)}
               </div>
 
               <div style={{ position: 'absolute', top: '10px', right: '12px', fontSize: '0.62rem', background: 'rgba(5,11,24,0.85)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(0,255,255,0.2)', textAlign: 'right' }}>
-                COORDENADAS X: -248.75 | Y: 117.82 | Z: -892.11<br/>
-                VELOCIDADE ORBITAL: <span style={{ color: '#00ffcc' }}>1.83x</span> | GRAVIDADE: <span style={{ color: '#ff00ff' }}>1.07 G</span>
+                {clock.dateText} · {clock.phase}<br/>
+                1 ÓRBITA DA TERRA: {WORLD_CLOCK_CONFIG.clock.orbitPeriodSeconds}s · ESCALA DIDÁTICA
               </div>
 
               {/* View Mode Selector */}
               <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', background: 'rgba(5,11,24,0.9)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(0,255,255,0.3)' }}>
-                {['ORBITAL', 'HELICOIDAL', 'QUÂNTICA', 'REDE NEURAL'].map(mode => (
+                {SOLAR_VIEWS.map(mode => (
                   <button
                     key={mode}
+                    aria-pressed={viewMode === mode}
                     onClick={() => setViewMode(mode)}
                     style={{
                       background: viewMode === mode ? 'rgba(0,255,255,0.25)' : 'transparent',
@@ -404,6 +257,8 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            <p style={{ margin: 0, fontSize: '.62rem', opacity: .7 }}>{WORLD_CLOCK_CONFIG.solar.presentation}</p>
 
             {/* Active Conversation & Chat History */}
             <div style={{ background: 'rgba(5,11,24,0.85)', border: '1px solid rgba(0,255,255,0.2)', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
